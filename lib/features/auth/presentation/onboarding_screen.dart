@@ -57,20 +57,20 @@ class _MasonryGallery extends StatefulWidget {
 }
 
 class _MasonryGalleryState extends State<_MasonryGallery> {
-  // Pet placeholder images (using picsum with pet-like seeds)
+  // Real pet images from Unsplash
   final List<String> _petImages = [
-    'https://picsum.photos/seed/dog1/400/500',
-    'https://picsum.photos/seed/cat1/400/350',
-    'https://picsum.photos/seed/pet3/400/450',
-    'https://picsum.photos/seed/dog2/400/380',
-    'https://picsum.photos/seed/cat2/400/520',
-    'https://picsum.photos/seed/pet6/400/400',
-    'https://picsum.photos/seed/dog3/400/480',
-    'https://picsum.photos/seed/cat3/400/360',
-    'https://picsum.photos/seed/pet9/400/440',
-    'https://picsum.photos/seed/dog4/400/390',
-    'https://picsum.photos/seed/cat4/400/510',
-    'https://picsum.photos/seed/pet12/400/370',
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=500&fit=crop', // Dog
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=350&fit=crop', // Cat
+    'https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=400&h=450&fit=crop', // Hamster
+    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=380&fit=crop', // Dogs
+    'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=400&h=520&fit=crop', // Cat
+    'https://images.unsplash.com/photo-1452857297128-d9c29adba80b?w=400&h=400&fit=crop', // Parrot
+    'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&h=480&fit=crop', // Dog
+    'https://images.unsplash.com/photo-1606567595334-d39972c85dfd?w=400&h=360&fit=crop', // Cat
+    'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400&h=440&fit=crop', // Rabbit
+    'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=390&fit=crop', // Dog
+    'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=400&h=510&fit=crop', // Cat
+    'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=370&fit=crop', // Fish
   ];
 
   // Scroll controllers for each column
@@ -209,7 +209,7 @@ class _ContentSection extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(flex: 1),
-          // Headline with highlighted city
+          // Headline with highlighted word - Hebrew
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
@@ -217,24 +217,24 @@ class _ContentSection extends StatelessWidget {
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
                 color: AppColors.secondarySlate,
-                height: 1.2,
+                height: 1.3,
               ),
               children: [
-                const TextSpan(text: 'Find the Perfect Care\nfor Your '),
+                const TextSpan(text: 'מצא את הטיפול המושלם\nלחבר ה'),
                 TextSpan(
-                  text: 'Furry Friend',
+                  text: 'פרוותי',
                   style: TextStyle(
                     color: AppColors.primarySage,
                   ),
                 ),
-                const TextSpan(text: '!'),
+                const TextSpan(text: ' שלך!'),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          // Subtext description
+          // Subtext description - Hebrew (without payment info)
           Text(
-            'Verified sitters, real-time updates, and\npay only 10% now—rest upon arrival.',
+            'מטפלים מאומתים, עדכונים בזמן אמת,\nושירות אמין לחיית המחמד שלך.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -259,7 +259,7 @@ class _ContentSection extends StatelessWidget {
                 elevation: 0,
               ),
               child: const Text(
-                'Start Now',
+                'התחל עכשיו',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -268,11 +268,11 @@ class _ContentSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Secondary Link
+          // Secondary Link - Hebrew
           TextButton(
             onPressed: onGuestPressed,
             child: Text(
-              'Browse as Guest',
+              'המשך כאורח',
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.secondarySlate.withOpacity(0.6),
