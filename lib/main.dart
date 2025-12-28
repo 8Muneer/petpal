@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'screens/welcome_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
-import 'screens/guest_home_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:petpal/core/theme/app_theme.dart';
 
 void main() {
-  runApp(const PetPalApp());
+  runApp(
+    const ProviderScope(
+      child: PetPalApp(),
+    ),
+  );
 }
 
 class PetPalApp extends StatelessWidget {
@@ -14,15 +16,14 @@ class PetPalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'PetPal Marketplace',
       debugShowCheckedModeBanner: false,
-      title: 'PetPal',
-      theme: ThemeData(primarySwatch: Colors.teal),
-      home: const WelcomeScreen(),
-routes: {
-  '/login': (context) => const LoginScreen(),
-  '/register': (context) => const RegisterScreen(),
-  '/guest': (context) => const GuestHomeScreen(),
-},
+      theme: AppTheme.lightTheme,
+      home: const Scaffold(
+        body: Center(
+          child: Text('PetPal Architecture Initialized'),
+        ),
+      ),
     );
   }
 }

@@ -36,7 +36,7 @@ class AppTheme {
       textTheme: GoogleFonts.ibmPlexSansArabicTextTheme().merge(
         GoogleFonts.ibmPlexSansTextTheme(),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.warmMist,
         elevation: 2,
         shadowColor: const Color(0x0D2D2D2D),
