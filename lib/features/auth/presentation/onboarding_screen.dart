@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/features/auth/presentation/login_screen.dart';
 import 'package:petpal/screens/guest_home_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -35,7 +36,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               flex: 45,
               child: _ContentSection(
                 onStartPressed: () {
-                  // TODO: Navigate to Login/Register
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const LoginScreen()),
+                  );
                 },
                 onGuestPressed: () {
                   Navigator.push(

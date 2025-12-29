@@ -1,28 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/features/auth/presentation/signup_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
+  bool _acceptTerms = false;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleSignup() {
+    if (!_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('יש לאשר את תנאי השימוש'),
+          backgroundColor: AppColors.alertCoral,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     // TODO: Integrate with AuthState provider
     Future.delayed(const Duration(seconds: 2), () {
@@ -41,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
                 // Back button
                 Align(
                   alignment: Alignment.centerRight,
@@ -53,26 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 // Header
-                Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySage.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Icon(
-                      Icons.pets,
-                      size: 40,
-                      color: AppColors.primarySage,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
                 Text(
-                  'ברוכים השבים!',
+                  'צור חשבון חדש',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -82,14 +81,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'התחבר לחשבון שלך כדי להמשיך',
+                  'הצטרף למשפחת PetPal והתחל לטפל בחיית המחמד שלך',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.secondarySlate.withOpacity(0.7),
                   ),
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
+                // User type selector
+                _buildUserTypeSelector(),
+                const SizedBox(height: 24),
+                // Name field
+                _buildInputField(
+                  controller: _nameController,
+                  label: 'שם מלא',
+                  hint: 'הכנס את שמך',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
                 // Email field
                 _buildInputField(
                   controller: _emailController,
@@ -103,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildInputField(
                   controller: _passwordController,
                   label: 'סיסמה',
-                  hint: '••••••••',
+                  hint: 'לפחות 8 תווים',
                   icon: Icons.lock_outline,
                   isPassword: true,
                   isPasswordVisible: _isPasswordVisible,
@@ -111,29 +121,69 @@ class _LoginScreenState extends State<LoginScreen> {
                     setState(() => _isPasswordVisible = !_isPasswordVisible);
                   },
                 ),
-                const SizedBox(height: 12),
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to forgot password
-                    },
-                    child: Text(
-                      'שכחת סיסמה?',
-                      style: TextStyle(
-                        color: AppColors.primarySage,
-                        fontWeight: FontWeight.w500,
+                const SizedBox(height: 16),
+                // Confirm password field
+                _buildInputField(
+                  controller: _confirmPasswordController,
+                  label: 'אימות סיסמה',
+                  hint: 'הכנס את הסיסמה שוב',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                  isPasswordVisible: _isConfirmPasswordVisible,
+                  onVisibilityToggle: () {
+                    setState(() =>
+                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
+                  },
+                ),
+                const SizedBox(height: 20),
+                // Terms checkbox
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _acceptTerms,
+                      onChanged: (value) =>
+                          setState(() => _acceptTerms = value ?? false),
+                      activeColor: AppColors.primarySage,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                  ),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.secondarySlate.withOpacity(0.7),
+                          ),
+                          children: [
+                            const TextSpan(text: 'אני מסכים ל'),
+                            TextSpan(
+                              text: 'תנאי השימוש',
+                              style: TextStyle(
+                                color: AppColors.primarySage,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const TextSpan(text: ' ו'),
+                            TextSpan(
+                              text: 'מדיניות הפרטיות',
+                              style: TextStyle(
+                                color: AppColors.primarySage,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
-                // Login button
+                // Signup button
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
+                    onPressed: _isLoading ? null : _handleSignup,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primarySage,
                       foregroundColor: AppColors.white,
@@ -156,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            'התחבר',
+                            'צור חשבון',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -165,57 +215,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                        child: Divider(
-                            color: AppColors.secondarySlate.withOpacity(0.2))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'או',
-                        style: TextStyle(
-                          color: AppColors.secondarySlate.withOpacity(0.5),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                        child: Divider(
-                            color: AppColors.secondarySlate.withOpacity(0.2))),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Social login buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildSocialButton(Icons.g_mobiledata, 'Google'),
-                    const SizedBox(width: 16),
-                    _buildSocialButton(Icons.apple, 'Apple'),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                // Sign up link
+                // Login link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'אין לך חשבון?',
+                      'כבר יש לך חשבון?',
                       style: TextStyle(
                         color: AppColors.secondarySlate.withOpacity(0.7),
                       ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignupScreen()),
-                        );
-                      },
+                      onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'הירשם עכשיו',
+                        'התחבר כאן',
                         style: TextStyle(
                           color: AppColors.primarySage,
                           fontWeight: FontWeight.w600,
@@ -228,6 +241,59 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserTypeSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.warmMist,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTypeOption('בעל חיית מחמד', Icons.pets, true),
+          ),
+          Expanded(
+            child: _buildTypeOption('מטפל', Icons.volunteer_activism, false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeOption(String label, IconData icon, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Handle user type selection
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primarySage : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppColors.white : AppColors.secondarySlate,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppColors.white : AppColors.secondarySlate,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -292,32 +358,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, String label) {
-    return Container(
-      width: 140,
-      height: 50,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.secondarySlate.withOpacity(0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.secondarySlate),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.secondarySlate,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
