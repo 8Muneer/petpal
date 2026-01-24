@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/auth/presentation/login_screen.dart';
-import 'package:petpal/screens/guest_home_screen.dart';
+import 'package:petpal/features/auth/presentation/guest_home_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -13,53 +14,124 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const String _logTag = '[OnboardingScreen]';
+
+  void _log(String message, {Object? error, StackTrace? stackTrace}) {
+    debugPrint('$_logTag $message');
+    if (error != null) debugPrint('$_logTag   error: $error');
+    if (stackTrace != null) debugPrint('$_logTag   stackTrace: $stackTrace');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _log('initState');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surfaceAlabaster,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top 55% - Masonry Gallery
-            Expanded(
-              flex: 55,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(AppTheme.superCurveRadius),
-                  bottomRight: Radius.circular(AppTheme.superCurveRadius),
+    _log('build');
+    try {
+      return Scaffold(
+        backgroundColor: AppColors.surfaceAlabaster,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ✅ Top 55% - Masonry Gallery (same as old)
+              Expanded(
+                flex: 55,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppTheme.superCurveRadius),
+                    bottomRight: Radius.circular(AppTheme.superCurveRadius),
+                  ),
+                  child: const _MasonryGallery(),
                 ),
-                child: const _MasonryGallery(),
               ),
-            ),
-            // Bottom 45% - Content Section
-            Expanded(
-              flex: 45,
-              child: _ContentSection(
-                onStartPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const LoginScreen()),
-                  );
-                },
-                onGuestPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const GuestHomeScreen(),
-                    ),
-                  );
-                },
+
+              // ✅ Bottom 45% - Your new content section
+              Expanded(
+                flex: 45,
+                child: _ContentSection(
+                  onStartPressed: () {
+                    _log('onStartPressed -> navigate to LoginScreen');
+                    try {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    } catch (e, st) {
+                      _log('navigation to LoginScreen failed',
+                          error: e, stackTrace: st);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('הניווט נכשל. נסה/י שוב.')),
+                      );
+                    }
+                  },
+                  onGuestPressed: () {
+                    _log('onGuestPressed -> navigate to GuestHomeScreen');
+                    try {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const GuestHomeScreen()),
+                      );
+                    } catch (e, st) {
+                      _log('navigation to GuestHomeScreen failed',
+                          error: e, stackTrace: st);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('הניווט נכשל. נסה/י שוב.')),
+                      );
+                    }
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e, st) {
+      _log('build failed', error: e, stackTrace: st);
+      return Scaffold(
+        backgroundColor: AppColors.surfaceAlabaster,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 48, color: AppColors.alertCoral),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'שגיאה במסך הפתיחה',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondarySlate,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$e',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.secondarySlate),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
   }
 }
 
-/// Auto-scrolling masonry gallery with 3 columns
+/// Auto-scrolling masonry gallery with 3 columns (same as old)
 class _MasonryGallery extends StatefulWidget {
   const _MasonryGallery();
 
@@ -70,21 +142,20 @@ class _MasonryGallery extends StatefulWidget {
 class _MasonryGalleryState extends State<_MasonryGallery> {
   // Real pet images from Unsplash
   final List<String> _petImages = [
-    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=500&fit=crop', // Dog
-    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=350&fit=crop', // Cat
-    'https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=400&h=450&fit=crop', // Hamster
-    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=380&fit=crop', // Dogs
-    'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=400&h=520&fit=crop', // Cat
-    'https://images.unsplash.com/photo-1452857297128-d9c29adba80b?w=400&h=400&fit=crop', // Parrot
-    'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&h=480&fit=crop', // Dog
-    'https://images.unsplash.com/photo-1606567595334-d39972c85dfd?w=400&h=360&fit=crop', // Cat
-    'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400&h=440&fit=crop', // Rabbit
-    'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=390&fit=crop', // Dog
-    'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=400&h=510&fit=crop', // Cat
-    'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=370&fit=crop', // Fish
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=500&fit=crop',
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=350&fit=crop',
+    'https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=400&h=450&fit=crop',
+    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=380&fit=crop',
+    'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=400&h=520&fit=crop',
+    'https://images.unsplash.com/photo-1452857297128-d9c29adba80b?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&h=480&fit=crop',
+    'https://images.unsplash.com/photo-1606567595334-d39972c85dfd?w=400&h=360&fit=crop',
+    'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400&h=440&fit=crop',
+    'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=390&fit=crop',
+    'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=400&h=510&fit=crop',
+    'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=370&fit=crop',
   ];
 
-  // Scroll controllers for each column
   late List<ScrollController> _controllers;
   late List<Timer> _timers;
 
@@ -98,10 +169,11 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
   void initState() {
     super.initState();
     _controllers = List.generate(
-        3, (i) => ScrollController(initialScrollOffset: _offsets[i]));
+      3,
+      (i) => ScrollController(initialScrollOffset: _offsets[i]),
+    );
     _timers = [];
 
-    // Start auto-scrolling after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startAutoScroll();
     });
@@ -109,8 +181,10 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
 
   void _startAutoScroll() {
     for (int i = 0; i < 3; i++) {
-      _timers.add(Timer.periodic(const Duration(milliseconds: 50), (timer) {
-        if (_controllers[i].hasClients) {
+      _timers.add(
+        Timer.periodic(const Duration(milliseconds: 50), (timer) {
+          if (!_controllers[i].hasClients) return;
+
           final maxScroll = _controllers[i].position.maxScrollExtent;
           final currentScroll = _controllers[i].offset;
 
@@ -119,90 +193,94 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
           } else {
             _controllers[i].jumpTo(currentScroll + _speeds[i]);
           }
-        }
-      }));
+        }),
+      );
     }
   }
 
   @override
   void dispose() {
-    for (var timer in _timers) {
-      timer.cancel();
+    for (final t in _timers) {
+      t.cancel();
     }
-    for (var controller in _controllers) {
-      controller.dispose();
+    for (final c in _controllers) {
+      c.dispose();
     }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(3, (columnIndex) {
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: ListView.builder(
-              controller: _controllers[columnIndex],
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 100, // Infinite-like scroll
-              itemBuilder: (context, index) {
-                final imageIndex =
-                    (columnIndex + index * 3) % _petImages.length;
-                final random = Random(imageIndex);
-                final height =
-                    120.0 + random.nextDouble() * 80; // Random height 120-200
+    return Container(
+      color: AppColors.warmMist, // background behind tiles
+      child: Row(
+        children: List.generate(3, (columnIndex) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: ListView.builder(
+                controller: _controllers[columnIndex],
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 100, // Infinite-like scroll
+                itemBuilder: (context, index) {
+                  final imageIndex =
+                      (columnIndex + index * 3) % _petImages.length;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      height: height,
-                      decoration: BoxDecoration(
-                        color: AppColors.warmMist,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Image.network(
-                        _petImages[imageIndex],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: AppColors.warmMist,
-                            child: Icon(
-                              Icons.pets,
-                              size: 40,
-                              color: AppColors.primarySage.withOpacity(0.5),
-                            ),
-                          );
-                        },
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: AppColors.warmMist,
-                            child: Center(
+                  final random = Random(imageIndex);
+                  final height = 120.0 + random.nextDouble() * 80;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        height: height,
+                        decoration: BoxDecoration(
+                          color: AppColors.warmMist,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Image.network(
+                          _petImages[imageIndex],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: AppColors.warmMist,
                               child: Icon(
                                 Icons.pets,
                                 size: 40,
-                                color: AppColors.primarySage.withOpacity(0.3),
+                                color:
+                                    AppColors.primarySage.withOpacity(0.5),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: AppColors.warmMist,
+                              child: Center(
+                                child: Icon(
+                                  Icons.pets,
+                                  size: 40,
+                                  color:
+                                      AppColors.primarySage.withOpacity(0.3),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }
 
-/// Bottom content section with headline, subtext, and CTAs
 class _ContentSection extends StatelessWidget {
   final VoidCallback onStartPressed;
   final VoidCallback onGuestPressed;
@@ -220,10 +298,9 @@ class _ContentSection extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(flex: 1),
-          // Headline with highlighted word - Hebrew
           RichText(
             textAlign: TextAlign.center,
-            text: TextSpan(
+            text: const TextSpan(
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
@@ -231,55 +308,44 @@ class _ContentSection extends StatelessWidget {
                 height: 1.3,
               ),
               children: [
-                const TextSpan(text: 'מצא את הטיפול המושלם\nלחבר ה'),
+                TextSpan(text: 'ברוך הבא ל־'),
                 TextSpan(
-                  text: 'פרוותי',
-                  style: TextStyle(
-                    color: AppColors.primarySage,
-                  ),
+                  text: 'PetPal',
+                  style: TextStyle(color: AppColors.primarySage),
                 ),
-                const TextSpan(text: ' שלך!'),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          // Subtext description - Hebrew (without payment info)
+          const SizedBox(height: 12),
           Text(
-            'מטפלים מאומתים, עדכונים בזמן אמת,\nושירות אמין לחיית המחמד שלך.',
+            'מצא מטפל אמין או פרסם מודעות אבוד/נמצא בקלות ובמהירות.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.secondarySlate.withOpacity(0.7),
-              height: 1.5,
+              color: AppColors.secondarySlate.withOpacity(0.65),
+              height: 1.6,
             ),
           ),
-          const Spacer(flex: 2),
-          // Primary CTA Button
+          const Spacer(flex: 1),
           SizedBox(
             width: double.infinity,
-            height: 56,
+            height: 52,
             child: ElevatedButton(
               onPressed: onStartPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primarySage,
-                foregroundColor: AppColors.white,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppTheme.superCurveRadius),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 0,
               ),
               child: const Text(
-                'התחל עכשיו',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                'התחל',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
             ),
           ),
           const SizedBox(height: 12),
-          // Secondary Link - Hebrew
           TextButton(
             onPressed: onGuestPressed,
             child: Text(

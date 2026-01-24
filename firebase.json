@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"petpal-platform","appId":"1:399710613869:android:278c6b1a32a377ea3fea64","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"petpal-platform","configurations":{"android":"1:399710613869:android:278c6b1a32a377ea3fea64","ios":"1:399710613869:ios:046192a4b47ae8013fea64"}}}}}}

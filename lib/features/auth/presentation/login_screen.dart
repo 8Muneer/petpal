@@ -1,33 +1,126 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/auth/presentation/signup_screen.dart';
+import 'package:petpal/features/auth/presentation/guest_home_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
+  static const String _logTag = '[LoginScreen]';
+
+  void _log(String message, {Object? error, StackTrace? stackTrace}) {
+    debugPrint('$_logTag $message');
+    if (error != null) debugPrint('$_logTag   error: $error');
+    if (stackTrace != null) debugPrint('$_logTag   stackTrace: $stackTrace');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _log('initState');
+  }
+
   @override
   void dispose() {
+    _log('dispose');
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showSnack('אנא מלא/י אימייל וסיסמה');
+      _log('validation failed: empty email/password');
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(email)) {
+      _showSnack('אנא הזן/י כתובת אימייל תקינה');
+      _log('validation failed: invalid email', error: email);
+      return;
+    }
+
+    _log('attempting login', error: 'email=$email, passwordLength=${password.length}');
     setState(() => _isLoading = true);
-    // TODO: Integrate with AuthState provider
-    Future.delayed(const Duration(seconds: 2), () {
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      // ✅ Navigate to GuestHomeScreen after successful login
+      try {
+        _log('login success, navigating to GuestHomeScreen');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const GuestHomeScreen()),
+        );
+      } catch (e, st) {
+        _log('navigation failed after login', error: e, stackTrace: st);
+        if (!mounted) return;
+        _showSnack('התחברות הצליחה, אבל הניווט נכשל. נסה/י שוב.');
+      }
+    } on FirebaseAuthException catch (e) {
+      _log('FirebaseAuthException during login: ${e.code} | ${e.message}');
+      if (!mounted) return;
+      _showSnack(_friendlyAuthErrorHe(e));
+    } catch (e, st) {
+      _log('Unexpected error during login', error: e, stackTrace: st);
+      if (!mounted) return;
+      _showSnack('שגיאה לא צפויה. נסה/י שוב.');
+    } finally {
       if (mounted) setState(() => _isLoading = false);
-    });
+    }
+  }
+
+  void _showSnack(String msg) {
+    _log('SnackBar: $msg');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
+  String _friendlyAuthErrorHe(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-email':
+        return 'כתובת אימייל לא תקינה';
+      case 'user-disabled':
+        return 'המשתמש חסום';
+      case 'user-not-found':
+        return 'לא נמצא משתמש עם האימייל הזה';
+      case 'wrong-password':
+        return 'סיסמה שגויה';
+      case 'invalid-credential':
+      case 'INVALID_LOGIN_CREDENTIALS':
+        return 'אימייל או סיסמה לא נכונים';
+      case 'network-request-failed':
+        return 'בעיית רשת. בדוק/י אינטרנט ונסה/י שוב';
+      case 'too-many-requests':
+        return 'יותר מדי ניסיונות. נסה/י שוב מאוחר יותר';
+      default:
+        return 'התחברות נכשלה: ${e.message ?? e.code}';
+    }
   }
 
   @override
@@ -42,19 +135,24 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                // Back button
                 Align(
                   alignment: Alignment.centerRight,
                   child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
+                    onPressed: () {
+                      _log('back pressed');
+                      try {
+                        Navigator.pop(context);
+                      } catch (e, st) {
+                        _log('Navigator.pop failed', error: e, stackTrace: st);
+                      }
+                    },
+                    icon: const Icon(
                       Icons.arrow_forward_ios,
                       color: AppColors.secondarySlate,
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Header
                 Center(
                   child: Container(
                     width: 80,
@@ -63,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.primarySage.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.pets,
                       size: 40,
                       color: AppColors.primarySage,
@@ -71,154 +169,132 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  'ברוכים השבים!',
+                const Text(
+                  'ברוכים הבאים 👋',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.secondarySlate,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'התחבר לחשבון שלך כדי להמשיך',
+                  'התחברו כדי להמשיך',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.secondarySlate.withOpacity(0.7),
+                    color: AppColors.secondarySlate.withOpacity(0.65),
                   ),
                 ),
-                const SizedBox(height: 48),
-                // Email field
-                _buildInputField(
+                const SizedBox(height: 32),
+
+                // Email
+                TextField(
                   controller: _emailController,
-                  label: 'כתובת אימייל',
-                  hint: 'example@email.com',
-                  icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
+                  onChanged: (v) => _log('email changed', error: 'length=${v.length}'),
+                  decoration: InputDecoration(
+                    labelText: 'אימייל',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                // Password field
-                _buildInputField(
+
+                // Password
+                TextField(
                   controller: _passwordController,
-                  label: 'סיסמה',
-                  hint: '••••••••',
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  isPasswordVisible: _isPasswordVisible,
-                  onVisibilityToggle: () {
-                    setState(() => _isPasswordVisible = !_isPasswordVisible);
-                  },
-                ),
-                const SizedBox(height: 12),
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to forgot password
-                    },
-                    child: Text(
-                      'שכחת סיסמה?',
-                      style: TextStyle(
-                        color: AppColors.primarySage,
-                        fontWeight: FontWeight.w500,
+                  obscureText: !_isPasswordVisible,
+                  onChanged: (v) => _log('password changed', error: 'length=${v.length}'),
+                  decoration: InputDecoration(
+                    labelText: 'סיסמה',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() => _isPasswordVisible = !_isPasswordVisible);
+                        _log('toggle password visibility', error: _isPasswordVisible);
+                      },
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
+
                 // Login button
                 SizedBox(
-                  height: 56,
+                  height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primarySage,
-                      foregroundColor: AppColors.white,
-                      disabledBackgroundColor:
-                          AppColors.primarySage.withOpacity(0.5),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.superCurveRadius),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 0,
                     ),
                     child: _isLoading
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.white),
+                              strokeWidth: 2.5,
+                              color: Colors.white,
                             ),
                           )
                         : const Text(
-                            'התחבר',
+                            'התחברות',
                             style: TextStyle(
+                              fontWeight: FontWeight.w700,
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                        child: Divider(
-                            color: AppColors.secondarySlate.withOpacity(0.2))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'או',
-                        style: TextStyle(
-                          color: AppColors.secondarySlate.withOpacity(0.5),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                        child: Divider(
-                            color: AppColors.secondarySlate.withOpacity(0.2))),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Social login buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildSocialButton(Icons.g_mobiledata, 'Google'),
-                    const SizedBox(width: 16),
-                    _buildSocialButton(Icons.apple, 'Apple'),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                // Sign up link
+                const SizedBox(height: 18),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'אין לך חשבון?',
+                      'אין לך חשבון? ',
                       style: TextStyle(
-                        color: AppColors.secondarySlate.withOpacity(0.7),
+                        color: AppColors.secondarySlate.withOpacity(0.65),
                       ),
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignupScreen()),
-                        );
+                        _log('go to signup');
+                        try {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SignupScreen()),
+                          );
+                        } catch (e, st) {
+                          _log('navigation to SignupScreen failed', error: e, stackTrace: st);
+                          _showSnack('הניווט נכשל. נסה/י שוב.');
+                        }
                       },
-                      child: Text(
-                        'הירשם עכשיו',
+                      child: const Text(
+                        'הרשמה',
                         style: TextStyle(
+                          fontWeight: FontWeight.w700,
                           color: AppColors.primarySage,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -229,94 +305,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onVisibilityToggle,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.secondarySlate,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.warmMist,
-            borderRadius: BorderRadius.circular(AppTheme.superCurveRadius),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            obscureText: isPassword && !isPasswordVisible,
-            textAlign: TextAlign.right,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: AppColors.secondarySlate.withOpacity(0.4),
-              ),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              prefixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        color: AppColors.secondarySlate.withOpacity(0.5),
-                      ),
-                      onPressed: onVisibilityToggle,
-                    )
-                  : null,
-              suffixIcon: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Icon(icon, color: AppColors.primarySage),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, String label) {
-    return Container(
-      width: 140,
-      height: 50,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.secondarySlate.withOpacity(0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.secondarySlate),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.secondarySlate,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }

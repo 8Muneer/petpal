@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:petpal/core/theme/app_theme.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -13,13 +15,32 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
   bool _acceptTerms = false;
 
+  // User type selector (kept simple as you had TODO)
+  bool _isPetOwnerSelected = true;
+
+  static const String _logTag = '[SignupScreen]';
+
+  void _log(String message, {Object? error, StackTrace? stackTrace}) {
+    debugPrint('$_logTag $message');
+    if (error != null) debugPrint('$_logTag   error: $error');
+    if (stackTrace != null) debugPrint('$_logTag   stackTrace: $stackTrace');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _log('initState');
+  }
+
   @override
   void dispose() {
+    _log('dispose');
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -27,22 +48,130 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
+  Future<void> _handleSignup() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    _log(
+      'attempting signup',
+      error:
+          'email=$email, nameLength=${name.length}, passwordLength=${password.length}, userType=${_isPetOwnerSelected ? 'owner' : 'provider'}',
+    );
+
     if (!_acceptTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('יש לאשר את תנאי השימוש'),
-          backgroundColor: AppColors.alertCoral,
-        ),
-      );
+      _showSnack('יש לאשר את תנאי השימוש', isError: true);
+      _log('validation failed: terms not accepted');
+      return;
+    }
+
+    if (name.isEmpty) {
+      _showSnack('אנא הזן/י שם מלא', isError: true);
+      _log('validation failed: empty name');
+      return;
+    }
+
+    if (email.isEmpty) {
+      _showSnack('אנא הזן/י כתובת אימייל', isError: true);
+      _log('validation failed: empty email');
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(email)) {
+      _showSnack('כתובת אימייל לא תקינה', isError: true);
+      _log('validation failed: invalid email', error: email);
+      return;
+    }
+
+    if (password.isEmpty) {
+      _showSnack('אנא הזן/י סיסמה', isError: true);
+      _log('validation failed: empty password');
+      return;
+    }
+
+    if (password.length < 6) {
+      _showSnack('הסיסמה חייבת להכיל לפחות 6 תווים', isError: true);
+      _log('validation failed: password too short', error: password.length);
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showSnack('הסיסמאות אינן תואמות', isError: true);
+      _log('validation failed: password mismatch');
       return;
     }
 
     setState(() => _isLoading = true);
-    // TODO: Integrate with AuthState provider
-    Future.delayed(const Duration(seconds: 2), () {
+
+    try {
+      _log('calling FirebaseAuth.createUserWithEmailAndPassword');
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      _log('signup success: uid=${credential.user?.uid}');
+
+      // Optional: set display name (nice to have)
+      try {
+        await credential.user?.updateDisplayName(name);
+        _log('displayName updated');
+      } catch (e, st) {
+        // Not critical for signup success
+        _log('failed to update displayName', error: e, stackTrace: st);
+      }
+
+      if (!mounted) return;
+
+      _showSnack('החשבון נוצר בהצלחה ✅');
+
+      // For now: go back to login
+      try {
+        Navigator.pop(context);
+        _log('Navigator.pop -> back to login');
+      } catch (e, st) {
+        _log('Navigator.pop failed', error: e, stackTrace: st);
+      }
+    } on FirebaseAuthException catch (e) {
+      _log('FirebaseAuthException during signup: ${e.code} | ${e.message}');
+      if (!mounted) return;
+      _showSnack(_friendlyRegisterErrorHe(e), isError: true);
+    } catch (e, st) {
+      _log('Unexpected error during signup', error: e, stackTrace: st);
+      if (!mounted) return;
+      _showSnack('שגיאה לא צפויה. נסה/י שוב.', isError: true);
+    } finally {
       if (mounted) setState(() => _isLoading = false);
-    });
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    _log('SnackBar: $msg');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? AppColors.alertCoral : AppColors.primarySage,
+      ),
+    );
+  }
+
+  String _friendlyRegisterErrorHe(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'האימייל כבר בשימוש';
+      case 'invalid-email':
+        return 'כתובת אימייל לא תקינה';
+      case 'weak-password':
+        return 'סיסמה חלשה מדי';
+      case 'network-request-failed':
+        return 'בעיית רשת. בדוק/י אינטרנט ונסה/י שוב';
+      case 'operation-not-allowed':
+        return 'פעולה זו אינה זמינה כרגע';
+      default:
+        return 'הרשמה נכשלה: ${e.message ?? e.code}';
+    }
   }
 
   @override
@@ -56,186 +185,215 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
-                // Back button
+                const SizedBox(height: 60),
                 Align(
                   alignment: Alignment.centerRight,
                   child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
+                    onPressed: () {
+                      _log('back pressed');
+                      try {
+                        Navigator.pop(context);
+                      } catch (e, st) {
+                        _log('Navigator.pop failed', error: e, stackTrace: st);
+                      }
+                    },
+                    icon: const Icon(
                       Icons.arrow_forward_ios,
                       color: AppColors.secondarySlate,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Header
-                Text(
-                  'צור חשבון חדש',
+                const Text(
+                  'יצירת חשבון',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.secondarySlate,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
-                  'הצטרף למשפחת PetPal והתחל לטפל בחיית המחמד שלך',
+                  'מלא/י את הפרטים כדי להירשם',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.secondarySlate.withOpacity(0.7),
+                    color: AppColors.secondarySlate.withOpacity(0.65),
                   ),
                 ),
-                const SizedBox(height: 32),
-                // User type selector
-                _buildUserTypeSelector(),
-                const SizedBox(height: 24),
-                // Name field
-                _buildInputField(
+                const SizedBox(height: 28),
+
+                // Name
+                TextField(
                   controller: _nameController,
-                  label: 'שם מלא',
-                  hint: 'הכנס את שמך',
-                  icon: Icons.person_outline,
+                  onChanged: (v) => _log('name changed', error: 'length=${v.length}'),
+                  decoration: InputDecoration(
+                    labelText: 'שם מלא',
+                    prefixIcon: const Icon(Icons.person_outline),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                // Email field
-                _buildInputField(
+                const SizedBox(height: 14),
+
+                // Email
+                TextField(
                   controller: _emailController,
-                  label: 'כתובת אימייל',
-                  hint: 'example@email.com',
-                  icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
+                  onChanged: (v) => _log('email changed', error: 'length=${v.length}'),
+                  decoration: InputDecoration(
+                    labelText: 'אימייל',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                // Password field
-                _buildInputField(
+                const SizedBox(height: 14),
+
+                // Password
+                TextField(
                   controller: _passwordController,
-                  label: 'סיסמה',
-                  hint: 'לפחות 8 תווים',
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  isPasswordVisible: _isPasswordVisible,
-                  onVisibilityToggle: () {
-                    setState(() => _isPasswordVisible = !_isPasswordVisible);
-                  },
+                  obscureText: !_isPasswordVisible,
+                  onChanged: (v) => _log('password changed', error: 'length=${v.length}'),
+                  decoration: InputDecoration(
+                    labelText: 'סיסמה',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() => _isPasswordVisible = !_isPasswordVisible);
+                        _log('toggle password visibility', error: _isPasswordVisible);
+                      },
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                // Confirm password field
-                _buildInputField(
+                const SizedBox(height: 14),
+
+                // Confirm Password
+                TextField(
                   controller: _confirmPasswordController,
-                  label: 'אימות סיסמה',
-                  hint: 'הכנס את הסיסמה שוב',
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  isPasswordVisible: _isConfirmPasswordVisible,
-                  onVisibilityToggle: () {
-                    setState(() =>
-                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
-                  },
+                  obscureText: !_isConfirmPasswordVisible,
+                  onChanged: (v) =>
+                      _log('confirmPassword changed', error: 'length=${v.length}'),
+                  decoration: InputDecoration(
+                    labelText: 'אימות סיסמה',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
+                        _log('toggle confirm password visibility',
+                            error: _isConfirmPasswordVisible);
+                      },
+                      icon: Icon(
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 20),
-                // Terms checkbox
+                const SizedBox(height: 18),
+
+                // Simple user type selector
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Text('בעל חיית מחמד'),
+                        selected: _isPetOwnerSelected,
+                        onSelected: (v) {
+                          setState(() => _isPetOwnerSelected = true);
+                          _log('userType selected: owner');
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Text('מטפל/ת'),
+                        selected: !_isPetOwnerSelected,
+                        onSelected: (v) {
+                          setState(() => _isPetOwnerSelected = false);
+                          _log('userType selected: provider');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Terms
                 Row(
                   children: [
                     Checkbox(
                       value: _acceptTerms,
-                      onChanged: (value) =>
-                          setState(() => _acceptTerms = value ?? false),
-                      activeColor: AppColors.primarySage,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      onChanged: (v) {
+                        setState(() => _acceptTerms = v ?? false);
+                        _log('terms toggled', error: _acceptTerms);
+                      },
                     ),
                     Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.secondarySlate.withOpacity(0.7),
-                          ),
-                          children: [
-                            const TextSpan(text: 'אני מסכים ל'),
-                            TextSpan(
-                              text: 'תנאי השימוש',
-                              style: TextStyle(
-                                color: AppColors.primarySage,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const TextSpan(text: ' ו'),
-                            TextSpan(
-                              text: 'מדיניות הפרטיות',
-                              style: TextStyle(
-                                color: AppColors.primarySage,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                      child: Text(
+                        'אני מאשר/ת את תנאי השימוש',
+                        style: TextStyle(
+                          color: AppColors.secondarySlate.withOpacity(0.75),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                // Signup button
+                const SizedBox(height: 14),
+
                 SizedBox(
-                  height: 56,
+                  height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleSignup,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primarySage,
-                      foregroundColor: AppColors.white,
-                      disabledBackgroundColor:
-                          AppColors.primarySage.withOpacity(0.5),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.superCurveRadius),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 0,
                     ),
                     child: _isLoading
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.white),
+                              strokeWidth: 2.5,
+                              color: Colors.white,
                             ),
                           )
                         : const Text(
-                            'צור חשבון',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            'הרשמה',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                           ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                // Login link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'כבר יש לך חשבון?',
-                      style: TextStyle(
-                        color: AppColors.secondarySlate.withOpacity(0.7),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'התחבר כאן',
-                        style: TextStyle(
-                          color: AppColors.primarySage,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 24),
               ],
@@ -243,121 +401,6 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildUserTypeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.warmMist,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildTypeOption('בעל חיית מחמד', Icons.pets, true),
-          ),
-          Expanded(
-            child: _buildTypeOption('מטפל', Icons.volunteer_activism, false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeOption(String label, IconData icon, bool isSelected) {
-    return GestureDetector(
-      onTap: () {
-        // TODO: Handle user type selection
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primarySage : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isSelected ? AppColors.white : AppColors.secondarySlate,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.white : AppColors.secondarySlate,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onVisibilityToggle,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.secondarySlate,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.warmMist,
-            borderRadius: BorderRadius.circular(AppTheme.superCurveRadius),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            obscureText: isPassword && !isPasswordVisible,
-            textAlign: TextAlign.right,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: AppColors.secondarySlate.withOpacity(0.4),
-              ),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              prefixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        color: AppColors.secondarySlate.withOpacity(0.5),
-                      ),
-                      onPressed: onVisibilityToggle,
-                    )
-                  : null,
-              suffixIcon: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Icon(icon, color: AppColors.primarySage),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
