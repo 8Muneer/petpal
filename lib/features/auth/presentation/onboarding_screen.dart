@@ -38,14 +38,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Column(
             children: [
               // ✅ Top 55% - Masonry Gallery (same as old)
-              Expanded(
+              const Expanded(
                 flex: 55,
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
+                  borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(AppTheme.superCurveRadius),
                     bottomRight: Radius.circular(AppTheme.superCurveRadius),
                   ),
-                  child: const _MasonryGallery(),
+                  child: _MasonryGallery(),
                 ),
               ),
 

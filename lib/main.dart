@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/features/auth/presentation/onboarding_screen.dart';
 import 'package:petpal/firebase_options.dart';
+
+// ✅ screens
+import 'package:petpal/features/auth/presentation/onboarding_screen.dart';
+import 'package:petpal/features/auth/presentation/login_screen.dart';
+import 'package:petpal/features/auth/presentation/signup_screen.dart';
+import 'package:petpal/features/auth/presentation/guest_home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,27 +34,24 @@ class PetPalApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
 
-      // ✅ Hebrew RTL base setup (applies to ALL screens)
-      locale: const Locale('he'),
-      supportedLocales: const [
-        Locale('he'),
-        Locale('en'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      builder: (context, child) {
-        // Force RTL layout direction globally.
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child ?? const SizedBox.shrink(),
-        );
+      // ✅ Start screen
+      initialRoute: '/onboarding',
+
+      // ✅ Named routes (THIS fixes your error)
+      routes: {
+        '/onboarding': (_) => const OnboardingScreen(),
+        '/login': (_) => const LoginScreen(),
+        '/signup': (_) => const SignupScreen(),
+        '/guest': (_) => const GuestHomeScreen(),
+
+        // (optional) after login/signup
+        '/home': (_) => const GuestHomeScreen(),
       },
 
-      // ✅ Always starts on Welcome/Onboarding
-      home: const OnboardingScreen(),
+      // ✅ fallback if any route missing
+      onUnknownRoute: (_) => MaterialPageRoute(
+        builder: (_) => const OnboardingScreen(),
+      ),
     );
   }
 }
