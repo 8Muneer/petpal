@@ -1,17 +1,20 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:petpal/core/theme/app_theme.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
-class GuestHomeScreen extends StatefulWidget {
-  const GuestHomeScreen({super.key});
+class UserHomeScreen extends StatefulWidget {
+  const UserHomeScreen({super.key});
 
   @override
-  State<GuestHomeScreen> createState() => _GuestHomeScreenState();
+  State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
-class _GuestHomeScreenState extends State<GuestHomeScreen> {
+class _UserHomeScreenState extends State<UserHomeScreen>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
   // Mock cards (later replace with Firestore)
@@ -64,6 +67,21 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   List<_ServiceCardData> get _petSittingCards =>
       _cards.where((c) => c.type == ServiceType.petSitting).toList();
 
+  User? get _user => FirebaseAuth.instance.currentUser;
+
+  String get _displayName {
+    final u = _user;
+    final dn = (u?.displayName ?? '').trim();
+    if (dn.isNotEmpty) return dn;
+
+    final email = (u?.email ?? '').trim();
+    if (email.contains('@')) return email.split('@').first;
+
+    return 'משתמש';
+  }
+
+  String get _email => (_user?.email ?? '').trim();
+
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -76,31 +94,83 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     );
   }
 
-  void _requireLogin() => _requireLoginDialog(context);
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+  }
+
+  void _confirmLogout() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Text(
+            'להתנתק מהחשבון?',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: const Text('תוכל/י להתחבר שוב בכל זמן.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await _logout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F766E),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text('התנתקות',
+                  style: TextStyle(fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color get _bgTop => const Color(0xFFECFDF5); // minty
+  Color get _bgMid => const Color(0xFFF6F7FB); // cool gray
+  Color get _bgBottom => const Color(0xFFFFFFFF);
 
   @override
   Widget build(BuildContext context) {
     final tabs = <Widget>[
       _HomeTab(
+        displayName: _displayName,
+        email: _email,
         cards: _cards,
-        onRequireLogin: _requireLogin,
-        onToast: _toast,
+        onAction: (msg) => _toast(msg),
       ),
       _LostPetsTab(
-        onRequireLogin: _requireLogin,
-        onToast: _toast,
+        onAction: (msg) => _toast(msg),
       ),
       _CardsListTab(
         title: 'טיולים (Dog Walk)',
-        subtitle: 'תצוגה בלבד כאורח • התחבר/י להזמנה',
+        subtitle: 'מצא/י דוג-ווקר קרוב ובזמינות מהירה',
         cards: _dogWalkCards,
-        onRequireLogin: _requireLogin,
+        onAction: (msg) => _toast(msg),
       ),
       _CardsListTab(
         title: 'שמירה (Pet Sitting)',
-        subtitle: 'תצוגה בלבד כאורח • התחבר/י להזמנה',
+        subtitle: 'מטפלים עם דירוגים מאומתים',
         cards: _petSittingCards,
-        onRequireLogin: _requireLogin,
+        onAction: (msg) => _toast(msg),
       ),
     ];
 
@@ -108,7 +178,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         extendBody: true,
-        backgroundColor: Colors.white,
+        backgroundColor: _bgBottom,
         body: Stack(
           children: [
             // Background gradient
@@ -119,16 +189,16 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                     colors: [
-                      const Color(0xFFECFDF5),
-                      const Color(0xFFF6F7FB),
-                      Colors.white,
+                      _bgTop,
+                      _bgMid,
+                      _bgBottom,
                     ],
                   ),
                 ),
               ),
             ),
 
-            // subtle blobs
+            // subtle blob
             Positioned(
               top: -120,
               left: -90,
@@ -139,8 +209,8 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF34D399).withOpacity(0.20),
-                      const Color(0xFF0EA5E9).withOpacity(0.12),
+                      const Color(0xFF34D399).withOpacity(0.22),
+                      const Color(0xFF0EA5E9).withOpacity(0.14),
                     ],
                   ),
                 ),
@@ -164,12 +234,16 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
               ),
             ),
 
+            // Content
             SafeArea(
               child: Column(
                 children: [
-                  _GuestTopBar(
-                    onLoginPressed: () => Navigator.pushNamed(context, '/login'),
-                    onProfilePressed: _requireLogin,
+                  _ModernTopBar(
+                    displayName: _displayName,
+                    email: _email,
+                    onProfilePressed: () =>
+                        Navigator.pushNamed(context, '/profile'),
+                    onLogoutPressed: _confirmLogout,
                   ),
                   Expanded(
                     child: AnimatedSwitcher(
@@ -192,12 +266,14 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 88),
+                  const SizedBox(height: 88), // space for floating nav
                 ],
               ),
             ),
           ],
         ),
+
+        // Floating glass bottom nav
         bottomNavigationBar: _GlassNavBar(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),
@@ -207,16 +283,24 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   }
 }
 
-// ====================== Top bar ======================
-
-class _GuestTopBar extends StatelessWidget {
-  final VoidCallback onLoginPressed;
+class _ModernTopBar extends StatelessWidget {
+  final String displayName;
+  final String email;
   final VoidCallback onProfilePressed;
+  final VoidCallback onLogoutPressed;
 
-  const _GuestTopBar({
-    required this.onLoginPressed,
+  const _ModernTopBar({
+    required this.displayName,
+    required this.email,
     required this.onProfilePressed,
+    required this.onLogoutPressed,
   });
+
+  String get _initial {
+    final s = displayName.trim();
+    if (s.isEmpty) return 'P';
+    return s.characters.first.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,9 +317,11 @@ class _GuestTopBar extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'שלום 👋',
-                          style: TextStyle(
+                        Text(
+                          'שלום, $displayName 👋',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF0F172A),
@@ -244,23 +330,25 @@ class _GuestTopBar extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'את/ה גולש/ת כאורח • תצוגה בלבד',
+                          email.isEmpty
+                              ? 'בוא/י נמצא מטפל מושלם לחיית המחמד שלך'
+                              : email,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF334155).withOpacity(0.82),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155).withOpacity(0.8),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 10),
-                  _PillButton(
-                    text: 'התחבר/י',
-                    icon: Icons.login_rounded,
-                    onTap: onLoginPressed,
+                  _PillIconButton(
+                    icon: Icons.logout_rounded,
+                    tooltip: 'התנתקות',
+                    onTap: onLogoutPressed,
                   ),
                 ],
               ),
@@ -275,8 +363,14 @@ class _GuestTopBar extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                color: Colors.white.withOpacity(0.85),
-                border: Border.all(color: Colors.white.withOpacity(0.55)),
+                gradient: const LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [
+                    Color(0xFF0F766E),
+                    Color(0xFF22C55E),
+                  ],
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.10),
@@ -285,8 +379,16 @@ class _GuestTopBar extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.person_outline_rounded,
-                  color: Color(0xFF0F172A)),
+              child: Center(
+                child: Text(
+                  _initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -295,17 +397,94 @@ class _GuestTopBar extends StatelessWidget {
   }
 }
 
-// ====================== Tabs ======================
+class _GlassNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+
+  const _GlassNavBar({required this.currentIndex, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.72),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.45)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 26,
+                  offset: const Offset(0, 14),
+                ),
+              ],
+            ),
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                height: 66,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  final selected = states.contains(WidgetState.selected);
+                  return TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                    color: selected
+                        ? const Color(0xFF0F766E)
+                        : const Color(0xFF64748B),
+                  );
+                }),
+              ),
+              child: NavigationBar(
+                selectedIndex: currentIndex,
+                onDestinationSelected: onChanged,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'בית',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.pets_outlined),
+                    selectedIcon: Icon(Icons.pets_rounded),
+                    label: 'אבודים',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.directions_walk_outlined),
+                    selectedIcon: Icon(Icons.directions_walk_rounded),
+                    label: 'טיולים',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.home_work_outlined),
+                    selectedIcon: Icon(Icons.home_work_rounded),
+                    label: 'שמירה',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _HomeTab extends StatelessWidget {
+  final String displayName;
+  final String email;
   final List<_ServiceCardData> cards;
-  final VoidCallback onRequireLogin;
-  final void Function(String msg) onToast;
+  final void Function(String msg) onAction;
 
   const _HomeTab({
+    required this.displayName,
+    required this.email,
     required this.cards,
-    required this.onRequireLogin,
-    required this.onToast,
+    required this.onAction,
   });
 
   @override
@@ -313,16 +492,13 @@ class _HomeTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
-        const _GuestHeroBanner(),
-        const SizedBox(height: 12),
-
-        _HeroSearchBar(onTap: onRequireLogin),
+        _HeroSearchBar(onTap: () => onAction('TODO: Search flow')),
         const SizedBox(height: 14),
 
-        const _SectionHeader(
-          title: 'הצצה לפיצ׳רים',
-          subtitle: 'כדי להזמין, לפרסם ולצ׳אט — צריך חשבון',
-          trailing: _TinyChip(text: 'אורח'),
+        _SectionHeader(
+          title: 'פעולות מהירות',
+          subtitle: 'תוך שניות – פרסום, צ׳אט ועוד',
+          trailing: _TinyChip(text: 'חדש'),
         ),
         const SizedBox(height: 10),
 
@@ -338,23 +514,21 @@ class _HomeTab extends StatelessWidget {
                   end: Alignment.bottomLeft,
                   colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
                 ),
-                locked: true,
-                onTap: onRequireLogin,
+                onTap: () => onAction('TODO: Publish card flow'),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _GradientActionCard(
                 title: 'צ׳אט מאובטח',
-                subtitle: 'רק למשתמשים רשומים',
+                subtitle: 'פתח שיחות',
                 icon: Icons.chat_bubble_outline,
                 gradient: const LinearGradient(
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                   colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
                 ),
-                locked: true,
-                onTap: onRequireLogin,
+                onTap: () => onAction('TODO: Chat flow'),
               ),
             ),
           ],
@@ -362,26 +536,10 @@ class _HomeTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        Row(
-          children: [
-            const Expanded(
-              child: _SectionHeader(
-                title: 'עדכונים אחרונים',
-                subtitle: 'קהילה פעילה בירושלים',
-                trailing: _TinyChip(text: 'LIVE'),
-              ),
-            ),
-            TextButton(
-              onPressed: onRequireLogin,
-              child: const Text(
-                'ראה עוד',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F766E),
-                ),
-              ),
-            ),
-          ],
+        _SectionHeader(
+          title: 'עדכונים אחרונים',
+          subtitle: 'דברים שקרו ממש עכשיו',
+          trailing: const _TinyChip(text: 'LIVE'),
         ),
         const SizedBox(height: 10),
 
@@ -401,38 +559,40 @@ class _HomeTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        const _SectionHeader(
+        _SectionHeader(
           title: 'מומלצים בקרבתך',
-          subtitle: 'תצוגה בלבד • הזמנה נעולה',
+          subtitle: 'מטפלים עם דירוגים גבוהים',
+          trailing: TextButton(
+            onPressed: () => onAction('TODO: View all'),
+            child: const Text(
+              'הצג הכל',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F766E),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
 
         ...cards.take(3).map(
               (c) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _ModernServiceCardLocked(
+                child: _ModernServiceCard(
                   data: c,
-                  onPressed: onRequireLogin,
+                  onPressed: () => onAction('TODO: Booking/Request flow'),
                 ),
               ),
             ),
-
-        const SizedBox(height: 6),
-        _PrimaryGradientButton(
-          text: 'התחבר/י כדי לפתוח את כל הפיצ׳רים',
-          icon: Icons.lock_open_rounded,
-          onTap: () => Navigator.pushNamed(context, '/login'),
-        ),
       ],
     );
   }
 }
 
 class _LostPetsTab extends StatelessWidget {
-  final VoidCallback onRequireLogin;
-  final void Function(String msg) onToast;
+  final void Function(String msg) onAction;
 
-  const _LostPetsTab({required this.onRequireLogin, required this.onToast});
+  const _LostPetsTab({required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +601,7 @@ class _LostPetsTab extends StatelessWidget {
       children: [
         const _SectionHeader(
           title: 'חיות אבודות',
-          subtitle: 'תצוגה בלבד כאורח • דיווח + AI נעולים',
+          subtitle: 'דיווחים מהקהילה + התאמות AI בהמשך',
         ),
         const SizedBox(height: 10),
 
@@ -461,9 +621,9 @@ class _LostPetsTab extends StatelessWidget {
         const SizedBox(height: 18),
 
         _PrimaryGradientButton(
-          text: 'דווח/י על חיה אבודה (נעול)',
-          icon: Icons.lock_rounded,
-          onTap: onRequireLogin,
+          text: 'דווח/י על חיה אבודה',
+          icon: Icons.add_rounded,
+          onTap: () => onAction('TODO: Report lost pet'),
         ),
       ],
     );
@@ -474,13 +634,13 @@ class _CardsListTab extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<_ServiceCardData> cards;
-  final VoidCallback onRequireLogin;
+  final void Function(String msg) onAction;
 
   const _CardsListTab({
     required this.title,
     required this.subtitle,
     required this.cards,
-    required this.onRequireLogin,
+    required this.onAction,
   });
 
   @override
@@ -493,71 +653,13 @@ class _CardsListTab extends StatelessWidget {
         ...cards.map(
           (c) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _ModernServiceCardLocked(
+            child: _ModernServiceCard(
               data: c,
-              onPressed: onRequireLogin,
+              onPressed: () => onAction('TODO: Booking/Request flow'),
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-// ====================== Modern widgets (guest) ======================
-
-class _GuestHeroBanner extends StatelessWidget {
-  const _GuestHeroBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return _GlassCard(
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-              ),
-            ),
-            child: const Icon(Icons.lock_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'מצב אורח',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'אפשר לצפות בלבד. התחבר/י כדי להזמין, לפרסם ולצ׳אט.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          _TinyChip(
-            text: 'תצוגה',
-            color: const Color(0xFF0EA5E9),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -606,21 +708,13 @@ class _HeroSearchBar extends StatelessWidget {
                 color: const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.lock_outline_rounded,
-                      size: 16, color: Color(0xFF0F766E)),
-                  SizedBox(width: 6),
-                  Text(
-                    'נעול',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F766E),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+              child: const Text(
+                'סינון',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F766E),
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -635,7 +729,6 @@ class _GradientActionCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final LinearGradient gradient;
-  final bool locked;
   final VoidCallback onTap;
 
   const _GradientActionCard({
@@ -643,7 +736,6 @@ class _GradientActionCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.gradient,
-    required this.locked,
     required this.onTap,
   });
 
@@ -668,33 +760,15 @@ class _GradientActionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.20),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.22)),
-                  ),
-                  child: Icon(icon, color: Colors.white),
-                ),
-                const Spacer(),
-                if (locked)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(999),
-                      border:
-                          Border.all(color: Colors.white.withOpacity(0.22)),
-                    ),
-                    child: const Icon(Icons.lock_rounded,
-                        size: 16, color: Colors.white),
-                  ),
-              ],
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.22)),
+              ),
+              child: Icon(icon, color: Colors.white),
             ),
             const SizedBox(height: 12),
             Text(
@@ -776,7 +850,8 @@ class _ModernFeedTile extends StatelessWidget {
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
+            decoration:
+                BoxDecoration(shape: BoxShape.circle, color: accent),
           ),
         ],
       ),
@@ -865,11 +940,11 @@ class _LostPetModernCard extends StatelessWidget {
   }
 }
 
-class _ModernServiceCardLocked extends StatelessWidget {
+class _ModernServiceCard extends StatelessWidget {
   final _ServiceCardData data;
   final VoidCallback onPressed;
 
-  const _ModernServiceCardLocked({
+  const _ModernServiceCard({
     required this.data,
     required this.onPressed,
   });
@@ -985,7 +1060,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                   color: _accent.withOpacity(0.12),
                 ),
                 child: Text(
-                  '$_typeLabel • 🔒',
+                  '$_typeLabel • ${data.type == ServiceType.available ? "🟢" : "✨"}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -994,7 +1069,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              _MiniLockButton(
+              _MiniPrimaryButton(
                 text: 'בקשת הזמנה',
                 onTap: onPressed,
               ),
@@ -1005,87 +1080,6 @@ class _ModernServiceCardLocked extends StatelessWidget {
     );
   }
 }
-
-// ====================== Bottom nav ======================
-
-class _GlassNavBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onChanged;
-
-  const _GlassNavBar({required this.currentIndex, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.72),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.45)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 26,
-                  offset: const Offset(0, 14),
-                ),
-              ],
-            ),
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                height: 66,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                  final selected = states.contains(WidgetState.selected);
-                  return TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                    color: selected
-                        ? const Color(0xFF0F766E)
-                        : const Color(0xFF64748B),
-                  );
-                }),
-              ),
-              child: NavigationBar(
-                selectedIndex: currentIndex,
-                onDestinationSelected: onChanged,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
-                    label: 'בית',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.pets_outlined),
-                    selectedIcon: Icon(Icons.pets_rounded),
-                    label: 'אבודים',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.directions_walk_outlined),
-                    selectedIcon: Icon(Icons.directions_walk_rounded),
-                    label: 'טיולים',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.home_work_outlined),
-                    selectedIcon: Icon(Icons.home_work_rounded),
-                    label: 'שמירה',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ====================== Shared components ======================
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -1134,67 +1128,23 @@ class _SectionHeader extends StatelessWidget {
 
 class _TinyChip extends StatelessWidget {
   final String text;
-  final Color? color;
 
-  const _TinyChip({required this.text, this.color});
+  const _TinyChip({required this.text});
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF0F766E);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: c.withOpacity(0.12),
+        color: const Color(0xFF0F766E).withOpacity(0.10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w900,
-          color: c,
-        ),
-      ),
-    );
-  }
-}
-
-class _PillButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _PillButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: const Color(0xFF0F766E)),
-            const SizedBox(width: 8),
-            const Text(
-              'התחבר/י',
-              style: TextStyle(
-                color: Color(0xFF0F172A),
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
+          color: Color(0xFF0F766E),
         ),
       ),
     );
@@ -1265,11 +1215,11 @@ class _PrimaryGradientButton extends StatelessWidget {
   }
 }
 
-class _MiniLockButton extends StatelessWidget {
+class _MiniPrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  const _MiniLockButton({required this.text, required this.onTap});
+  const _MiniPrimaryButton({required this.text, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1286,20 +1236,47 @@ class _MiniLockButton extends StatelessWidget {
             colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.lock_rounded, color: Colors.white, size: 16),
-            SizedBox(width: 6),
-            Text(
-              'בקשת הזמנה',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-              ),
-            ),
-          ],
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _PillIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Center(
+            child: Icon(Icons.logout_rounded, color: Color(0xFF334155)),
+          ),
         ),
       ),
     );
@@ -1342,8 +1319,6 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-// ====================== Data ======================
-
 class _ServiceCardData {
   final ServiceType type;
   final String name;
@@ -1360,49 +1335,4 @@ class _ServiceCardData {
     required this.priceText,
     required this.timeText,
   });
-}
-
-// ====================== Login gate dialog ======================
-
-void _requireLoginDialog(BuildContext context) {
-  showDialog<void>(
-    context: context,
-    builder: (ctx) => Directionality(
-      textDirection: TextDirection.rtl,
-      child: AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Text(
-          'צריך להתחבר כדי להמשיך',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        content: const Text(
-          'במצב אורח אפשר לצפות בלבד. התחבר/י כדי להזמין, לפרסם ולצ׳אט.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ביטול'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pushNamed(context, '/login');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F766E),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: const Text('התחבר/י',
-                style: TextStyle(fontWeight: FontWeight.w900)),
-          ),
-        ],
-      ),
-    ),
-  );
 }

@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/auth/presentation/signup_screen.dart';
-import 'package:petpal/features/auth/presentation/guest_home_screen.dart';
+import 'package:petpal/features/auth/presentation/user_home_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -69,12 +69,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
 
-      // ✅ Navigate to GuestHomeScreen after successful login
+      // ✅ Navigate to UserHomeScreen after successful login
       try {
-        _log('login success, navigating to GuestHomeScreen');
+        _log('login success, navigating to UserHomeScreen');
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const GuestHomeScreen()),
+          MaterialPageRoute(builder: (_) => const UserHomeScreen()),
         );
       } catch (e, st) {
         _log('navigation failed after login', error: e, stackTrace: st);
@@ -138,14 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: IconButton(
-                    onPressed: () {
-                      _log('back pressed');
-                      try {
-                        Navigator.pop(context);
-                      } catch (e, st) {
-                        _log('Navigator.pop failed', error: e, stackTrace: st);
-                      }
-                    },
+                    onPressed: () => Navigator.pop(context),
                     icon: const Icon(
                       Icons.arrow_forward_ios,
                       color: AppColors.secondarySlate,
@@ -161,11 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: AppColors.primarySage.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: const Icon(
-                      Icons.pets,
-                      size: 40,
-                      color: AppColors.primarySage,
-                    ),
+                    child: const Icon(Icons.pets, size: 40, color: AppColors.primarySage),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -189,11 +178,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Email
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  onChanged: (v) => _log('email changed', error: 'length=${v.length}'),
                   decoration: InputDecoration(
                     labelText: 'אימייל',
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -207,11 +194,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Password
                 TextField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
-                  onChanged: (v) => _log('password changed', error: 'length=${v.length}'),
                   decoration: InputDecoration(
                     labelText: 'סיסמה',
                     prefixIcon: const Icon(Icons.lock_outline),
@@ -222,10 +207,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderSide: BorderSide.none,
                     ),
                     suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() => _isPasswordVisible = !_isPasswordVisible);
-                        _log('toggle password visibility', error: _isPasswordVisible);
-                      },
+                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                       icon: Icon(
                         _isPasswordVisible
                             ? Icons.visibility_off_outlined
@@ -236,7 +218,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Login button
                 SizedBox(
                   height: 52,
                   child: ElevatedButton(
@@ -259,10 +240,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           )
                         : const Text(
                             'התחברות',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                           ),
                   ),
                 ),
@@ -273,22 +251,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Text(
                       'אין לך חשבון? ',
-                      style: TextStyle(
-                        color: AppColors.secondarySlate.withOpacity(0.65),
-                      ),
+                      style: TextStyle(color: AppColors.secondarySlate.withOpacity(0.65)),
                     ),
                     TextButton(
                       onPressed: () {
-                        _log('go to signup');
-                        try {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const SignupScreen()),
-                          );
-                        } catch (e, st) {
-                          _log('navigation to SignupScreen failed', error: e, stackTrace: st);
-                          _showSnack('הניווט נכשל. נסה/י שוב.');
-                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SignupScreen()),
+                        );
                       },
                       child: const Text(
                         'הרשמה',
