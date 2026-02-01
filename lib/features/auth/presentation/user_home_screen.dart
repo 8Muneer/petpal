@@ -266,7 +266,7 @@ class _UserHomeScreenState extends State<UserHomeScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 88), // space for floating nav
+
                 ],
               ),
             ),

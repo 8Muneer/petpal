@@ -192,7 +192,6 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 88),
                 ],
               ),
             ),

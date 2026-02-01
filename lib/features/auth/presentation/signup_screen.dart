@@ -17,33 +17,55 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
   bool _acceptTerms = false;
 
-  // ✅ default: Pet Owner selected (like your screenshot)
+  // Role selection (PetOwner vs ServiceProvider)
   bool _isPetOwnerSelected = true;
 
-  // Firestore (users collection)
+  final _auth = FirebaseAuth.instance;
   final _usersRef = FirebaseFirestore.instance.collection('users');
 
-  static const String _logTag = '[SignupScreen]';
-
   void _log(String message, {Object? error, StackTrace? stackTrace}) {
-    debugPrint('$_logTag $message');
-    if (error != null) debugPrint('$_logTag   error: $error');
-    if (stackTrace != null) debugPrint('$_logTag   stackTrace: $stackTrace');
+    // ignore: avoid_print
+    print('[SignupScreen] $message');
+    if (error != null) {
+      // ignore: avoid_print
+      print('[SignupScreen] error: $error');
+    }
+    if (stackTrace != null) {
+      // ignore: avoid_print
+      print('[SignupScreen] stackTrace: $stackTrace');
+    }
   }
 
-  @override
-  void dispose() {
-    _log('dispose');
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Text(msg),
+        backgroundColor: isError ? const Color(0xFFB91C1C) : const Color(0xFF0F766E),
+      ),
+    );
+  }
+
+  String _friendlyRegisterErrorHe(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'האימייל כבר בשימוש. נסה/י להתחבר או השתמש/י באימייל אחר.';
+      case 'invalid-email':
+        return 'כתובת האימייל לא תקינה.';
+      case 'weak-password':
+        return 'הסיסמה חלשה מדי. נסה/י סיסמה חזקה יותר.';
+      case 'operation-not-allowed':
+        return 'שיטת ההרשמה הזו לא זמינה כרגע.';
+      case 'network-request-failed':
+        return 'בעיית רשת. בדוק/י את החיבור ונסה/י שוב.';
+      default:
+        return 'שגיאה בהרשמה. נסה/י שוב.';
+    }
   }
 
   Future<void> _handleSignup() async {
@@ -55,7 +77,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _log(
       'attempting signup',
       error:
-          'email=$email, nameLength=${name.length}, passwordLength=${password.length}, role=${_isPetOwnerSelected ? 'owner' : 'provider'}',
+          'email=$email, nameLength=${name.length}, passwordLength=${password.length}, role=${_isPetOwnerSelected ? 'petOwner' : 'serviceProvider'}',
     );
 
     if (!_acceptTerms) {
@@ -93,13 +115,14 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       final uid = credential.user?.uid;
+
+      _log('signup success uid=$uid');
 
       // display name (non-fatal)
       try {
@@ -114,7 +137,8 @@ class _SignupScreenState extends State<SignupScreen> {
               'uid': uid,
               'name': name,
               'email': email,
-              'role': _isPetOwnerSelected ? 'owner' : 'provider',
+              // ✅ UPDATED: role values
+              'role': _isPetOwnerSelected ? 'petOwner' : 'serviceProvider',
               'isVerified': false,
               'createdAt': FieldValue.serverTimestamp(),
               'updatedAt': FieldValue.serverTimestamp(),
@@ -132,8 +156,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
       _showSnack('החשבון נוצר בהצלחה ✅');
 
-      // ✅ go to home after signup
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      // ✅ UPDATED: go to AuthGate (/) after signup so it routes by role
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _showSnack(_friendlyRegisterErrorHe(e), isError: true);
@@ -145,282 +169,421 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  void _showSnack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? AppColors.alertCoral : AppColors.primarySage,
-      ),
-    );
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
-  String _friendlyRegisterErrorHe(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'email-already-in-use':
-        return 'האימייל כבר בשימוש';
-      case 'invalid-email':
-        return 'כתובת אימייל לא תקינה';
-      case 'weak-password':
-        return 'סיסמה חלשה מדי';
-      case 'network-request-failed':
-        return 'בעיית רשת. בדוק/י אינטרנט ונסה/י שוב';
-      default:
-        return 'הרשמה נכשלה: ${e.message ?? e.code}';
-    }
-  }
+  Color get _bgTop => const Color(0xFFECFDF5);
+  Color get _bgMid => const Color(0xFFF6F7FB);
+  Color get _bgBottom => const Color(0xFFFFFFFF);
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surfaceAlabaster,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 60),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        Icons.arrow_forward_ios,
-                        color: AppColors.secondarySlate,
-                      ),
-                    ),
+        backgroundColor: _bgBottom,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [_bgTop, _bgMid, _bgBottom],
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'יצירת חשבון',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.secondarySlate,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'מלא/י את הפרטים כדי להירשם',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.secondarySlate.withOpacity(0.65),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'שם מלא',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'אימייל',
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: 'סיסמה',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible),
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  TextField(
-                    controller: _confirmPasswordController,
-                    obscureText: !_isConfirmPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: 'אימות סיסמה',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() =>
-                            _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
-                        icon: Icon(
-                          _isConfirmPasswordVisible
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // ✅ Styled user type pills
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('בעל חיית מחמד'),
-                          selected: _isPetOwnerSelected,
-                          showCheckmark: true,
-                          selectedColor: AppColors.primarySage.withOpacity(0.22),
-                          backgroundColor: Colors.white,
-                          labelStyle: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: _isPetOwnerSelected
-                                ? AppColors.secondarySlate
-                                : AppColors.secondarySlate.withOpacity(0.7),
-                          ),
-                          side: BorderSide(
-                            color: _isPetOwnerSelected
-                                ? AppColors.primarySage.withOpacity(0.55)
-                                : Colors.black.withOpacity(0.08),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          onSelected: (_) =>
-                              setState(() => _isPetOwnerSelected = true),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('מטפל/ת'),
-                          selected: !_isPetOwnerSelected,
-                          showCheckmark: true,
-                          selectedColor: AppColors.primarySage.withOpacity(0.22),
-                          backgroundColor: Colors.white,
-                          labelStyle: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: !_isPetOwnerSelected
-                                ? AppColors.secondarySlate
-                                : AppColors.secondarySlate.withOpacity(0.7),
-                          ),
-                          side: BorderSide(
-                            color: !_isPetOwnerSelected
-                                ? AppColors.primarySage.withOpacity(0.55)
-                                : Colors.black.withOpacity(0.08),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          onSelected: (_) =>
-                              setState(() => _isPetOwnerSelected = false),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  Text(
-                    _isPetOwnerSelected
-                        ? 'בחרת: בעל/ת חיית מחמד — תוכל/י לבקש טיולים ושמירה בזמן נסיעה.'
-                        : 'בחרת: מטפל/ת — תוכל/י לקבל בקשות ולטייל (בהמשך עם אימות).',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.secondarySlate.withOpacity(0.65),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _acceptTerms,
-                        onChanged: (v) =>
-                            setState(() => _acceptTerms = v ?? false),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'אני מאשר/ת את תנאי השימוש',
-                          style: TextStyle(
-                            color: AppColors.secondarySlate.withOpacity(0.75),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  SizedBox(
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSignup,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primarySage,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'הרשמה',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 16),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
             ),
-          ),
+            Positioned(
+              top: -120,
+              left: -90,
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF34D399).withOpacity(0.22),
+                      const Color(0xFF0EA5E9).withOpacity(0.14),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 90,
+              right: -110,
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF22C55E).withOpacity(0.12),
+                      const Color(0xFF0F766E).withOpacity(0.14),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'יצירת חשבון',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Role selection
+                    _GlassCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'בחר/י סוג משתמש',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ChoiceChip(
+                                  label: const Text('בעל חיית מחמד'),
+                                  selected: _isPetOwnerSelected,
+                                  onSelected: (v) {
+                                    setState(() => _isPetOwnerSelected = true);
+                                  },
+                                  selectedColor: const Color(0xFF0F766E).withOpacity(0.16),
+                                  labelStyle: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: _isPetOwnerSelected
+                                        ? const Color(0xFF0F766E)
+                                        : const Color(0xFF334155),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
+                                      color: _isPetOwnerSelected
+                                          ? const Color(0xFF0F766E).withOpacity(0.35)
+                                          : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ChoiceChip(
+                                  label: const Text('מטפל/ת'),
+                                  selected: !_isPetOwnerSelected,
+                                  onSelected: (v) {
+                                    setState(() => _isPetOwnerSelected = false);
+                                  },
+                                  selectedColor: const Color(0xFF0EA5E9).withOpacity(0.16),
+                                  labelStyle: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: !_isPetOwnerSelected
+                                        ? const Color(0xFF0EA5E9)
+                                        : const Color(0xFF334155),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
+                                      color: !_isPetOwnerSelected
+                                          ? const Color(0xFF0EA5E9).withOpacity(0.35)
+                                          : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isPetOwnerSelected
+                                ? 'לבעלי חיות מחמד שמחפשים דוג-ווקר/סיטר'
+                                : 'למטפלים/דוג-ווקרים שמציעים שירותים',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF334155).withOpacity(0.80),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    _GlassCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        children: [
+                          _InputField(
+                            controller: _nameController,
+                            label: 'שם מלא',
+                            hint: 'הזן/י שם',
+                            icon: Icons.badge_outlined,
+                          ),
+                          const SizedBox(height: 12),
+                          _InputField(
+                            controller: _emailController,
+                            label: 'אימייל',
+                            hint: 'name@example.com',
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 12),
+                          _InputField(
+                            controller: _passwordController,
+                            label: 'סיסמה',
+                            hint: '••••••••',
+                            icon: Icons.lock_outline,
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _InputField(
+                            controller: _confirmPasswordController,
+                            label: 'אימות סיסמה',
+                            hint: '••••••••',
+                            icon: Icons.lock_reset_outlined,
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 14),
+
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _acceptTerms,
+                                onChanged: (v) => setState(() => _acceptTerms = v ?? false),
+                                activeColor: const Color(0xFF0F766E),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'אני מאשר/ת את תנאי השימוש והמדיניות',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF334155).withOpacity(0.90),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          _PrimaryGradientButton(
+                            text: _isLoading ? 'יוצר חשבון...' : 'צור חשבון',
+                            icon: _isLoading ? Icons.hourglass_top_rounded : Icons.check_rounded,
+                            onTap: _isLoading ? null : _handleSignup,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'כבר יש לך חשבון?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF334155).withOpacity(0.85),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pushNamed(context, '/login'),
+                          child: const Text(
+                            'התחבר/י',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F766E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _InputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+
+  const _InputField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.obscureText = false,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      textDirection: TextDirection.ltr,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.65),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.9)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.6),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryGradientButton extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _PrimaryGradientButton({
+    required this.text,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.22)),
+              ),
+              child: Icon(icon, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsets padding;
+
+  const _GlassCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.76),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withOpacity(0.48)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 26,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: child,
       ),
     );
   }

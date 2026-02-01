@@ -22,6 +22,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (stackTrace != null) debugPrint('$_logTag   stackTrace: $stackTrace');
   }
 
+  Color get _bgTop => const Color(0xFFECFDF5);
+  Color get _bgMid => const Color(0xFFF6F7FB);
+  Color get _bgBottom => const Color(0xFFFFFFFF);
+
   @override
   void initState() {
     super.initState();
@@ -31,61 +35,153 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     _log('build');
+
     try {
-      return Scaffold(
-        backgroundColor: AppColors.surfaceAlabaster,
-        body: SafeArea(
-          child: Column(
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: AppColors.surfaceAlabaster,
+          body: Stack(
             children: [
-              // ✅ Top 55% - Masonry Gallery (same as old)
-              const Expanded(
-                flex: 55,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(AppTheme.superCurveRadius),
-                    bottomRight: Radius.circular(AppTheme.superCurveRadius),
+              // Background gradient (same family)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [_bgTop, _bgMid, _bgBottom],
+                    ),
                   ),
-                  child: _MasonryGallery(),
                 ),
               ),
 
-              // ✅ Bottom 45% - Your new content section
-              Expanded(
-                flex: 45,
-                child: _ContentSection(
-                  onStartPressed: () {
-                    _log('onStartPressed -> navigate to LoginScreen');
-                    try {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    } catch (e, st) {
-                      _log('navigation to LoginScreen failed',
-                          error: e, stackTrace: st);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('הניווט נכשל. נסה/י שוב.')),
-                      );
-                    }
-                  },
-                  onGuestPressed: () {
-                    _log('onGuestPressed -> navigate to GuestHomeScreen');
-                    try {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const GuestHomeScreen()),
-                      );
-                    } catch (e, st) {
-                      _log('navigation to GuestHomeScreen failed',
-                          error: e, stackTrace: st);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('הניווט נכשל. נסה/י שוב.')),
-                      );
-                    }
-                  },
+              // Blobs
+              Positioned(
+                top: -120,
+                left: -90,
+                child: _Blob(
+                  size: 260,
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF34D399).withOpacity(0.22),
+                      const Color(0xFF0EA5E9).withOpacity(0.12),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 120,
+                right: -110,
+                child: _Blob(
+                  size: 290,
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF22C55E).withOpacity(0.12),
+                      const Color(0xFF0F766E).withOpacity(0.14),
+                    ],
+                  ),
+                ),
+              ),
+
+              SafeArea(
+                child: Column(
+                  children: [
+                    // Top 55% - Masonry Gallery with overlay
+                    Expanded(
+                      flex: 55,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(AppTheme.superCurveRadius),
+                          bottomRight: Radius.circular(AppTheme.superCurveRadius),
+                        ),
+                        child: Stack(
+                          children: [
+                            const _MasonryGallery(),
+
+                            // Soft overlay to match theme + better text separation
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.06),
+                                      Colors.black.withOpacity(0.02),
+                                      Colors.black.withOpacity(0.12),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Small top badge
+                            Positioned(
+                              top: 14,
+                              right: 14,
+                              child: _GlassPill(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.pets_rounded,
+                                      size: 16,
+                                      color: AppColors.secondarySlate.withOpacity(0.75),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'PetPal',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.secondarySlate.withOpacity(0.80),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Bottom 45% - content card
+                    Expanded(
+                      flex: 45,
+                      child: _ContentSection(
+                        onStartPressed: () {
+                          _log('onStartPressed -> navigate to LoginScreen');
+                          try {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          } catch (e, st) {
+                            _log('navigation to LoginScreen failed', error: e, stackTrace: st);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('הניווט נכשל. נסה/י שוב.')),
+                            );
+                          }
+                        },
+                        onGuestPressed: () {
+                          _log('onGuestPressed -> navigate to GuestHomeScreen');
+                          try {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const GuestHomeScreen()),
+                            );
+                          } catch (e, st) {
+                            _log('navigation to GuestHomeScreen failed', error: e, stackTrace: st);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('הניווט נכשל. נסה/י שוב.')),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -103,8 +199,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: AppColors.alertCoral),
+                  const Icon(Icons.error_outline, size: 48, color: AppColors.alertCoral),
                   const SizedBox(height: 12),
                   const Text(
                     'שגיאה במסך הפתיחה',
@@ -131,7 +226,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// Auto-scrolling masonry gallery with 3 columns (same as old)
+/// Auto-scrolling masonry gallery with 3 columns
 class _MasonryGallery extends StatefulWidget {
   const _MasonryGallery();
 
@@ -140,7 +235,6 @@ class _MasonryGallery extends StatefulWidget {
 }
 
 class _MasonryGalleryState extends State<_MasonryGallery> {
-  // Real pet images from Unsplash
   final List<String> _petImages = [
     'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=500&fit=crop',
     'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=350&fit=crop',
@@ -159,10 +253,10 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
   late List<ScrollController> _controllers;
   late List<Timer> _timers;
 
-  // Different speeds for each column (pixels per tick)
+  // Speeds for each column
   final List<double> _speeds = [0.8, 0.6, 0.7];
 
-  // Staggered offsets for organic look
+  // Staggered offsets
   final List<double> _offsets = [0.0, 100.0, 50.0];
 
   @override
@@ -174,9 +268,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
     );
     _timers = [];
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startAutoScroll();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoScroll());
   }
 
   void _startAutoScroll() {
@@ -185,13 +277,15 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
         Timer.periodic(const Duration(milliseconds: 50), (timer) {
           if (!_controllers[i].hasClients) return;
 
-          final maxScroll = _controllers[i].position.maxScrollExtent;
-          final currentScroll = _controllers[i].offset;
+          final pos = _controllers[i].position;
+          final maxScroll = pos.maxScrollExtent;
+          final current = _controllers[i].offset;
 
-          if (currentScroll >= maxScroll) {
-            _controllers[i].jumpTo(0);
+          // Smooth loop: jump back slightly instead of hard 0 (prevents visible "snap")
+          if (current >= maxScroll - 2) {
+            _controllers[i].jumpTo(1.0);
           } else {
-            _controllers[i].jumpTo(currentScroll + _speeds[i]);
+            _controllers[i].jumpTo(current + _speeds[i]);
           }
         }),
       );
@@ -212,7 +306,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.warmMist, // background behind tiles
+      color: AppColors.warmMist,
       child: Row(
         children: List.generate(3, (columnIndex) {
           return Expanded(
@@ -221,23 +315,21 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
               child: ListView.builder(
                 controller: _controllers[columnIndex],
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: 100, // Infinite-like scroll
+                itemCount: 120,
                 itemBuilder: (context, index) {
-                  final imageIndex =
-                      (columnIndex + index * 3) % _petImages.length;
-
+                  final imageIndex = (columnIndex + index * 3) % _petImages.length;
                   final random = Random(imageIndex);
                   final height = 120.0 + random.nextDouble() * 80;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18),
                       child: Container(
                         height: height,
                         decoration: BoxDecoration(
                           color: AppColors.warmMist,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         child: Image.network(
                           _petImages[imageIndex],
@@ -248,8 +340,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                               child: Icon(
                                 Icons.pets,
                                 size: 40,
-                                color:
-                                    AppColors.primarySage.withOpacity(0.5),
+                                color: AppColors.primarySage.withOpacity(0.5),
                               ),
                             );
                           },
@@ -261,8 +352,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                                 child: Icon(
                                   Icons.pets,
                                   size: 40,
-                                  color:
-                                      AppColors.primarySage.withOpacity(0.3),
+                                  color: AppColors.primarySage.withOpacity(0.28),
                                 ),
                               ),
                             );
@@ -293,71 +383,212 @@ class _ContentSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 22),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Spacer(flex: 1),
-          RichText(
-            textAlign: TextAlign.center,
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: AppColors.secondarySlate,
-                height: 1.3,
+          const SizedBox(height: 10),
+
+          // Glass Card (consistent with app)
+          _GlassCard(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.secondarySlate,
+                        height: 1.2,
+                      ),
+                      children: const [
+                        TextSpan(text: 'ברוך הבא ל־'),
+                        TextSpan(
+                          text: 'PetPal',
+                          style: TextStyle(color: AppColors.primarySage),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'מצא מטפל אמין או פרסם מודעות אבוד/נמצא בקלות ובמהירות.\nהכול במקום אחד — שירותים, צ׳אט והתראות.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondarySlate.withOpacity(0.68),
+                      height: 1.55,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _PrimaryGradientButton(
+                    text: 'התחל',
+                    icon: Icons.rocket_launch_rounded,
+                    onTap: onStartPressed,
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  TextButton(
+                    onPressed: onGuestPressed,
+                    child: Text(
+                      'המשך כאורח',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.secondarySlate.withOpacity(0.68),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              children: [
-                TextSpan(text: 'ברוך הבא ל־'),
-                TextSpan(
-                  text: 'PetPal',
-                  style: TextStyle(color: AppColors.primarySage),
-                ),
-              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            'מצא מטפל אמין או פרסם מודעות אבוד/נמצא בקלות ובמהירות.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.secondarySlate.withOpacity(0.65),
-              height: 1.6,
-            ),
-          ),
-          const Spacer(flex: 1),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: onStartPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primarySage,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'התחל',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: onGuestPressed,
-            child: Text(
-              'המשך כאורח',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.secondarySlate.withOpacity(0.6),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+/// ---------- Small UI helpers (same style family) ----------
+
+class _Blob extends StatelessWidget {
+  const _Blob({required this.size, required this.gradient});
+
+  final double size;
+  final Gradient gradient;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: gradient,
+      ),
+    );
+  }
+}
+
+class _GlassPill extends StatelessWidget {
+  const _GlassPill({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: Colors.white.withOpacity(0.62),
+        border: Border.all(color: Colors.white.withOpacity(0.52)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  const _GlassCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.76),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.50)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 26,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _PrimaryGradientButton extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _PrimaryGradientButton({
+    required this.text,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.22)),
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          ],
+        ),
       ),
     );
   }
