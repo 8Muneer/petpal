@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:petpal/shared/widgets/widgets.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 enum RequestStatus { pending, accepted, declined }
@@ -335,7 +336,7 @@ class _ModernTopBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _GlassCard(
+            child: GlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
@@ -370,14 +371,14 @@ class _ModernTopBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   if (badgeText != null) ...[
-                    _TinyChip(
+                    TinyChip(
                       text: badgeText!,
                       fill: const Color(0xFF0EA5E9).withOpacity(0.10),
                       textColor: const Color(0xFF0EA5E9),
                     ),
                     const SizedBox(width: 10),
                   ],
-                  _PillIconButton(
+                  PillIconButton(
                     icon: Icons.logout_rounded,
                     tooltip: 'התנתקות',
                     onTap: onLogoutPressed,
@@ -537,7 +538,7 @@ class _ProviderDashboardTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
-        _GlassCard(
+        GlassCard(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -588,10 +589,10 @@ class _ProviderDashboardTab extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
-        _SectionHeader(
+        SectionHeader(
           title: 'סטטיסטיקות מהירות',
           subtitle: 'סיכום קצר להיום',
-          trailing: _TinyChip(
+          trailing: TinyChip(
             text: 'LIVE',
             fill: const Color(0xFF22C55E).withOpacity(0.10),
             textColor: const Color(0xFF22C55E),
@@ -645,10 +646,10 @@ class _ProviderDashboardTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        _SectionHeader(
+        SectionHeader(
           title: 'פעולות מהירות',
           subtitle: 'עדכן זמינות, שירותים ועוד',
-          trailing: const _TinyChip(
+          trailing: const TinyChip(
             text: 'חדש',
           ),
         ),
@@ -657,7 +658,7 @@ class _ProviderDashboardTab extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _GradientActionCard(
+              child: GradientActionCard(
                 title: 'עדכן זמינות',
                 subtitle: 'פתח/סגור בקשות',
                 icon: Icons.toggle_on_rounded,
@@ -671,7 +672,7 @@ class _ProviderDashboardTab extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _GradientActionCard(
+              child: GradientActionCard(
                 title: 'נהל שירותים',
                 subtitle: 'מחירים, סוג שירות',
                 icon: Icons.settings_suggest_outlined,
@@ -688,7 +689,7 @@ class _ProviderDashboardTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        const _SectionHeader(
+        const SectionHeader(
           title: 'הזמנות קרובות',
           subtitle: 'רק אחרי אישור הבקשה',
         ),
@@ -733,7 +734,7 @@ class _RequestsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'בקשות להזמנה',
           subtitle: 'אשר/י או דחה/י בקשות נכנסות',
         ),
@@ -810,13 +811,13 @@ class _LostPetsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'אבודים',
           subtitle: 'דיווחים על חיות אבודות ונמצאות (בקרוב AI התאמות)',
         ),
         const SizedBox(height: 10),
 
-        _GlassCard(
+        GlassCard(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -861,13 +862,13 @@ class _LostPetsTab extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'דיווח על חיה נמצאה',
           icon: Icons.add_photo_alternate_rounded,
           onTap: () => onAction('TODO: Report found pet'),
         ),
         const SizedBox(height: 12),
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'חיפוש חיה אבודה',
           icon: Icons.search_rounded,
           onTap: () => onAction('TODO: Search lost pets'),
@@ -901,13 +902,13 @@ class _ScheduleTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'לו״ז וזמינות',
           subtitle: 'נהל/י את הזמנים והימים הפנויים',
         ),
         const SizedBox(height: 10),
 
-        _GlassCard(
+        GlassCard(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -977,7 +978,7 @@ class _ScheduleTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'עריכת חלונות זמן',
           icon: Icons.edit_calendar_rounded,
           onTap: () => onAction('TODO: Edit time slots'),
@@ -1015,7 +1016,7 @@ class _MessagesTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'צ׳אט',
           subtitle: 'שיחות עם בעלי חיות המחמד',
         ),
@@ -1092,7 +1093,7 @@ class _RequestCard extends StatelessWidget {
         onAccept != null &&
         onDecline != null;
 
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
@@ -1132,7 +1133,7 @@ class _RequestCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _TinyChip(
+              TinyChip(
                 text: '$_statusText • $_typeLabel',
                 fill: _accent.withOpacity(0.10),
                 textColor: _accent,
@@ -1144,7 +1145,7 @@ class _RequestCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _OutlineButton(
+                  child: OutlineButton(
                     text: 'דחה',
                     icon: Icons.close_rounded,
                     onTap: onDecline!,
@@ -1153,7 +1154,7 @@ class _RequestCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _SolidButton(
+                  child: SolidButton(
                     text: 'אשר',
                     icon: Icons.check_rounded,
                     onTap: onAccept!,
@@ -1184,7 +1185,7 @@ class _UpcomingBookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -1240,7 +1241,7 @@ class _ChatCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: _GlassCard(
+      child: GlassCard(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
@@ -1311,7 +1312,7 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -1368,7 +1369,7 @@ class _TimeSlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -1412,94 +1413,13 @@ class _TimeSlotCard extends StatelessWidget {
   }
 }
 
-class _OutlineButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color accent;
+// ====================== Shared components removed ======================
+// Components moved to lib/shared/widgets/
+// - GlassCard, SectionHeader, TinyChip
+// - PrimaryGradientButton, GradientActionCard
+// - PillIconButton, OutlineButton, SolidButton
 
-  const _OutlineButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-    required this.accent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent.withOpacity(0.38)),
-          color: accent.withOpacity(0.06),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: accent),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: accent,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SolidButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SolidButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// ====================== Screen-specific components ======================
 
 class _SubHeader extends StatelessWidget {
   final String text;
@@ -1515,51 +1435,6 @@ class _SubHeader extends StatelessWidget {
         fontWeight: FontWeight.w900,
         color: Color(0xFF0F172A),
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF334155).withOpacity(0.78),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
     );
   }
 }
@@ -1593,241 +1468,6 @@ class _DayChip extends StatelessWidget {
   }
 }
 
-class _TinyChip extends StatelessWidget {
-  final String text;
-  final Color? fill;
-  final Color? textColor;
-
-  const _TinyChip({
-    required this.text,
-    this.fill,
-    this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: (fill ?? const Color(0xFF0F766E).withOpacity(0.10)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: (textColor ?? const Color(0xFF0F766E)),
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryGradientButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _PrimaryGradientButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GradientActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
-
-  const _GradientActionCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: gradient,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 22,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.20),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withOpacity(0.88),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PillIconButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _PillIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Center(
-            child: Icon(icon, color: const Color(0xFF334155)),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
-
-  const _GlassCard({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.76),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.48)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 26,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
 class _EmptyStateCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -1846,7 +1486,7 @@ class _EmptyStateCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: _GlassCard(
+      child: GlassCard(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
