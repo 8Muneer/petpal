@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/features/auth/providers/auth_provider.dart';
 
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -22,9 +23,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // Role selection (PetOwner vs ServiceProvider)
   bool _isPetOwnerSelected = true;
-
-  final _auth = FirebaseAuth.instance;
-  final _usersRef = FirebaseFirestore.instance.collection('users');
 
   void _log(String message, {Object? error, StackTrace? stackTrace}) {
     // ignore: avoid_print
@@ -115,7 +113,11 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential = await _auth.createUserWithEmailAndPassword(
+      // ✅ Use AuthRepository from Riverpod
+      final authRepo = ref.read(authRepositoryProvider);
+
+      // Create user with email and password
+      final credential = await authRepo.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -124,28 +126,21 @@ class _SignupScreenState extends State<SignupScreen> {
 
       _log('signup success uid=$uid');
 
-      // display name (non-fatal)
+      // Update display name (non-fatal)
       try {
         await credential.user?.updateDisplayName(name);
       } catch (_) {}
 
-      // ✅ Save role in Firestore (non-fatal)
+      // ✅ Save user data in Firestore using AuthRepository
       if (uid != null) {
         try {
-          await _usersRef.doc(uid).set(
-            {
-              'uid': uid,
-              'name': name,
-              'email': email,
-              // ✅ UPDATED: role values
-              'role': _isPetOwnerSelected ? 'petOwner' : 'serviceProvider',
-              'isVerified': false,
-              'createdAt': FieldValue.serverTimestamp(),
-              'updatedAt': FieldValue.serverTimestamp(),
-            },
-            SetOptions(merge: true),
+          await authRepo.createUserDocument(
+            uid: uid,
+            email: email,
+            role: _isPetOwnerSelected ? 'petOwner' : 'serviceProvider',
+            displayName: name,
           );
-          _log('Firestore user doc upserted');
+          _log('Firestore user doc created');
         } catch (e, st) {
           _log('Firestore user doc write failed (non-fatal)',
               error: e, stackTrace: st);

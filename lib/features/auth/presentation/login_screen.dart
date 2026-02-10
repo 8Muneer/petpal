@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/auth/presentation/signup_screen.dart';
+import 'package:petpal/features/auth/providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -101,7 +102,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // ✅ Use AuthRepository from Riverpod
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.signInWithEmailAndPassword(
         email: email,
         password: password,
       );

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/firebase_options.dart';
+
+// ✅ providers
+import 'package:petpal/features/auth/providers/auth_provider.dart';
+import 'package:petpal/features/auth/domain/models/models.dart';
 
 // ✅ screens
 import 'package:petpal/features/auth/presentation/onboarding_screen.dart';
@@ -61,64 +63,45 @@ class PetPalApp extends StatelessWidget {
   }
 }
 
-class _AuthGate extends StatelessWidget {
+class _AuthGate extends ConsumerWidget {
   const _AuthGate();
 
-  Future<String?> _fetchUserRole(String uid) async {
-    // Expected structure:
-    // users/{uid} -> { role: 'petOwner' | 'serviceProvider' }
-    // (We also tolerate: userType)
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data = doc.data();
-    if (data == null) return null;
-
-    final role = (data['role'] ?? data['userType'])?.toString().trim();
-    if (role == null || role.isEmpty) return null;
-    return role;
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // While FirebaseAuth is initializing
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the current user stream from Riverpod
+    final currentUserAsync = ref.watch(currentUserProvider);
 
-        final user = snapshot.data;
+    return currentUserAsync.when(
+      // Loading state - show spinner
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
 
-        // ✅ Logged in → route by role (Firestore)
-        if (user != null) {
-          return FutureBuilder<String?>(
-            future: _fetchUserRole(user.uid),
-            builder: (context, roleSnap) {
-              if (roleSnap.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              final role = (roleSnap.data ?? '').toLowerCase();
-
-              // Accept a few common spellings
-              if (role == 'serviceprovider' ||
-                  role == 'service_provider' ||
-                  role == 'provider') {
-                return const ServiceProviderHomeScreen();
-              }
-
-              // Default: PetOwner (your current "UserHomeScreen")
-              return const UserHomeScreen();
-            },
-          );
-        }
-
-        // ✅ Not logged in → Onboarding
+      // Error state - show onboarding
+      error: (error, stack) {
+        debugPrint('Auth error: $error');
         return const OnboardingScreen();
+      },
+
+      // Data state - route based on user
+      data: (UserModel? user) {
+        // Not logged in → Onboarding
+        if (user == null) {
+          return const OnboardingScreen();
+        }
+
+        // Logged in → route by role
+        final role = user.role.toLowerCase();
+
+        // Accept a few common spellings for service provider
+        if (role == 'serviceprovider' ||
+            role == 'service_provider' ||
+            role == 'provider') {
+          return const ServiceProviderHomeScreen();
+        }
+
+        // Default: PetOwner
+        return const UserHomeScreen();
       },
     );
   }
