@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:petpal/shared/widgets/widgets.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -224,7 +225,7 @@ class _GuestTopBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _GlassCard(
+            child: GlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
@@ -318,10 +319,10 @@ class _HomeTab extends StatelessWidget {
         _HeroSearchBar(onTap: onRequireLogin),
         const SizedBox(height: 14),
 
-        const _SectionHeader(
+        SectionHeader(
           title: 'הצצה לפיצ׳רים',
           subtitle: 'כדי להזמין, לפרסם ולצ׳אט — צריך חשבון',
-          trailing: _TinyChip(text: 'אורח'),
+          trailing: TinyChip(text: 'אורח'),
         ),
         const SizedBox(height: 10),
 
@@ -363,11 +364,11 @@ class _HomeTab extends StatelessWidget {
 
         Row(
           children: [
-            const Expanded(
-              child: _SectionHeader(
+            Expanded(
+              child: SectionHeader(
                 title: 'עדכונים אחרונים',
                 subtitle: 'קהילה פעילה בירושלים',
-                trailing: _TinyChip(text: 'LIVE'),
+                trailing: TinyChip(text: 'LIVE'),
               ),
             ),
             TextButton(
@@ -400,7 +401,7 @@ class _HomeTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        const _SectionHeader(
+        const SectionHeader(
           title: 'מומלצים בקרבתך',
           subtitle: 'תצוגה בלבד • הזמנה נעולה',
         ),
@@ -417,7 +418,7 @@ class _HomeTab extends StatelessWidget {
             ),
 
         const SizedBox(height: 6),
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'התחבר/י כדי לפתוח את כל הפיצ׳רים',
           icon: Icons.lock_open_rounded,
           onTap: () => Navigator.pushNamed(context, '/login'),
@@ -438,7 +439,7 @@ class _LostPetsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'חיות אבודות',
           subtitle: 'תצוגה בלבד כאורח • דיווח + AI נעולים',
         ),
@@ -459,7 +460,7 @@ class _LostPetsTab extends StatelessWidget {
         ),
         const SizedBox(height: 18),
 
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'דווח/י על חיה אבודה (נעול)',
           icon: Icons.lock_rounded,
           onTap: onRequireLogin,
@@ -487,7 +488,7 @@ class _CardsListTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        _SectionHeader(title: title, subtitle: subtitle),
+        SectionHeader(title: title, subtitle: subtitle),
         const SizedBox(height: 10),
         ...cards.map(
           (c) => Padding(
@@ -510,7 +511,7 @@ class _GuestHeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       child: Row(
         children: [
           Container(
@@ -551,9 +552,10 @@ class _GuestHeroBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          _TinyChip(
+          TinyChip(
             text: 'תצוגה',
-            color: const Color(0xFF0EA5E9),
+            textColor: const Color(0xFF0EA5E9),
+            fill: const Color(0xFF0EA5E9).withOpacity(0.12),
           ),
         ],
       ),
@@ -571,7 +573,7 @@ class _HeroSearchBar extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: _GlassCard(
+      child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
@@ -734,7 +736,7 @@ class _ModernFeedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -798,7 +800,7 @@ class _LostPetModernCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -908,7 +910,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
@@ -1084,79 +1086,9 @@ class _GlassNavBar extends StatelessWidget {
   }
 }
 
-// ====================== Shared components ======================
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF334155).withOpacity(0.78),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
-
-class _TinyChip extends StatelessWidget {
-  final String text;
-  final Color? color;
-
-  const _TinyChip({required this.text, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF0F766E);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: c.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: c,
-        ),
-      ),
-    );
-  }
-}
+// ====================== Screen-specific components ======================
+// Note: Shared components (SectionHeader, TinyChip, PrimaryGradientButton, GlassCard)
+// have been moved to lib/shared/widgets/ and are now imported at the top
 
 class _PillButton extends StatelessWidget {
   final String text;
@@ -1200,70 +1132,6 @@ class _PillButton extends StatelessWidget {
   }
 }
 
-class _PrimaryGradientButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _PrimaryGradientButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MiniLockButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
@@ -1299,42 +1167,6 @@ class _MiniLockButton extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
-
-  const _GlassCard({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.76),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.48)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 26,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: child,
         ),
       ),
     );
