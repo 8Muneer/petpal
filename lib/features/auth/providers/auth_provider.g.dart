@@ -63,33 +63,13 @@ final authStateChangesProvider = AutoDisposeStreamProvider<User?>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthStateChangesRef = AutoDisposeStreamProviderRef<User?>;
-String _$currentFirebaseUserHash() =>
-    r'149127087f8712a1554cc7ba953a74dceab3373c';
-
-/// Current Firebase User provider
-///
-/// Returns the currently authenticated user or null
-///
-/// Copied from [currentFirebaseUser].
-@ProviderFor(currentFirebaseUser)
-final currentFirebaseUserProvider = AutoDisposeProvider<User?>.internal(
-  currentFirebaseUser,
-  name: r'currentFirebaseUserProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$currentFirebaseUserHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef CurrentFirebaseUserRef = AutoDisposeProviderRef<User?>;
-String _$currentUserHash() => r'255f9a10635b86d1edec6c397d0e1bad75ad5aff';
+String _$currentUserHash() => r'36a192eb464333e72a9511b2744c838d5442c499';
 
 /// Current UserModel provider
 ///
-/// Fetches full user data from Firestore based on current auth state
+/// Listens to Firestore user data in real-time based on current auth state
+/// Returns null if user is not logged in
+/// Automatically updates when user data changes in Firestore
 ///
 /// Copied from [currentUser].
 @ProviderFor(currentUser)

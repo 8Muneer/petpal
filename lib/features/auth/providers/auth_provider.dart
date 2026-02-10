@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -26,52 +27,53 @@ Stream<User?> authStateChanges(AuthStateChangesRef ref) {
   return auth.authStateChanges();
 }
 
-/// Current Firebase User provider
-///
-/// Returns the currently authenticated user or null
-@riverpod
-User? currentFirebaseUser(CurrentFirebaseUserRef ref) {
-  final authState = ref.watch(authStateChangesProvider);
-  return authState.when(
-    data: (user) => user,
-    loading: () => null,
-    error: (_, __) => null,
-  );
-}
-
 /// Current UserModel provider
 ///
-/// Fetches full user data from Firestore based on current auth state
+/// Listens to Firestore user data in real-time based on current auth state
+/// Returns null if user is not logged in
+/// Automatically updates when user data changes in Firestore
 @riverpod
-Stream<UserModel?> currentUser(CurrentUserRef ref) async* {
-  final firebaseUser = ref.watch(currentFirebaseUserProvider);
-
-  if (firebaseUser == null) {
-    yield null;
-    return;
-  }
-
-  // Listen to Firestore user document changes
+Stream<UserModel?> currentUser(CurrentUserRef ref) {
+  final auth = ref.watch(firebaseAuthProvider);
   final firestore = ref.watch(firestoreProvider);
-  yield* firestore
-      .collection('users')
-      .doc(firebaseUser.uid)
-      .snapshots()
-      .map((snapshot) {
-    if (!snapshot.exists) return null;
 
-    final data = snapshot.data();
-    if (data == null) return null;
-
-    // Add the ID from the document
-    data['id'] = snapshot.id;
-
-    // Handle Timestamp to DateTime conversion
-    if (data['createdAt'] is Timestamp) {
-      data['createdAt'] = (data['createdAt'] as Timestamp).toDate();
+  // Transform auth state changes into user model stream with real-time updates
+  return auth.authStateChanges().asyncExpand((firebaseUser) {
+    // User not logged in - return single null value
+    if (firebaseUser == null) {
+      return Stream.value(null);
     }
 
-    return UserModel.fromJson(data);
+    // User logged in - listen to Firestore updates in real-time
+    return firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .snapshots()
+        .map((snapshot) {
+      try {
+        if (!snapshot.exists) {
+          return null;
+        }
+
+        final data = snapshot.data();
+        if (data == null) {
+          return null;
+        }
+
+        // Add the ID from the document
+        data['id'] = snapshot.id;
+
+        // Handle Timestamp to DateTime conversion
+        if (data['createdAt'] is Timestamp) {
+          data['createdAt'] = (data['createdAt'] as Timestamp).toDate();
+        }
+
+        return UserModel.fromJson(data);
+      } catch (e) {
+        debugPrint('Error parsing user data: $e');
+        return null;
+      }
+    });
   });
 }
 
