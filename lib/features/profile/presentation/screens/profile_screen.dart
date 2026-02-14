@@ -1,7 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/section_header.dart';
+import 'package:petpal/core/widgets/tiny_chip.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -30,7 +33,7 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+    context.go('/');
   }
 
   void _confirmLogout(BuildContext context) {
@@ -189,14 +192,15 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  _SectionHeader(
+                  SectionHeader(
                     title: 'החשבון שלי',
                     subtitle: 'הגדרות, אבטחה ופרטיות',
-                    trailing: _TinyChip(text: isVerified ? 'מאומת' : 'לא מאומת'),
+                    trailing: TinyChip(text: isVerified ? 'מאומת' : 'לא מאומת'),
                   ),
                   const SizedBox(height: 10),
 
-                  _GlassCard(
+                  GlassCard(
+                    useBlur: true,
                     child: Column(
                       children: [
                         _SettingTile(
@@ -225,7 +229,7 @@ class ProfileScreen extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
-                  _SectionHeader(
+                  SectionHeader(
                     title: 'הפעילות שלי',
                     subtitle: 'הזמנות, מודעות ושיחות',
                   ),
@@ -281,13 +285,14 @@ class ProfileScreen extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
-                  _SectionHeader(
+                  SectionHeader(
                     title: 'מידע טכני',
                     subtitle: 'לצורכי תמיכה',
                   ),
                   const SizedBox(height: 10),
 
-                  _GlassCard(
+                  GlassCard(
+                    useBlur: true,
                     padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +368,8 @@ class _ProfileHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
+      useBlur: true,
       child: Row(
         children: [
           Container(
@@ -415,7 +421,7 @@ class _ProfileHeroCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _TinyChip(
+                    TinyChip(
                       text: verified ? 'מאומת ✅' : 'לא מאומת',
                       color: verified
                           ? const Color(0xFF22C55E)
@@ -458,51 +464,6 @@ class _ProfileHeroCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF334155).withOpacity(0.78),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
     );
   }
 }
@@ -590,7 +551,8 @@ class _StatCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: _GlassCard(
+      child: GlassCard(
+        useBlur: true,
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
@@ -901,33 +863,6 @@ class _MiniSecondaryButton extends StatelessWidget {
   }
 }
 
-class _TinyChip extends StatelessWidget {
-  final String text;
-  final Color? color;
-
-  const _TinyChip({required this.text, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF0F766E);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: c.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: c,
-        ),
-      ),
-    );
-  }
-}
-
 class _DividerLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -935,42 +870,6 @@ class _DividerLine extends StatelessWidget {
       height: 1,
       thickness: 1,
       color: const Color(0xFFE2E8F0).withOpacity(0.7),
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
-
-  const _GlassCard({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.76),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.48)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 26,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: child,
-        ),
-      ),
     );
   }
 }

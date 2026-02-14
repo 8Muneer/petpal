@@ -1,10 +1,57 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/section_header.dart';
+import 'package:petpal/core/widgets/tiny_chip.dart';
+import 'package:petpal/core/widgets/primary_gradient_button.dart';
+import 'package:petpal/core/widgets/gradient_action_card.dart';
+import 'package:petpal/core/widgets/empty_state_card.dart';
+import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/core/widgets/glass_nav_bar.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 enum RequestStatus { pending, accepted, declined }
+
+class BookingRequestData {
+  final String ownerName;
+  final ProviderServiceType serviceType;
+  final String city;
+  final String whenText;
+  final String priceText;
+  final RequestStatus status;
+
+  const BookingRequestData({
+    required this.ownerName,
+    required this.serviceType,
+    required this.city,
+    required this.whenText,
+    required this.priceText,
+    required this.status,
+  });
+
+  BookingRequestData copyWith({RequestStatus? status}) => BookingRequestData(
+        ownerName: ownerName,
+        serviceType: serviceType,
+        city: city,
+        whenText: whenText,
+        priceText: priceText,
+        status: status ?? this.status,
+      );
+}
+
+class ChatPreviewData {
+  final String name;
+  final String lastMessage;
+  final String timeAgo;
+
+  const ChatPreviewData({
+    required this.name,
+    required this.lastMessage,
+    required this.timeAgo,
+  });
+}
 
 class ServiceProviderHomeScreen extends StatefulWidget {
   const ServiceProviderHomeScreen({super.key});
@@ -18,8 +65,8 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
   int _currentIndex = 0;
 
   // Mock requests (later replace with Firestore)
-  final List<_BookingRequestData> _requests = [
-    _BookingRequestData(
+  final List<BookingRequestData> _requests = [
+    BookingRequestData(
       ownerName: 'מוניר',
       serviceType: ProviderServiceType.dogWalk,
       city: 'ירושלים',
@@ -27,7 +74,7 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
       priceText: '₪90',
       status: RequestStatus.pending,
     ),
-    _BookingRequestData(
+    BookingRequestData(
       ownerName: 'לוג׳יין',
       serviceType: ProviderServiceType.petSitting,
       city: 'ירושלים',
@@ -35,7 +82,7 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
       priceText: '₪220',
       status: RequestStatus.pending,
     ),
-    _BookingRequestData(
+    BookingRequestData(
       ownerName: 'סאמר',
       serviceType: ProviderServiceType.dogWalk,
       city: 'ירושלים',
@@ -48,18 +95,18 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
   bool _isAvailable = true;
 
   // Mock chats
-  final List<_ChatPreviewData> _chats = const [
-    _ChatPreviewData(
+  final List<ChatPreviewData> _chats = const [
+    ChatPreviewData(
       name: 'מוניר',
       lastMessage: 'מעולה, נפגש בכניסה לבניין 😊',
       timeAgo: 'לפני 5 דק׳',
     ),
-    _ChatPreviewData(
+    ChatPreviewData(
       name: 'לוג׳יין',
       lastMessage: 'יש לך ניסיון עם חתולים?',
       timeAgo: 'לפני שעה',
     ),
-    _ChatPreviewData(
+    ChatPreviewData(
       name: 'סאמר',
       lastMessage: 'תודה רבה על הטיול!',
       timeAgo: 'אתמול',
@@ -99,7 +146,7 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+    context.go('/');
   }
 
   void _confirmLogout() {
@@ -148,18 +195,12 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
     );
   }
 
-  Color get _bgTop => const Color(0xFFECFDF5); // minty
-  Color get _bgMid => const Color(0xFFF6F7FB); // cool gray
-  Color get _bgBottom => const Color(0xFFFFFFFF);
-
   void _setRequestStatus(int index, RequestStatus status) {
     setState(() => _requests[index] = _requests[index].copyWith(status: status));
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ TABS ORDER:
-    // לוח | בקשות | אבודים | לו"ז | צ'אט
     final tabs = <Widget>[
       _ProviderDashboardTab(
         displayName: _displayName,
@@ -206,101 +247,72 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        extendBody: true,
-        backgroundColor: _bgBottom,
-        body: Stack(
-          children: [
-            // Background gradient
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [_bgTop, _bgMid, _bgBottom],
-                  ),
-                ),
+      child: PetPalScaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              _ModernTopBar(
+                displayName: _displayName,
+                email: _email,
+                badgeText:
+                    _pendingCount > 0 ? '$_pendingCount בקשות' : null,
+                onLogoutPressed: _confirmLogout,
+                onAvatarPressed: () => context.push('/profile'),
               ),
-            ),
-
-            // subtle blobs
-            Positioned(
-              top: -120,
-              left: -90,
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF34D399).withOpacity(0.22),
-                      const Color(0xFF0EA5E9).withOpacity(0.14),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 120,
-              right: -110,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF22C55E).withOpacity(0.12),
-                      const Color(0xFF0F766E).withOpacity(0.14),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            SafeArea(
-              child: Column(
-                children: [
-                  _ModernTopBar(
-                    displayName: _displayName,
-                    email: _email,
-                    badgeText:
-                        _pendingCount > 0 ? '$_pendingCount בקשות' : null,
-                    onLogoutPressed: _confirmLogout,
-                    onAvatarPressed: () =>
-                        Navigator.pushNamed(context, '/profile'),
-                  ),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      transitionBuilder: (child, anim) => FadeTransition(
-                        opacity: anim,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.02, 0),
-                            end: Offset.zero,
-                          ).animate(anim),
-                          child: child,
-                        ),
-                      ),
-                      child: KeyedSubtree(
-                        key: ValueKey(_currentIndex),
-                        child: tabs[_currentIndex],
-                      ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.02, 0),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
                     ),
                   ),
-                ],
+                  child: KeyedSubtree(
+                    key: ValueKey(_currentIndex),
+                    child: tabs[_currentIndex],
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        bottomNavigationBar: _GlassProviderNavBar(
+        bottomNavigationBar: GlassNavBar(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard_rounded),
+              label: 'לוח',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.inbox_outlined),
+              selectedIcon: Icon(Icons.inbox_rounded),
+              label: 'בקשות',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.pets_outlined),
+              selectedIcon: Icon(Icons.pets_rounded),
+              label: 'אבודים',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.event_available_outlined),
+              selectedIcon: Icon(Icons.event_available_rounded),
+              label: 'לו״ז',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat_bubble_rounded),
+              label: 'צ׳אט',
+            ),
+          ],
         ),
       ),
     );
@@ -335,7 +347,8 @@ class _ModernTopBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _GlassCard(
+            child: GlassCard(
+              useBlur: true,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
@@ -370,7 +383,7 @@ class _ModernTopBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   if (badgeText != null) ...[
-                    _TinyChip(
+                    TinyChip(
                       text: badgeText!,
                       fill: const Color(0xFF0EA5E9).withOpacity(0.10),
                       textColor: const Color(0xFF0EA5E9),
@@ -426,100 +439,13 @@ class _ModernTopBar extends StatelessWidget {
   }
 }
 
-class _GlassProviderNavBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onChanged;
-
-  const _GlassProviderNavBar({
-    required this.currentIndex,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.72),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.45)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 26,
-                  offset: const Offset(0, 14),
-                ),
-              ],
-            ),
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                height: 68,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                  final selected = states.contains(WidgetState.selected);
-                  return TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                    color: selected
-                        ? const Color(0xFF0F766E)
-                        : const Color(0xFF64748B),
-                  );
-                }),
-              ),
-              child: NavigationBar(
-                selectedIndex: currentIndex,
-                onDestinationSelected: onChanged,
-                // ✅ NAV ITEMS ORDER:
-                // לוח | בקשות | אבודים | לו"ז | צ׳אט
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard_rounded),
-                    label: 'לוח',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.inbox_outlined),
-                    selectedIcon: Icon(Icons.inbox_rounded),
-                    label: 'בקשות',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.pets_outlined),
-                    selectedIcon: Icon(Icons.pets_rounded),
-                    label: 'אבודים',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.event_available_outlined),
-                    selectedIcon: Icon(Icons.event_available_rounded),
-                    label: 'לו״ז',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.chat_bubble_outline),
-                    selectedIcon: Icon(Icons.chat_bubble_rounded),
-                    label: 'צ׳אט',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ProviderDashboardTab extends StatelessWidget {
   final String displayName;
   final String email;
   final bool isAvailable;
   final int pendingCount;
   final ValueChanged<bool> onToggleAvailability;
-  final List<_BookingRequestData> upcoming;
+  final List<BookingRequestData> upcoming;
   final void Function(String msg) onAction;
 
   const _ProviderDashboardTab({
@@ -537,7 +463,8 @@ class _ProviderDashboardTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
-        _GlassCard(
+        GlassCard(
+          useBlur: true,
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -588,10 +515,10 @@ class _ProviderDashboardTab extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
-        _SectionHeader(
+        SectionHeader(
           title: 'סטטיסטיקות מהירות',
           subtitle: 'סיכום קצר להיום',
-          trailing: _TinyChip(
+          trailing: TinyChip(
             text: 'LIVE',
             fill: const Color(0xFF22C55E).withOpacity(0.10),
             textColor: const Color(0xFF22C55E),
@@ -645,10 +572,10 @@ class _ProviderDashboardTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        _SectionHeader(
+        SectionHeader(
           title: 'פעולות מהירות',
           subtitle: 'עדכן זמינות, שירותים ועוד',
-          trailing: const _TinyChip(
+          trailing: const TinyChip(
             text: 'חדש',
           ),
         ),
@@ -657,7 +584,7 @@ class _ProviderDashboardTab extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _GradientActionCard(
+              child: GradientActionCard(
                 title: 'עדכן זמינות',
                 subtitle: 'פתח/סגור בקשות',
                 icon: Icons.toggle_on_rounded,
@@ -671,7 +598,7 @@ class _ProviderDashboardTab extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _GradientActionCard(
+              child: GradientActionCard(
                 title: 'נהל שירותים',
                 subtitle: 'מחירים, סוג שירות',
                 icon: Icons.settings_suggest_outlined,
@@ -688,14 +615,14 @@ class _ProviderDashboardTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        const _SectionHeader(
+        const SectionHeader(
           title: 'הזמנות קרובות',
           subtitle: 'רק אחרי אישור הבקשה',
         ),
         const SizedBox(height: 10),
 
         if (upcoming.isEmpty)
-          _EmptyStateCard(
+          EmptyStateCard(
             title: 'אין הזמנות קרובות עדיין',
             subtitle: 'אשר/י בקשות חדשות כדי להתחיל.',
             icon: Icons.event_busy_rounded,
@@ -714,7 +641,7 @@ class _ProviderDashboardTab extends StatelessWidget {
 }
 
 class _RequestsTab extends StatelessWidget {
-  final List<_BookingRequestData> requests;
+  final List<BookingRequestData> requests;
   final void Function(int index) onAccept;
   final void Function(int index) onDecline;
 
@@ -733,7 +660,7 @@ class _RequestsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'בקשות להזמנה',
           subtitle: 'אשר/י או דחה/י בקשות נכנסות',
         ),
@@ -789,7 +716,7 @@ class _RequestsTab extends StatelessWidget {
         ],
 
         if (requests.isEmpty)
-          const _EmptyStateCard(
+          const EmptyStateCard(
             title: 'אין בקשות כרגע',
             subtitle: 'כשבקשה תגיע – תופיע כאן.',
             icon: Icons.inbox_outlined,
@@ -799,7 +726,7 @@ class _RequestsTab extends StatelessWidget {
   }
 }
 
-/// ✅ NEW TAB: אבודים (Lost & Found)
+/// Lost & Found tab
 class _LostPetsTab extends StatelessWidget {
   final void Function(String msg) onAction;
 
@@ -810,13 +737,14 @@ class _LostPetsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'אבודים',
           subtitle: 'דיווחים על חיות אבודות ונמצאות (בקרוב AI התאמות)',
         ),
         const SizedBox(height: 10),
 
-        _GlassCard(
+        GlassCard(
+          useBlur: true,
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -861,13 +789,13 @@ class _LostPetsTab extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'דיווח על חיה נמצאה',
           icon: Icons.add_photo_alternate_rounded,
           onTap: () => onAction('TODO: Report found pet'),
         ),
         const SizedBox(height: 12),
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'חיפוש חיה אבודה',
           icon: Icons.search_rounded,
           onTap: () => onAction('TODO: Search lost pets'),
@@ -875,7 +803,7 @@ class _LostPetsTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        const _EmptyStateCard(
+        const EmptyStateCard(
           title: 'אין דיווחים עדיין',
           subtitle: 'בקרוב: התאמות חכמות לפי תמונה ומיקום.',
           icon: Icons.pets_outlined,
@@ -901,13 +829,14 @@ class _ScheduleTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'לו״ז וזמינות',
           subtitle: 'נהל/י את הזמנים והימים הפנויים',
         ),
         const SizedBox(height: 10),
 
-        _GlassCard(
+        GlassCard(
+          useBlur: true,
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -977,7 +906,7 @@ class _ScheduleTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        _PrimaryGradientButton(
+        PrimaryGradientButton(
           text: 'עריכת חלונות זמן',
           icon: Icons.edit_calendar_rounded,
           onTap: () => onAction('TODO: Edit time slots'),
@@ -1005,7 +934,7 @@ class _ScheduleTab extends StatelessWidget {
 }
 
 class _MessagesTab extends StatelessWidget {
-  final List<_ChatPreviewData> chats;
+  final List<ChatPreviewData> chats;
   final void Function(String msg) onAction;
 
   const _MessagesTab({required this.chats, required this.onAction});
@@ -1015,7 +944,7 @@ class _MessagesTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       children: [
-        const _SectionHeader(
+        const SectionHeader(
           title: 'צ׳אט',
           subtitle: 'שיחות עם בעלי חיות המחמד',
         ),
@@ -1030,7 +959,7 @@ class _MessagesTab extends StatelessWidget {
           ),
         ),
         if (chats.isEmpty)
-          const _EmptyStateCard(
+          const EmptyStateCard(
             title: 'אין שיחות עדיין',
             subtitle: 'שיחות יופיעו כאן אחרי בקשה/הזמנה.',
             icon: Icons.chat_bubble_outline,
@@ -1041,7 +970,7 @@ class _MessagesTab extends StatelessWidget {
 }
 
 class _RequestCard extends StatelessWidget {
-  final _BookingRequestData data;
+  final BookingRequestData data;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
 
@@ -1092,7 +1021,8 @@ class _RequestCard extends StatelessWidget {
         onAccept != null &&
         onDecline != null;
 
-    return _GlassCard(
+    return GlassCard(
+      useBlur: true,
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
@@ -1132,7 +1062,7 @@ class _RequestCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _TinyChip(
+              TinyChip(
                 text: '$_statusText • $_typeLabel',
                 fill: _accent.withOpacity(0.10),
                 textColor: _accent,
@@ -1169,7 +1099,7 @@ class _RequestCard extends StatelessWidget {
 }
 
 class _UpcomingBookingCard extends StatelessWidget {
-  final _BookingRequestData data;
+  final BookingRequestData data;
 
   const _UpcomingBookingCard({required this.data});
 
@@ -1184,7 +1114,8 @@ class _UpcomingBookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
+      useBlur: true,
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -1230,7 +1161,7 @@ class _UpcomingBookingCard extends StatelessWidget {
 }
 
 class _ChatCard extends StatelessWidget {
-  final _ChatPreviewData data;
+  final ChatPreviewData data;
   final VoidCallback onTap;
 
   const _ChatCard({required this.data, required this.onTap});
@@ -1240,7 +1171,8 @@ class _ChatCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: _GlassCard(
+      child: GlassCard(
+        useBlur: true,
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
@@ -1311,7 +1243,8 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
+      useBlur: true,
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -1368,7 +1301,8 @@ class _TimeSlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return GlassCard(
+      useBlur: true,
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -1519,51 +1453,6 @@ class _SubHeader extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF334155).withOpacity(0.78),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
-
 class _DayChip extends StatelessWidget {
   final String text;
   final bool selected;
@@ -1587,171 +1476,6 @@ class _DayChip extends StatelessWidget {
         style: TextStyle(
           fontWeight: FontWeight.w900,
           color: fg,
-        ),
-      ),
-    );
-  }
-}
-
-class _TinyChip extends StatelessWidget {
-  final String text;
-  final Color? fill;
-  final Color? textColor;
-
-  const _TinyChip({
-    required this.text,
-    this.fill,
-    this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: (fill ?? const Color(0xFF0F766E).withOpacity(0.10)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: (textColor ?? const Color(0xFF0F766E)),
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryGradientButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _PrimaryGradientButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GradientActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
-
-  const _GradientActionCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: gradient,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 22,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.20),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withOpacity(0.88),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1790,142 +1514,4 @@ class _PillIconButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
-
-  const _GlassCard({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.76),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.48)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 26,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyStateCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _EmptyStateCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: _GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: const Color(0xFF64748B).withOpacity(0.12),
-              ),
-              child: Icon(icon, color: const Color(0xFF64748B)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF334155).withOpacity(0.82),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_back_rounded, color: Color(0xFF64748B)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BookingRequestData {
-  final String ownerName;
-  final ProviderServiceType serviceType;
-  final String city;
-  final String whenText;
-  final String priceText;
-  final RequestStatus status;
-
-  const _BookingRequestData({
-    required this.ownerName,
-    required this.serviceType,
-    required this.city,
-    required this.whenText,
-    required this.priceText,
-    required this.status,
-  });
-
-  _BookingRequestData copyWith({RequestStatus? status}) => _BookingRequestData(
-        ownerName: ownerName,
-        serviceType: serviceType,
-        city: city,
-        whenText: whenText,
-        priceText: priceText,
-        status: status ?? this.status,
-      );
-}
-
-class _ChatPreviewData {
-  final String name;
-  final String lastMessage;
-  final String timeAgo;
-
-  const _ChatPreviewData({
-    required this.name,
-    required this.lastMessage,
-    required this.timeAgo,
-  });
 }
