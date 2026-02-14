@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/features/auth/presentation/login_screen.dart';
-import 'package:petpal/features/auth/presentation/guest_home_screen.dart';
+import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/primary_gradient_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -99,7 +100,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           children: [
                             const _MasonryGallery(),
 
-                            // Soft overlay to match theme + better text separation
+                            // Soft overlay
                             Positioned.fill(
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
@@ -154,28 +155,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         onStartPressed: () {
                           _log('onStartPressed -> navigate to LoginScreen');
                           try {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                            );
+                            context.push('/login');
                           } catch (e, st) {
                             _log('navigation to LoginScreen failed', error: e, stackTrace: st);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('הניווט נכשל. נסה/י שוב.')),
+                              const SnackBar(content: Text('navigation failed.')),
                             );
                           }
                         },
                         onGuestPressed: () {
                           _log('onGuestPressed -> navigate to GuestHomeScreen');
                           try {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (_) => const GuestHomeScreen()),
-                            );
+                            context.go('/guest');
                           } catch (e, st) {
                             _log('navigation to GuestHomeScreen failed', error: e, stackTrace: st);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('הניווט נכשל. נסה/י שוב.')),
+                              const SnackBar(content: Text('navigation failed.')),
                             );
                           }
                         },
@@ -202,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const Icon(Icons.error_outline, size: 48, color: AppColors.alertCoral),
                   const SizedBox(height: 12),
                   const Text(
-                    'שגיאה במסך הפתיחה',
+                    'error in onboarding screen',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
@@ -253,10 +248,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
   late List<ScrollController> _controllers;
   late List<Timer> _timers;
 
-  // Speeds for each column
   final List<double> _speeds = [0.8, 0.6, 0.7];
-
-  // Staggered offsets
   final List<double> _offsets = [0.0, 100.0, 50.0];
 
   @override
@@ -281,7 +273,6 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
           final maxScroll = pos.maxScrollExtent;
           final current = _controllers[i].offset;
 
-          // Smooth loop: jump back slightly instead of hard 0 (prevents visible "snap")
           if (current >= maxScroll - 2) {
             _controllers[i].jumpTo(1.0);
           } else {
@@ -382,14 +373,14 @@ class _ContentSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 22),
       child: Column(
         children: [
           const SizedBox(height: 10),
 
-          // Glass Card (consistent with app)
-          _GlassCard(
+          GlassCard(
+            useBlur: false,
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Column(
@@ -404,7 +395,7 @@ class _ContentSection extends StatelessWidget {
                         height: 1.2,
                       ),
                       children: const [
-                        TextSpan(text: 'ברוך הבא ל־'),
+                        TextSpan(text: 'Welcome to '),
                         TextSpan(
                           text: 'PetPal',
                           style: TextStyle(color: AppColors.primarySage),
@@ -414,7 +405,7 @@ class _ContentSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'מצא מטפל אמין או פרסם מודעות אבוד/נמצא בקלות ובמהירות.\nהכול במקום אחד — שירותים, צ׳אט והתראות.',
+                    'Find a reliable caretaker or post lost/found ads easily and quickly.\nEverything in one place - services, chat and notifications.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13.5,
@@ -425,8 +416,8 @@ class _ContentSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  _PrimaryGradientButton(
-                    text: 'התחל',
+                  PrimaryGradientButton(
+                    text: 'Get Started',
                     icon: Icons.rocket_launch_rounded,
                     onTap: onStartPressed,
                   ),
@@ -436,7 +427,7 @@ class _ContentSection extends StatelessWidget {
                   TextButton(
                     onPressed: onGuestPressed,
                     child: Text(
-                      'המשך כאורח',
+                      'Continue as Guest',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -454,7 +445,7 @@ class _ContentSection extends StatelessWidget {
   }
 }
 
-/// ---------- Small UI helpers (same style family) ----------
+/// ---------- Small UI helpers ----------
 
 class _Blob extends StatelessWidget {
   const _Blob({required this.size, required this.gradient});
@@ -497,99 +488,6 @@ class _GlassPill extends StatelessWidget {
         ],
       ),
       child: child,
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  const _GlassCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.76),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.50)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 26,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _PrimaryGradientButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _PrimaryGradientButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 54,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          ],
-        ),
-      ),
     );
   }
 }
