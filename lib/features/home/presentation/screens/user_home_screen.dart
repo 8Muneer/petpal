@@ -202,6 +202,7 @@ class _UserHomeScreenState extends State<UserHomeScreen>
               _ModernTopBar(
                 displayName: _displayName,
                 email: _email,
+                photoUrl: _user?.photoURL,
                 onProfilePressed: () => context.push('/profile'),
                 onLogoutPressed: _confirmLogout,
               ),
@@ -265,6 +266,7 @@ class _UserHomeScreenState extends State<UserHomeScreen>
 class _ModernTopBar extends StatelessWidget {
   final String displayName;
   final String email;
+  final String? photoUrl;
   final VoidCallback onProfilePressed;
   final VoidCallback onLogoutPressed;
 
@@ -273,6 +275,7 @@ class _ModernTopBar extends StatelessWidget {
     required this.email,
     required this.onProfilePressed,
     required this.onLogoutPressed,
+    this.photoUrl,
   });
 
   String get _initial {
@@ -343,14 +346,22 @@ class _ModernTopBar extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [
-                    Color(0xFF0F766E),
-                    Color(0xFF22C55E),
-                  ],
-                ),
+                gradient: photoUrl != null && photoUrl!.isNotEmpty
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          Color(0xFF0F766E),
+                          Color(0xFF22C55E),
+                        ],
+                      ),
+                image: photoUrl != null && photoUrl!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(photoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.10),
@@ -359,16 +370,18 @@ class _ModernTopBar extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Center(
-                child: Text(
-                  _initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
+              child: photoUrl != null && photoUrl!.isNotEmpty
+                  ? null
+                  : Center(
+                      child: Text(
+                        _initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ],

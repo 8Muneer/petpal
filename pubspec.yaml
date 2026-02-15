@@ -57,6 +57,8 @@ dependencies:
 
   # Routing
   go_router: ^14.0.0
+  image_picker: ^1.2.1
+  firebase_storage: ^11.7.7
 
 dev_dependencies:
   flutter_test:

@@ -254,6 +254,7 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
               _ModernTopBar(
                 displayName: _displayName,
                 email: _email,
+                photoUrl: _user?.photoURL,
                 badgeText:
                     _pendingCount > 0 ? '$_pendingCount בקשות' : null,
                 onLogoutPressed: _confirmLogout,
@@ -323,6 +324,7 @@ class _ModernTopBar extends StatelessWidget {
   final String displayName;
   final String email;
   final String? badgeText;
+  final String? photoUrl;
   final VoidCallback onLogoutPressed;
   final VoidCallback onAvatarPressed;
 
@@ -332,6 +334,7 @@ class _ModernTopBar extends StatelessWidget {
     required this.onLogoutPressed,
     required this.onAvatarPressed,
     this.badgeText,
+    this.photoUrl,
   });
 
   String get _initial {
@@ -408,11 +411,19 @@ class _ModernTopBar extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                ),
+                gradient: photoUrl != null && photoUrl!.isNotEmpty
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                      ),
+                image: photoUrl != null && photoUrl!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(photoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.10),
@@ -421,16 +432,18 @@ class _ModernTopBar extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Center(
-                child: Text(
-                  _initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
+              child: photoUrl != null && photoUrl!.isNotEmpty
+                  ? null
+                  : Center(
+                      child: Text(
+                        _initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ],

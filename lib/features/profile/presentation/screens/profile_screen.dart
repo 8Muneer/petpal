@@ -1,34 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/core/widgets/tiny_chip.dart';
+import 'package:petpal/features/auth/domain/enums/user_role.dart';
+import 'package:petpal/features/profile/domain/entities/user_profile.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-
-  User? get _user => FirebaseAuth.instance.currentUser;
-
-  String get _displayName {
-    final u = _user;
-    final dn = (u?.displayName ?? '').trim();
-    if (dn.isNotEmpty) return dn;
-
-    final email = (u?.email ?? '').trim();
-    if (email.contains('@')) return email.split('@').first;
-
-    return 'משתמש';
-  }
-
-  String get _email => (_user?.email ?? 'אין אימייל').trim();
-
-  String get _initial {
-    final s = _displayName.trim();
-    if (s.isEmpty) return 'P';
-    return s.characters.first.toUpperCase();
-  }
 
   Future<void> _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -47,14 +30,15 @@ class ProfileScreen extends StatelessWidget {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: const Text(
-            'להתנתק מהחשבון?',
+            '\u05dc\u05d4\u05ea\u05e0\u05ea\u05e7 \u05de\u05d4\u05d7\u05e9\u05d1\u05d5\u05df?',
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
-          content: const Text('תוכל/י להתחבר שוב בכל זמן.'),
+          content: const Text(
+              '\u05ea\u05d5\u05db\u05dc/\u05d9 \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05e9\u05d5\u05d1 \u05d1\u05db\u05dc \u05d6\u05de\u05df.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('ביטול'),
+              child: const Text('\u05d1\u05d9\u05d8\u05d5\u05dc'),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -71,7 +55,7 @@ class ProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('התנתקות',
+              child: const Text('\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
                   style: TextStyle(fontWeight: FontWeight.w900)),
             ),
           ],
@@ -93,10 +77,8 @@ class ProfileScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final u = _user;
-    final isVerified = u?.emailVerified ?? false;
-    final uid = u?.uid ?? '-';
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(currentUserProfileProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -109,7 +91,7 @@ class ProfileScreen extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
           title: const Text(
-            'פרופיל',
+            '\u05e4\u05e8\u05d5\u05e4\u05d9\u05dc',
             style: TextStyle(
               fontWeight: FontWeight.w900,
               color: Color(0xFF0F172A),
@@ -117,7 +99,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              tooltip: 'התנתקות',
+              tooltip: '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
               onPressed: () => _confirmLogout(context),
               icon: const Icon(Icons.logout_rounded, color: Color(0xFF0F172A)),
             ),
@@ -179,170 +161,310 @@ class ProfileScreen extends StatelessWidget {
             ),
 
             SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                children: [
-                  _ProfileHeroCard(
-                    initial: _initial,
-                    displayName: _displayName,
-                    email: _email,
-                    verified: isVerified,
-                    onEdit: () => _toast(context, 'TODO: עריכת פרופיל'),
-                    onShare: () => _toast(context, 'TODO: שיתוף פרופיל'),
-                  ),
-                  const SizedBox(height: 14),
-
-                  SectionHeader(
-                    title: 'החשבון שלי',
-                    subtitle: 'הגדרות, אבטחה ופרטיות',
-                    trailing: TinyChip(text: isVerified ? 'מאומת' : 'לא מאומת'),
-                  ),
-                  const SizedBox(height: 10),
-
-                  GlassCard(
-                    useBlur: true,
-                    child: Column(
-                      children: [
-                        _SettingTile(
-                          icon: Icons.edit_rounded,
-                          title: 'פרטים אישיים',
-                          subtitle: 'שם, טלפון ותמונה',
-                          onTap: () => _toast(context, 'TODO: Personal details'),
-                        ),
-                        _DividerLine(),
-                        _SettingTile(
-                          icon: Icons.security_rounded,
-                          title: 'אבטחה',
-                          subtitle: 'סיסמה, אימות דו־שלבי',
-                          onTap: () => _toast(context, 'TODO: Security'),
-                        ),
-                        _DividerLine(),
-                        _SettingTile(
-                          icon: Icons.privacy_tip_rounded,
-                          title: 'פרטיות',
-                          subtitle: 'מי רואה את הפרופיל שלך',
-                          onTap: () => _toast(context, 'TODO: Privacy'),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  SectionHeader(
-                    title: 'הפעילות שלי',
-                    subtitle: 'הזמנות, מודעות ושיחות',
-                  ),
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          title: 'הזמנות',
-                          value: '3',
-                          icon: Icons.calendar_month_rounded,
-                          accent: const Color(0xFF0F766E),
-                          onTap: () => _toast(context, 'TODO: My bookings'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          title: 'מודעות',
-                          value: '2',
-                          icon: Icons.post_add_rounded,
-                          accent: const Color(0xFF0EA5E9),
-                          onTap: () => _toast(context, 'TODO: My posts'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          title: 'שיחות',
-                          value: '5',
-                          icon: Icons.chat_bubble_rounded,
-                          accent: const Color(0xFFFB7185),
-                          onTap: () => _toast(context, 'TODO: My chats'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          title: 'דירוג',
-                          value: '4.8',
-                          icon: Icons.star_rounded,
-                          accent: const Color(0xFFF59E0B),
-                          onTap: () => _toast(context, 'TODO: Reviews'),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  SectionHeader(
-                    title: 'מידע טכני',
-                    subtitle: 'לצורכי תמיכה',
-                  ),
-                  const SizedBox(height: 10),
-
-                  GlassCard(
-                    useBlur: true,
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _KeyValueRow(
-                          k: 'UID',
-                          v: uid,
-                        ),
-                        const SizedBox(height: 10),
-                        _KeyValueRow(
-                          k: 'סטטוס אימייל',
-                          v: isVerified ? 'מאומת' : 'לא מאומת',
-                          badgeColor:
-                              isVerified ? const Color(0xFF22C55E) : const Color(0xFFFB7185),
-                        ),
-                        const SizedBox(height: 12),
-                        _PrimaryOutlineButton(
-                          text: 'שלח/י אימייל אימות',
-                          icon: Icons.mark_email_read_rounded,
-                          onTap: isVerified
-                              ? null
-                              : () async {
-                                  try {
-                                    await FirebaseAuth.instance.currentUser
-                                        ?.sendEmailVerification();
-                                    if (!context.mounted) return;
-                                    _toast(context, 'נשלח אימייל אימות ✅');
-                                  } catch (_) {
-                                    if (!context.mounted) return;
-                                    _toast(context, 'שגיאה בשליחה. נסה/י שוב.');
-                                  }
-                                },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _DangerButton(
-                    text: 'התנתקות',
-                    icon: Icons.logout_rounded,
-                    onTap: () => _confirmLogout(context),
-                  ),
-                ],
+              child: profileAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                    child: Text(
+                        '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05d4\u05e4\u05e8\u05d5\u05e4\u05d9\u05dc')),
+                data: (profile) {
+                  if (profile == null) {
+                    return const Center(
+                        child: Text(
+                            '\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05e4\u05e8\u05d5\u05e4\u05d9\u05dc'));
+                  }
+                  return _ProfileBody(
+                    profile: profile,
+                    onEdit: () => context.push('/profile/edit'),
+                    onSecurity: () => context.push('/profile/security'),
+                    onPrivacy: () => context.push('/profile/privacy'),
+                    onShare: () =>
+                        _toast(context, 'TODO: \u05e9\u05d9\u05ea\u05d5\u05e3 \u05e4\u05e8\u05d5\u05e4\u05d9\u05dc'),
+                    onLogout: () => _confirmLogout(context),
+                    onToast: (msg) => _toast(context, msg),
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileBody extends StatelessWidget {
+  final UserProfile profile;
+  final VoidCallback onEdit;
+  final VoidCallback onSecurity;
+  final VoidCallback onPrivacy;
+  final VoidCallback onShare;
+  final VoidCallback onLogout;
+  final void Function(String) onToast;
+
+  const _ProfileBody({
+    required this.profile,
+    required this.onEdit,
+    required this.onSecurity,
+    required this.onPrivacy,
+    required this.onShare,
+    required this.onLogout,
+    required this.onToast,
+  });
+
+  String get _displayName {
+    final name = profile.name.trim();
+    if (name.isNotEmpty) return name;
+    final email = profile.email.trim();
+    if (email.contains('@')) return email.split('@').first;
+    return '\u05de\u05e9\u05ea\u05de\u05e9';
+  }
+
+  String get _initial {
+    final s = _displayName.trim();
+    if (s.isEmpty) return 'P';
+    return s.characters.first.toUpperCase();
+  }
+
+  String get _roleLabel {
+    switch (profile.role) {
+      case UserRole.petOwner:
+        return '\u05d1\u05e2\u05dc \u05d7\u05d9\u05d9\u05ea \u05de\u05d7\u05de\u05d3';
+      case UserRole.serviceProvider:
+        return '\u05de\u05d8\u05e4\u05dc/\u05ea';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      children: [
+        _ProfileHeroCard(
+          initial: _initial,
+          displayName: _displayName,
+          email: profile.email,
+          verified: profile.isVerified,
+          roleLabel: _roleLabel,
+          photoUrl: profile.photoUrl,
+          onEdit: onEdit,
+          onShare: onShare,
+        ),
+        const SizedBox(height: 14),
+
+        SectionHeader(
+          title: '\u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05e9\u05dc\u05d9',
+          subtitle: '\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea, \u05d0\u05d1\u05d8\u05d7\u05d4 \u05d5\u05e4\u05e8\u05d8\u05d9\u05d5\u05ea',
+          trailing: TinyChip(
+              text: profile.isVerified
+                  ? '\u05de\u05d0\u05d5\u05de\u05ea'
+                  : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea'),
+        ),
+        const SizedBox(height: 10),
+
+        GlassCard(
+          useBlur: true,
+          child: Column(
+            children: [
+              _SettingTile(
+                icon: Icons.edit_rounded,
+                title: '\u05e4\u05e8\u05d8\u05d9\u05dd \u05d0\u05d9\u05e9\u05d9\u05d9\u05dd',
+                subtitle: '\u05e9\u05dd, \u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05ea\u05de\u05d5\u05e0\u05d4',
+                onTap: onEdit,
+              ),
+              _DividerLine(),
+              _SettingTile(
+                icon: Icons.security_rounded,
+                title: '\u05d0\u05d1\u05d8\u05d7\u05d4',
+                subtitle: '\u05e1\u05d9\u05e1\u05de\u05d4, \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5\u05be\u05e9\u05dc\u05d1\u05d9',
+                onTap: onSecurity,
+              ),
+              _DividerLine(),
+              _SettingTile(
+                icon: Icons.privacy_tip_rounded,
+                title: '\u05e4\u05e8\u05d8\u05d9\u05d5\u05ea',
+                subtitle: '\u05de\u05d9 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05d4\u05e4\u05e8\u05d5\u05e4\u05d9\u05dc \u05e9\u05dc\u05da',
+                onTap: onPrivacy,
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        SectionHeader(
+          title: '\u05d4\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05e9\u05dc\u05d9',
+          subtitle: '\u05d4\u05d6\u05de\u05e0\u05d5\u05ea, \u05de\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05e9\u05d9\u05d7\u05d5\u05ea',
+        ),
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: '\u05d4\u05d6\u05de\u05e0\u05d5\u05ea',
+                value: '${profile.totalBookings}',
+                icon: Icons.calendar_month_rounded,
+                accent: const Color(0xFF0F766E),
+                onTap: () => onToast('TODO: My bookings'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                title: '\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea',
+                value: '${profile.totalReviews}',
+                icon: Icons.rate_review_rounded,
+                accent: const Color(0xFF0EA5E9),
+                onTap: () => onToast('TODO: My reviews'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: '\u05d3\u05d9\u05e8\u05d5\u05d2',
+                value: profile.rating > 0
+                    ? profile.rating.toStringAsFixed(1)
+                    : '-',
+                icon: Icons.star_rounded,
+                accent: const Color(0xFFF59E0B),
+                onTap: () => onToast('TODO: Reviews'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                title: '\u05ea\u05e4\u05e7\u05d9\u05d3',
+                value: _roleLabel,
+                icon: profile.role == UserRole.serviceProvider
+                    ? Icons.pets_rounded
+                    : Icons.person_rounded,
+                accent: const Color(0xFFFB7185),
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+
+        // Bio section
+        if (profile.bio != null && profile.bio!.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(
+            title: '\u05e7\u05e6\u05ea \u05e2\u05dc\u05d9',
+            subtitle: '\u05de\u05d9\u05d3\u05e2 \u05e0\u05d5\u05e1\u05e3',
+          ),
+          const SizedBox(height: 10),
+          GlassCard(
+            useBlur: true,
+            padding: const EdgeInsets.all(14),
+            child: Text(
+              profile.bio!,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF334155).withOpacity(0.85),
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 14),
+
+        const SectionHeader(
+          title: '\u05de\u05d9\u05d3\u05e2 \u05d8\u05db\u05e0\u05d9',
+          subtitle: '\u05dc\u05e6\u05d5\u05e8\u05db\u05d9 \u05ea\u05de\u05d9\u05db\u05d4',
+        ),
+        const SizedBox(height: 10),
+
+        GlassCard(
+          useBlur: true,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _KeyValueRow(
+                k: 'UID',
+                v: profile.uid,
+              ),
+              const SizedBox(height: 10),
+              _KeyValueRow(
+                k: '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc',
+                v: profile.isVerified
+                    ? '\u05de\u05d0\u05d5\u05de\u05ea'
+                    : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
+                badgeColor: profile.isVerified
+                    ? const Color(0xFF22C55E)
+                    : const Color(0xFFFB7185),
+              ),
+              if (profile.phone != null && profile.phone!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _KeyValueRow(
+                  k: '\u05d8\u05dc\u05e4\u05d5\u05df',
+                  v: profile.phone!,
+                ),
+              ],
+              if (profile.location != null &&
+                  profile.location!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _KeyValueRow(
+                  k: '\u05de\u05d9\u05e7\u05d5\u05dd',
+                  v: profile.location!,
+                ),
+              ],
+              const SizedBox(height: 12),
+              _PrimaryOutlineButton(
+                text: '\u05e9\u05dc\u05d7/\u05d9 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d0\u05d9\u05de\u05d5\u05ea',
+                icon: Icons.mark_email_read_rounded,
+                onTap: profile.isVerified
+                    ? null
+                    : () async {
+                        try {
+                          await FirebaseAuth.instance.currentUser
+                              ?.sendEmailVerification();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.all(14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              content: const Text(
+                                  '\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d0\u05d9\u05de\u05d5\u05ea \u2705'),
+                              backgroundColor: const Color(0xFF0F766E),
+                            ),
+                          );
+                        } catch (_) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.all(14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              content: const Text(
+                                  '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.'),
+                              backgroundColor: const Color(0xFFB91C1C),
+                            ),
+                          );
+                        }
+                      },
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        _DangerButton(
+          text: '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
+          icon: Icons.logout_rounded,
+          onTap: onLogout,
+        ),
+      ],
     );
   }
 }
@@ -354,6 +476,8 @@ class _ProfileHeroCard extends StatelessWidget {
   final String displayName;
   final String email;
   final bool verified;
+  final String roleLabel;
+  final String? photoUrl;
   final VoidCallback onEdit;
   final VoidCallback onShare;
 
@@ -362,6 +486,8 @@ class _ProfileHeroCard extends StatelessWidget {
     required this.displayName,
     required this.email,
     required this.verified,
+    required this.roleLabel,
+    this.photoUrl,
     required this.onEdit,
     required this.onShare,
   });
@@ -377,11 +503,13 @@ class _ProfileHeroCard extends StatelessWidget {
             height: 66,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(26),
-              gradient: const LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-              ),
+              gradient: (photoUrl != null && photoUrl!.isNotEmpty)
+                  ? null
+                  : const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                    ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.12),
@@ -389,17 +517,25 @@ class _ProfileHeroCard extends StatelessWidget {
                   offset: const Offset(0, 16),
                 ),
               ],
+              image: (photoUrl != null && photoUrl!.isNotEmpty)
+                  ? DecorationImage(
+                      image: NetworkImage(photoUrl!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 22,
-                ),
-              ),
-            ),
+            child: (photoUrl != null && photoUrl!.isNotEmpty)
+                ? null
+                : Center(
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -422,14 +558,25 @@ class _ProfileHeroCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     TinyChip(
-                      text: verified ? 'מאומת ✅' : 'לא מאומת',
+                      text: verified
+                          ? '\u05de\u05d0\u05d5\u05de\u05ea \u2705'
+                          : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                       color: verified
                           ? const Color(0xFF22C55E)
                           : const Color(0xFFFB7185),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
+                Text(
+                  roleLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F766E),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   email,
                   maxLines: 1,
@@ -444,7 +591,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _MiniPrimaryButton(
-                        text: 'עריכה',
+                        text: '\u05e2\u05e8\u05d9\u05db\u05d4',
                         icon: Icons.edit_rounded,
                         onTap: onEdit,
                       ),
@@ -452,7 +599,7 @@ class _ProfileHeroCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _MiniSecondaryButton(
-                        text: 'שיתוף',
+                        text: '\u05e9\u05d9\u05ea\u05d5\u05e3',
                         icon: Icons.ios_share_rounded,
                         onTap: onShare,
                       ),
@@ -688,7 +835,9 @@ class _PrimaryOutlineButton extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                color: enabled ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                color: enabled
+                    ? const Color(0xFF0F766E)
+                    : const Color(0xFF64748B),
               ),
             ),
             const SizedBox(width: 12),
@@ -697,13 +846,16 @@ class _PrimaryOutlineButton extends StatelessWidget {
                 text,
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
-                  color: enabled ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                  color: enabled
+                      ? const Color(0xFF0F172A)
+                      : const Color(0xFF64748B),
                 ),
               ),
             ),
             Icon(
               Icons.chevron_left_rounded,
-              color: enabled ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+              color:
+                  enabled ? const Color(0xFF0F766E) : const Color(0xFF64748B),
             ),
           ],
         ),
@@ -734,7 +886,8 @@ class _DangerButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           color: const Color(0xFFFFF1F2),
-          border: Border.all(color: const Color(0xFFFB7185).withOpacity(0.35)),
+          border:
+              Border.all(color: const Color(0xFFFB7185).withOpacity(0.35)),
         ),
         child: Row(
           children: const [
@@ -742,7 +895,7 @@ class _DangerButton extends StatelessWidget {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                'התנתקות',
+                '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF9F1239),

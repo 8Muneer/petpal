@@ -197,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const Icon(Icons.error_outline, size: 48, color: AppColors.alertCoral),
                   const SizedBox(height: 12),
                   const Text(
-                    'error in onboarding screen',
+                    '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05e4\u05ea\u05d9\u05d7\u05d4',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
@@ -395,7 +395,7 @@ class _ContentSection extends StatelessWidget {
                         height: 1.2,
                       ),
                       children: const [
-                        TextSpan(text: 'Welcome to '),
+                        TextSpan(text: '\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc'),
                         TextSpan(
                           text: 'PetPal',
                           style: TextStyle(color: AppColors.primarySage),
@@ -405,7 +405,7 @@ class _ContentSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Find a reliable caretaker or post lost/found ads easily and quickly.\nEverything in one place - services, chat and notifications.',
+                    '\u05de\u05e6\u05d0/\u05d9 \u05de\u05d8\u05e4\u05dc/\u05ea \u05d0\u05de\u05d9\u05e0/\u05d4 \u05d0\u05d5 \u05e4\u05e8\u05e1\u05de/\u05d9 \u05de\u05d5\u05d3\u05e2\u05d5\u05ea \u05d0\u05d1\u05d5\u05d3/\u05e0\u05de\u05e6\u05d0 \u05d1\u05e7\u05dc\u05d5\u05ea.\n\u05d4\u05db\u05dc \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05d3 - \u05e9\u05d9\u05e8\u05d5\u05ea\u05d9\u05dd, \u05e6\u05f3\u05d0\u05d8 \u05d5\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13.5,
@@ -417,7 +417,7 @@ class _ContentSection extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   PrimaryGradientButton(
-                    text: 'Get Started',
+                    text: '\u05d1\u05d5\u05d0\u05d5 \u05e0\u05ea\u05d7\u05d9\u05dc',
                     icon: Icons.rocket_launch_rounded,
                     onTap: onStartPressed,
                   ),
@@ -427,7 +427,7 @@ class _ContentSection extends StatelessWidget {
                   TextButton(
                     onPressed: onGuestPressed,
                     child: Text(
-                      'Continue as Guest',
+                      '\u05d4\u05de\u05e9\u05da/\u05d9 \u05db\u05d0\u05d5\u05e8\u05d7/\u05ea',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
