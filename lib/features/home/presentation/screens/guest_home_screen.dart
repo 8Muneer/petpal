@@ -1,13 +1,15 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/glass_nav_bar.dart';
-import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/section_header.dart';
-import 'package:petpal/core/widgets/tiny_chip.dart';
+import 'package:petpal/features/feed/domain/entities/feed_post.dart';
+import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -107,9 +109,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   Widget build(BuildContext context) {
     final tabs = <Widget>[
       _HomeTab(
-        cards: _cards,
         onRequireLogin: _requireLogin,
-        onToast: _toast,
       ),
       _LostPetsTab(
         onRequireLogin: _requireLogin,
@@ -284,133 +284,137 @@ class _GuestTopBar extends StatelessWidget {
 
 // ====================== Tabs ======================
 
-class _HomeTab extends StatelessWidget {
-  final List<ServiceCardData> cards;
+class _HomeTab extends ConsumerWidget {
   final VoidCallback onRequireLogin;
-  final void Function(String msg) onToast;
 
   const _HomeTab({
-    required this.cards,
     required this.onRequireLogin,
-    required this.onToast,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      children: [
-        const _GuestHeroBanner(),
-        const SizedBox(height: 12),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final postsAsync = ref.watch(feedPostsProvider);
 
-        _HeroSearchBar(onTap: onRequireLogin),
-        const SizedBox(height: 14),
-
-        const SectionHeader(
-          title: 'הצצה לפיצ׳רים',
-          subtitle: 'כדי להזמין, לפרסם ולצ׳אט — צריך חשבון',
-          trailing: TinyChip(text: 'אורח'),
-        ),
-        const SizedBox(height: 10),
-
-        Row(
+    return postsAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+      ),
+      error: (e, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: GradientActionCard(
-                title: 'פרסם/י מודעה',
-                subtitle: 'אבוד/נמצא או שירות',
-                icon: Icons.add_circle_outline,
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                ),
-                locked: true,
-                onTap: onRequireLogin,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GradientActionCard(
-                title: 'צ׳אט מאובטח',
-                subtitle: 'רק למשתמשים רשומים',
-                icon: Icons.chat_bubble_outline,
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
-                ),
-                locked: true,
-                onTap: onRequireLogin,
+            Icon(Icons.error_outline_rounded,
+                size: 48,
+                color: const Color(0xFFFB7185).withOpacity(0.6)),
+            const SizedBox(height: 12),
+            const Text(
+              'שגיאה בטעינת הפיד',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF64748B),
               ),
             ),
           ],
         ),
-
-        const SizedBox(height: 18),
-
-        Row(
-          children: [
-            const Expanded(
-              child: SectionHeader(
-                title: 'עדכונים אחרונים',
-                subtitle: 'קהילה פעילה בירושלים',
-                trailing: TinyChip(text: 'LIVE'),
-              ),
-            ),
-            TextButton(
-              onPressed: onRequireLogin,
-              child: const Text(
-                'ראה עוד',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F766E),
+      ),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.feed_outlined,
+                    size: 64,
+                    color: const Color(0xFF64748B).withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text(
+                  'אין פוסטים עדיין',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-
-        const _ModernFeedTile(
-          title: 'כלב אבוד - רקס',
-          subtitle: 'נראה לאחרונה בירושלים • לפני שעתיים',
-          icon: Icons.campaign_outlined,
-          accent: Color(0xFFFB7185),
-        ),
-        const SizedBox(height: 10),
-        const _ModernFeedTile(
-          title: 'מטפל חדש באזור שלך',
-          subtitle: 'דירוג גבוה • היום',
-          icon: Icons.notifications_none_rounded,
-          accent: Color(0xFF60A5FA),
-        ),
-
-        const SizedBox(height: 18),
-
-        const SectionHeader(
-          title: 'מומלצים בקרבתך',
-          subtitle: 'תצוגה בלבד • הזמנה נעולה',
-        ),
-        const SizedBox(height: 10),
-
-        ...cards.take(3).map(
-              (c) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _ModernServiceCardLocked(
-                  data: c,
-                  onPressed: onRequireLogin,
+                const SizedBox(height: 8),
+                const Text(
+                  'הפיד ריק כרגע — התחבר/י כדי לפרסם!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF94A3B8),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                PrimaryGradientButton(
+                  text: 'התחבר/י',
+                  icon: Icons.login_rounded,
+                  onTap: () => context.push('/login'),
+                ),
+              ],
             ),
+          );
+        }
 
-        const SizedBox(height: 6),
-        PrimaryGradientButton(
-          text: 'התחבר/י כדי לפתוח את כל הפיצ׳רים',
-          icon: Icons.lock_open_rounded,
-          onTap: () => context.push('/login'),
-        ),
-      ],
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          itemCount: posts.length + 1, // +1 for the create-post banner
+          itemBuilder: (context, index) {
+            // First item: locked "create post" prompt
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: onRequireLogin,
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: const Color(0xFFF1F5F9),
+                          ),
+                          child: const Icon(Icons.person_outline_rounded,
+                              color: Color(0xFF94A3B8)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'התחבר/י כדי לשתף פוסט...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color:
+                                  const Color(0xFF64748B).withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.lock_outline_rounded,
+                            size: 18, color: Color(0xFF94A3B8)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final post = posts[index - 1];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _GuestPostCard(
+                post: post,
+                onTap: () => context.push('/feed/${post.id}'),
+                onRequireLogin: onRequireLogin,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -491,191 +495,235 @@ class _CardsListTab extends StatelessWidget {
   }
 }
 
-// ====================== Modern widgets (guest) ======================
-
-class _GuestHeroBanner extends StatelessWidget {
-  const _GuestHeroBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-              ),
-            ),
-            child: const Icon(Icons.lock_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'מצב אורח',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'אפשר לצפות בלבד. התחבר/י כדי להזמין, לפרסם ולצ׳אט.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          TinyChip(
-            text: 'תצוגה',
-            color: const Color(0xFF0EA5E9),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroSearchBar extends StatelessWidget {
+class _GuestPostCard extends StatelessWidget {
+  final FeedPost post;
   final VoidCallback onTap;
+  final VoidCallback onRequireLogin;
 
-  const _HeroSearchBar({required this.onTap});
+  const _GuestPostCard({
+    required this.post,
+    required this.onTap,
+    required this.onRequireLogin,
+  });
+
+  String get _timeAgo {
+    if (post.createdAt == null) return '';
+    final diff = DateTime.now().difference(post.createdAt!);
+    if (diff.inMinutes < 1) return 'עכשיו';
+    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
+    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
+    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
+    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isTip = post.type == PostType.tip;
+
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+            // Author row
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: post.authorPhotoUrl != null &&
+                            post.authorPhotoUrl!.isNotEmpty
+                        ? null
+                        : const LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                          ),
+                    image: post.authorPhotoUrl != null &&
+                            post.authorPhotoUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(
+                                post.authorPhotoUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: post.authorPhotoUrl != null &&
+                          post.authorPhotoUrl!.isNotEmpty
+                      ? null
+                      : Center(
+                          child: Text(
+                            post.authorName.isNotEmpty
+                                ? post.authorName.characters.first.toUpperCase()
+                                : 'P',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                 ),
-              ),
-              child: const Icon(Icons.search_rounded, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'חיפוש מטפל לפי מיקום ותאריך',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A).withOpacity(0.86),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.authorName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        _timeAgo,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF64748B).withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.lock_outline_rounded,
-                      size: 16, color: Color(0xFF0F766E)),
-                  SizedBox(width: 6),
-                  Text(
-                    'נעול',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F766E),
-                      fontSize: 12,
+                if (isTip)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lightbulb_outline_rounded,
+                            size: 13, color: Color(0xFFF59E0B)),
+                        SizedBox(width: 3),
+                        Text(
+                          'טיפ',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFF59E0B),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // Content (truncated)
+            Text(
+              post.content,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+                height: 1.4,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
-class _ModernFeedTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color accent;
-
-  const _ModernFeedTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.accent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: accent.withOpacity(0.14),
-            ),
-            child: Icon(icon, color: accent),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+            // Optional image
+            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: post.imageUrl!,
+                  width: double.infinity,
+                  height: 160,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    height: 160,
+                    color: const Color(0xFFF1F5F9),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0F766E),
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    height: 160,
+                    color: const Color(0xFFF1F5F9),
+                    child: const Icon(Icons.broken_image_rounded,
+                        color: Color(0xFF94A3B8)),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
+              ),
+            ],
+
+            const SizedBox(height: 10),
+
+            // Actions row (read-only for guests — tapping triggers login)
+            Row(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: onRequireLogin,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.favorite_border_rounded,
+                            size: 18, color: Color(0xFF64748B)),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${post.likes.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: onRequireLogin,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.chat_bubble_outline_rounded,
+                            size: 18, color: Color(0xFF64748B)),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${post.commentCount}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

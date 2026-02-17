@@ -14,6 +14,9 @@ import 'package:petpal/features/profile/presentation/screens/profile_screen.dart
 import 'package:petpal/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/security_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/privacy_screen.dart';
+import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
+import 'package:petpal/features/feed/presentation/screens/create_post_screen.dart';
+import 'package:petpal/features/feed/presentation/screens/post_detail_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -63,6 +66,21 @@ class AppRouter {
         path: '/profile/privacy',
         builder: (context, state) => const PrivacyScreen(),
       ),
+      GoRoute(
+        path: '/feed',
+        builder: (context, state) => const FeedScreen(),
+      ),
+      GoRoute(
+        path: '/feed/create',
+        builder: (context, state) => const CreatePostScreen(),
+      ),
+      GoRoute(
+        path: '/feed/:postId',
+        builder: (context, state) {
+          final postId = state.pathParameters['postId']!;
+          return PostDetailScreen(postId: postId);
+        },
+      ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
     redirect: (context, state) async {
@@ -76,9 +94,15 @@ class AppRouter {
         '/signup',
         '/guest',
         '/',
+        '/feed',
       ];
 
       if (publicRoutes.contains(location)) return null;
+
+      // Allow guest access to feed post details
+      if (location.startsWith('/feed/') && !location.startsWith('/feed/create')) {
+        return null;
+      }
 
       // If not logged in, redirect to onboarding
       if (user == null) return '/onboarding';
