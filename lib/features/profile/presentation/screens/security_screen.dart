@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:petpal/core/constants/app_constants.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});
@@ -159,7 +162,21 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   Future<void> _deleteAccount() async {
     setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.currentUser?.delete();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // 1. Delete all user's feed posts (and their comments)
+      await ref.read(feedRepositoryProvider).deleteAllUserPosts(user.uid);
+
+      // 2. Delete Firestore user document
+      await FirebaseFirestore.instance
+          .collection(AppConstants.usersCollection)
+          .doc(user.uid)
+          .delete();
+
+      // 3. Delete the Firebase Auth account
+      await user.delete();
+
       if (!mounted) return;
       context.go('/');
     } on FirebaseAuthException catch (e) {
