@@ -11,6 +11,9 @@ import 'package:petpal/features/home/presentation/screens/guest_home_screen.dart
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/profile_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/security_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/privacy_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -47,6 +50,18 @@ class AppRouter {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/security',
+        builder: (context, state) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: '/profile/privacy',
+        builder: (context, state) => const PrivacyScreen(),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),

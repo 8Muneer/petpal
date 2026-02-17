@@ -61,22 +61,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _friendlyAuthErrorHe(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
-        return 'Invalid email address';
+        return '\u05db\u05ea\u05d5\u05d1\u05ea \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05ea\u05e7\u05d9\u05e0\u05d4';
       case 'user-disabled':
-        return 'User is disabled';
+        return '\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d7\u05e1\u05d5\u05dd';
       case 'user-not-found':
-        return 'No user found with this email';
+        return '\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05de\u05e9\u05ea\u05de\u05e9 \u05e2\u05dd \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d6\u05d4';
       case 'wrong-password':
-        return 'Wrong password';
+        return '\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4';
       case 'invalid-credential':
       case 'INVALID_LOGIN_CREDENTIALS':
-        return 'Invalid email or password';
+        return '\u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd';
       case 'network-request-failed':
-        return 'Network error. Check internet and try again';
+        return '\u05d1\u05e2\u05d9\u05d9\u05ea \u05e8\u05e9\u05ea. \u05d1\u05d3\u05d5\u05e7/\u05d9 \u05d0\u05ea \u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05d5\u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1';
       case 'too-many-requests':
-        return 'Too many attempts. Try again later';
+        return '\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1 \u05de\u05d0\u05d5\u05d7\u05e8 \u05d9\u05d5\u05ea\u05e8';
       default:
-        return 'Login failed: ${e.message ?? e.code}';
+        return '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea: ${e.message ?? e.code}';
     }
   }
 
@@ -85,13 +85,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _showSnack('Please fill in email and password', isError: true);
+      _showSnack('\u05d0\u05e0\u05d0 \u05de\u05dc\u05d0/\u05d9 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d5\u05e1\u05d9\u05e1\u05de\u05d4', isError: true);
       _log('validation failed: empty email/password');
       return;
     }
 
     if (!Validators.isValidEmail(email)) {
-      _showSnack('Please enter a valid email address', isError: true);
+      _showSnack('\u05d0\u05e0\u05d0 \u05d4\u05d6\u05df/\u05d9 \u05db\u05ea\u05d5\u05d1\u05ea \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05ea\u05e7\u05d9\u05e0\u05d4', isError: true);
       _log('validation failed: invalid email', error: email);
       return;
     }
@@ -116,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e, st) {
       _log('Unexpected error during login', error: e, stackTrace: st);
       if (!mounted) return;
-      _showSnack('Unexpected error. Please try again.', isError: true);
+      _showSnack('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05dc\u05d0 \u05e6\u05e4\u05d5\u05d9\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -125,12 +125,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _showSnack('Please enter an email to reset password', isError: true);
+      _showSnack('\u05d0\u05e0\u05d0 \u05d4\u05d6\u05df/\u05d9 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d9\u05e4\u05d5\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4', isError: true);
       return;
     }
 
     if (!Validators.isValidEmail(email)) {
-      _showSnack('Please enter a valid email address', isError: true);
+      _showSnack('\u05d0\u05e0\u05d0 \u05d4\u05d6\u05df/\u05d9 \u05db\u05ea\u05d5\u05d1\u05ea \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05ea\u05e7\u05d9\u05e0\u05d4', isError: true);
       return;
     }
 
@@ -139,13 +139,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (!mounted) return;
-      _showSnack('Password reset link sent');
+      _showSnack('\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0\u05d9\u05e4\u05d5\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e0\u05e9\u05dc\u05d7 \u05dc\u05d0\u05d9\u05de\u05d9\u05d9\u05dc');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _showSnack(_friendlyAuthErrorHe(e), isError: true);
     } catch (_) {
       if (!mounted) return;
-      _showSnack('Unexpected error. Please try again.', isError: true);
+      _showSnack('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05dc\u05d0 \u05e6\u05e4\u05d5\u05d9\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -171,7 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      'Login',
+                      '\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -211,7 +211,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 14),
 
                 const Text(
-                  'Welcome Back',
+                  '\u05e9\u05de\u05d7\u05d9\u05dd \u05e9\u05d7\u05d6\u05e8\u05ea!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
@@ -221,7 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Log in to continue',
+                  '\u05d4\u05ea\u05d7\u05d1\u05e8/\u05d9 \u05db\u05d3\u05d9 \u05dc\u05d4\u05de\u05e9\u05d9\u05da',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -240,7 +240,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       InputField(
                         controller: _emailController,
-                        label: 'Email',
+                        label: '\u05d0\u05d9\u05de\u05d9\u05d9\u05dc',
                         hint: 'name@example.com',
                         icon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
@@ -253,8 +253,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         obscureText: !_isPasswordVisible,
                         textDirection: TextDirection.ltr,
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: '........',
+                          labelText: '\u05e1\u05d9\u05e1\u05de\u05d4',
+                          hintText: '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             onPressed: () => setState(
@@ -295,7 +295,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: TextButton(
                           onPressed: _isLoading ? null : _handleForgotPassword,
                           child: Text(
-                            'Forgot password?',
+                            '\u05e9\u05db\u05d7\u05ea \u05e1\u05d9\u05e1\u05de\u05d4?',
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFF0F766E).withOpacity(0.95),
@@ -307,7 +307,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 6),
 
                       PrimaryGradientButton(
-                        text: _isLoading ? 'Logging in...' : 'Log In',
+                        text: _isLoading ? '\u05de\u05ea\u05d7\u05d1\u05e8...' : '\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea',
                         icon: _isLoading
                             ? Icons.hourglass_top_rounded
                             : Icons.login_rounded,
@@ -323,7 +323,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Don\'t have an account?',
+                      '\u05d0\u05d9\u05df \u05dc\u05da \u05d7\u05e9\u05d1\u05d5\u05df?',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF334155).withOpacity(0.85),
@@ -334,7 +334,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ? null
                           : () => context.push('/signup'),
                       child: const Text(
-                        'Sign Up',
+                        '\u05d4\u05e8\u05e9\u05de\u05d4',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           color: Color(0xFF0F766E),
