@@ -17,6 +17,9 @@ import 'package:petpal/features/profile/presentation/screens/privacy_screen.dart
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/create_post_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/post_detail_screen.dart';
+import 'package:petpal/features/walks/domain/entities/walk_request.dart';
+import 'package:petpal/features/walks/presentation/screens/create_walk_request_screen.dart';
+import 'package:petpal/features/walks/presentation/screens/walk_request_detail_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -80,6 +83,22 @@ class AppRouter {
           final postId = state.pathParameters['postId']!;
           return PostDetailScreen(postId: postId);
         },
+      ),
+      GoRoute(
+        path: '/walks/create',
+        builder: (context, state) => const CreateWalkRequestScreen(),
+      ),
+      GoRoute(
+        path: '/walks/edit',
+        builder: (context, state) => CreateWalkRequestScreen(
+          initialRequest: state.extra as WalkRequest,
+        ),
+      ),
+      GoRoute(
+        path: '/walks/detail',
+        builder: (context, state) => WalkRequestDetailScreen(
+          request: state.extra as WalkRequest,
+        ),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
