@@ -107,8 +107,6 @@ class _UserHomeScreenState extends State<UserHomeScreen>
     return 'משתמש';
   }
 
-  String get _email => (_user?.email ?? '').trim();
-
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -198,13 +196,13 @@ class _UserHomeScreenState extends State<UserHomeScreen>
         body: SafeArea(
           child: Column(
             children: [
-              _ModernTopBar(
-                displayName: _displayName,
-                email: _email,
-                photoUrl: _user?.photoURL,
-                onProfilePressed: () => context.push('/profile'),
-                onLogoutPressed: _confirmLogout,
-              ),
+              if (_currentIndex == 0)
+                _ModernTopBar(
+                  displayName: _displayName,
+                  photoUrl: _user?.photoURL,
+                  onProfilePressed: () => context.push('/profile'),
+                  onLogoutPressed: _confirmLogout,
+                ),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
@@ -264,14 +262,12 @@ class _UserHomeScreenState extends State<UserHomeScreen>
 
 class _ModernTopBar extends StatelessWidget {
   final String displayName;
-  final String email;
   final String? photoUrl;
   final VoidCallback onProfilePressed;
   final VoidCallback onLogoutPressed;
 
   const _ModernTopBar({
     required this.displayName,
-    required this.email,
     required this.onProfilePressed,
     required this.onLogoutPressed,
     this.photoUrl,
@@ -287,103 +283,76 @@ class _ModernTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: GlassCard(
-              useBlur: true,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'שלום, $displayName 👋',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
-                            height: 1.1,
-                          ),
+      child: GlassCard(
+        useBlur: true,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            // Profile avatar — RIGHT side in RTL (first child)
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: onProfilePressed,
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: photoUrl != null && photoUrl!.isNotEmpty
+                      ? null
+                      : const LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          email.isEmpty
-                              ? 'בוא/י נמצא מטפל מושלם לחיית המחמד שלך'
-                              : email,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF334155).withOpacity(0.8),
-                          ),
-                        ),
-                      ],
+                  image: photoUrl != null && photoUrl!.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(photoUrl!), fit: BoxFit.cover)
+                      : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.10),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  _PillIconButton(
-                    icon: Icons.logout_rounded,
-                    tooltip: 'התנתקות',
-                    onTap: onLogoutPressed,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: onProfilePressed,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                gradient: photoUrl != null && photoUrl!.isNotEmpty
+                  ],
+                ),
+                child: photoUrl != null && photoUrl!.isNotEmpty
                     ? null
-                    : const LinearGradient(
-                        begin: Alignment.topRight,
-                        end: Alignment.bottomLeft,
-                        colors: [
-                          Color(0xFF0F766E),
-                          Color(0xFF22C55E),
-                        ],
-                      ),
-                image: photoUrl != null && photoUrl!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(photoUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: photoUrl != null && photoUrl!.isNotEmpty
-                  ? null
-                  : Center(
-                      child: Text(
-                        _initial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
+                    : Center(
+                        child: Text(
+                          _initial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 17,
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            // Greeting — CENTER
+            Expanded(
+              child: Text(
+                'שלום, $displayName 👋',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Logout — LEFT side in RTL (last child)
+            _PillIconButton(
+              icon: Icons.logout_rounded,
+              tooltip: 'התנתקות',
+              onTap: onLogoutPressed,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -135,10 +135,11 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _GuestTopBar(
-                onLoginPressed: () => context.push('/login'),
-                onProfilePressed: _requireLogin,
-              ),
+              if (_currentIndex == 0)
+                _GuestTopBar(
+                  onLoginPressed: () => context.push('/login'),
+                  onProfilePressed: _requireLogin,
+                ),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
@@ -211,6 +212,29 @@ class _GuestTopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Row(
         children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: onProfilePressed,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                color: Colors.white.withOpacity(0.85),
+                border: Border.all(color: Colors.white.withOpacity(0.55)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.person_outline_rounded,
+                  color: Color(0xFF0F172A)),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: GlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -251,29 +275,6 @@ class _GuestTopBar extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: onProfilePressed,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                color: Colors.white.withOpacity(0.85),
-                border: Border.all(color: Colors.white.withOpacity(0.55)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.person_outline_rounded,
-                  color: Color(0xFF0F172A)),
             ),
           ),
         ],
