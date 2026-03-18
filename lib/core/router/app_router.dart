@@ -17,6 +17,9 @@ import 'package:petpal/features/profile/presentation/screens/privacy_screen.dart
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/create_post_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/post_detail_screen.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
+import 'package:petpal/features/sitting/presentation/screens/create_sitting_request_screen.dart';
+import 'package:petpal/features/sitting/presentation/screens/sitting_request_detail_screen.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/presentation/screens/create_walk_request_screen.dart';
 import 'package:petpal/features/walks/presentation/screens/walk_request_detail_screen.dart';
@@ -98,6 +101,22 @@ class AppRouter {
         path: '/walks/detail',
         builder: (context, state) => WalkRequestDetailScreen(
           request: state.extra as WalkRequest,
+        ),
+      ),
+      GoRoute(
+        path: '/sitting/create',
+        builder: (context, state) => const CreateSittingRequestScreen(),
+      ),
+      GoRoute(
+        path: '/sitting/edit',
+        builder: (context, state) => CreateSittingRequestScreen(
+          initialRequest: state.extra as SittingRequest,
+        ),
+      ),
+      GoRoute(
+        path: '/sitting/detail',
+        builder: (context, state) => SittingRequestDetailScreen(
+          request: state.extra as SittingRequest,
         ),
       ),
     ],
