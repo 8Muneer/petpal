@@ -10,6 +10,9 @@ import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
+    show SittingRequest, SittingStatus, SittingType;
+import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
@@ -182,10 +185,8 @@ class _UserHomeScreenState extends State<UserHomeScreen>
         dogWalkCards: _dogWalkCards,
         onAction: (msg) => _toast(msg),
       ),
-      _CardsListTab(
-        title: 'שמירה (Pet Sitting)',
-        subtitle: 'מטפלים עם דירוגים מאומתים',
-        cards: _petSittingCards,
+      _SittingTab(
+        petSittingCards: _petSittingCards,
         onAction: (msg) => _toast(msg),
       ),
     ];
@@ -1324,6 +1325,633 @@ class _WalkServicesView extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// שמירה Tab
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _SittingTab extends ConsumerStatefulWidget {
+  final List<ServiceCardData> petSittingCards;
+  final void Function(String msg) onAction;
+
+  const _SittingTab({
+    required this.petSittingCards,
+    required this.onAction,
+  });
+
+  @override
+  ConsumerState<_SittingTab> createState() => _SittingTabState();
+}
+
+class _SittingTabState extends ConsumerState<_SittingTab> {
+  int _selectedView = 0; // 0 = requests, 1 = services
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Toggle bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+          child: GlassCard(
+            useBlur: true,
+            padding: const EdgeInsets.all(6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ToggleChip(
+                    label: 'בקשות שמירה',
+                    icon: Icons.list_alt_rounded,
+                    selected: _selectedView == 0,
+                    onTap: () => setState(() => _selectedView = 0),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ToggleChip(
+                    label: 'שירותי שמירה',
+                    icon: Icons.search_rounded,
+                    selected: _selectedView == 1,
+                    onTap: () => setState(() => _selectedView = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Content
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selectedView == 0
+                ? _SittingRequestsView(key: const ValueKey('sitting_requests'))
+                : _SittingServicesView(
+                    key: const ValueKey('sitting_services'),
+                    cards: widget.petSittingCards,
+                    onAction: widget.onAction,
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SittingRequestsView extends ConsumerWidget {
+  const _SittingRequestsView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestsAsync = ref.watch(sittingRequestsProvider);
+    return Column(
+      children: [
+        // Create request button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => context.push('/sitting/create'),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_rounded, size: 20, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'בקשת שמירה חדשה',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Requests list
+        Expanded(
+          child: requestsAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+            ),
+            error: (e, _) => Center(
+              child: Text('שגיאה בטעינת הבקשות: $e'),
+            ),
+            data: (requests) {
+              if (requests.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.home_work_rounded,
+                          size: 64,
+                          color: const Color(0xFF64748B).withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'אין בקשות שמירה עדיין',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'לחץ/י על הכפתור למעלה כדי לפרסם בקשה',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                itemCount: requests.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.list_alt_rounded,
+                              size: 16, color: Color(0xFF7C3AED)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'הבקשות שלי (${requests.length})',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final req = requests[index - 1];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _SittingRequestCard(request: req),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SittingRequestCard extends StatelessWidget {
+  final SittingRequest request;
+  const _SittingRequestCard({required this.request});
+
+  IconData get _petIcon {
+    switch (request.petType) {
+      case PetType.dog:
+        return Icons.directions_walk_rounded;
+      case PetType.cat:
+        return Icons.pets_rounded;
+      case PetType.other:
+        return Icons.cruelty_free_rounded;
+    }
+  }
+
+  String get _petTypeLabel {
+    switch (request.petType) {
+      case PetType.dog:
+        return 'כלב';
+      case PetType.cat:
+        return 'חתול';
+      case PetType.other:
+        return 'אחר';
+    }
+  }
+
+  String get _timeAgo {
+    if (request.createdAt == null) return '';
+    final diff = DateTime.now().difference(request.createdAt!);
+    if (diff.inMinutes < 1) return 'עכשיו';
+    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
+    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
+    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
+    return '${request.createdAt!.day}/${request.createdAt!.month}/${request.createdAt!.year}';
+  }
+
+  bool get _isOpen => request.status == SittingStatus.open;
+
+  String get _genderSuffix {
+    if (request.petGender == PetGender.male) return ' · זכר';
+    if (request.petGender == PetGender.female) return ' · נקבה';
+    return '';
+  }
+
+  String _formatDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final startStr =
+        request.startDate != null ? _formatDate(request.startDate!) : '';
+    final endStr =
+        request.endDate != null ? _formatDate(request.endDate!) : '';
+    final nights = request.numberOfNights;
+    final sittingTypeLabel = request.sittingType == SittingType.atOwnerHome
+        ? 'בבית הבעלים'
+        : 'בבית השומר/ת';
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: GlassCard(
+        useBlur: true,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──────────────────────────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: request.ownerPhotoUrl != null &&
+                            request.ownerPhotoUrl!.isNotEmpty
+                        ? null
+                        : const LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                          ),
+                    image: request.ownerPhotoUrl != null &&
+                            request.ownerPhotoUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(request.ownerPhotoUrl!),
+                            fit: BoxFit.cover)
+                        : null,
+                  ),
+                  child: request.ownerPhotoUrl != null &&
+                          request.ownerPhotoUrl!.isNotEmpty
+                      ? null
+                      : Center(
+                          child: Text(
+                            request.ownerName.isNotEmpty
+                                ? request.ownerName.characters.first
+                                    .toUpperCase()
+                                : 'P',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(request.ownerName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                              fontSize: 13)),
+                      Text(_timeAgo,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8))),
+                    ],
+                  ),
+                ),
+                // Status badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _isOpen
+                        ? const Color(0xFF7C3AED).withOpacity(0.12)
+                        : const Color(0xFF94A3B8).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: _isOpen
+                            ? const Color(0xFF7C3AED).withOpacity(0.4)
+                            : const Color(0xFF94A3B8).withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                          _isOpen
+                              ? Icons.circle
+                              : Icons.check_circle_outline_rounded,
+                          size: 8,
+                          color: _isOpen
+                              ? const Color(0xFF7C3AED)
+                              : const Color(0xFF94A3B8)),
+                      const SizedBox(width: 4),
+                      Text(_isOpen ? 'פתוח' : 'הושלם',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: _isOpen
+                                  ? const Color(0xFF7C3AED)
+                                  : const Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // ── Pet photo ────────────────────────────────────────────────
+            if (request.petImageUrl != null &&
+                request.petImageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: request.petImageUrl!,
+                  width: double.infinity,
+                  height: 100,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                      height: 100,
+                      color: const Color(0xFFF1F5F9),
+                      child: const Center(
+                          child: CircularProgressIndicator(
+                              color: Color(0xFF7C3AED), strokeWidth: 2))),
+                  errorWidget: (_, __, ___) => Container(
+                      height: 100,
+                      color: const Color(0xFFF1F5F9),
+                      child: const Icon(Icons.broken_image_rounded,
+                          color: Color(0xFF94A3B8))),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 10),
+
+            // ── Pet name + type/gender ───────────────────────────────────
+            Row(
+              children: [
+                Icon(_petIcon, size: 15, color: const Color(0xFF7C3AED)),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: Text(request.petName,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A)))),
+                Text('$_petTypeLabel$_genderSuffix',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B))),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // ── Compact info row ─────────────────────────────────────────
+            Wrap(
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+                if (startStr.isNotEmpty && endStr.isNotEmpty)
+                  _MiniInfo(
+                      icon: Icons.date_range_rounded,
+                      text: '$startStr – $endStr'),
+                if (nights > 0)
+                  _MiniInfo(
+                      icon: Icons.nights_stay_rounded,
+                      text: '$nights לילות'),
+                _MiniInfo(
+                    icon: request.sittingType == SittingType.atOwnerHome
+                        ? Icons.home_rounded
+                        : Icons.house_rounded,
+                    text: sittingTypeLabel),
+                _MiniInfo(
+                    icon: Icons.location_on_outlined, text: request.area),
+                if (request.budget != null && request.budget!.isNotEmpty)
+                  _MiniInfo(
+                      icon: Icons.account_balance_wallet_outlined,
+                      text: request.budget!),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── View details button ──────────────────────────────────────
+            GestureDetector(
+              onTap: () =>
+                  context.push('/sitting/detail', extra: request),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('הצג פרטים',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white)),
+                    SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 12, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SittingServicesView extends StatelessWidget {
+  final List<ServiceCardData> cards;
+  final void Function(String msg) onAction;
+
+  const _SittingServicesView({
+    super.key,
+    required this.cards,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        const SectionHeader(
+          title: 'שירותי שמירה',
+          subtitle: 'מצא/י שומר/ת חיות קרוב/ה ובזמינות מהירה',
+        ),
+        const SizedBox(height: 10),
+        ...cards.map(
+          (c) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _SittingServiceCard(
+              data: c,
+              onPressed: () => onAction('TODO: Sitting booking flow'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SittingServiceCard extends StatelessWidget {
+  final ServiceCardData data;
+  final VoidCallback onPressed;
+
+  const _SittingServiceCard({
+    required this.data,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF7C3AED);
+    return GlassCard(
+      useBlur: true,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: accent.withOpacity(0.14),
+                ),
+                child: const Icon(Icons.home_work_rounded, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${data.city} • ${data.name}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${data.timeText} • ${data.priceText}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF334155).withOpacity(0.82),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        size: 16, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(
+                      data.rating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: accent.withOpacity(0.12),
+                ),
+                child: const Text(
+                  'Pet Sitting ✨',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: accent,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              _MiniPrimaryButton(
+                text: 'בקשת הזמנה',
+                onTap: onPressed,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+
 class _LostPetsTab extends StatelessWidget {
   final void Function(String msg) onAction;
 
@@ -1359,40 +1987,6 @@ class _LostPetsTab extends StatelessWidget {
           text: 'דווח/י על חיה אבודה',
           icon: Icons.add_rounded,
           onTap: () => onAction('TODO: Report lost pet'),
-        ),
-      ],
-    );
-  }
-}
-
-class _CardsListTab extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final List<ServiceCardData> cards;
-  final void Function(String msg) onAction;
-
-  const _CardsListTab({
-    required this.title,
-    required this.subtitle,
-    required this.cards,
-    required this.onAction,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      children: [
-        SectionHeader(title: title, subtitle: subtitle),
-        const SizedBox(height: 10),
-        ...cards.map(
-          (c) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _ModernServiceCard(
-              data: c,
-              onPressed: () => onAction('TODO: Booking/Request flow'),
-            ),
-          ),
         ),
       ],
     );
