@@ -37,3 +37,16 @@ final walkRequestsProvider = StreamProvider<List<WalkRequest>>((ref) {
 final walkImageServiceProvider = Provider<WalkImageService>((ref) {
   return WalkImageService(storage: FirebaseStorage.instance);
 });
+
+final openWalkRequestsProvider = StreamProvider<List<WalkRequest>>((ref) {
+  final datasource = ref.watch(walkDatasourceProvider);
+  return datasource.watchAllOpenRequests().map((requests) {
+    final sorted = [...requests];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
+});

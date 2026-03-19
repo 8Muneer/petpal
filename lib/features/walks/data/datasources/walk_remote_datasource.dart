@@ -19,6 +19,15 @@ class WalkRemoteDatasource {
             .toList());
   }
 
+  Stream<List<WalkRequestModel>> watchAllOpenRequests() {
+    return _requestsRef
+        .where('status', isEqualTo: 'open')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => WalkRequestModel.fromFirestore(doc))
+            .toList());
+  }
+
   Future<String> createRequest(Map<String, dynamic> data) async {
     final doc = await _requestsRef.add(data);
     return doc.id;
