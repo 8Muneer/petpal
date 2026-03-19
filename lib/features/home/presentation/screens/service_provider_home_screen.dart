@@ -14,6 +14,8 @@ import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/core/widgets/glass_nav_bar.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/walks/domain/entities/walk_request.dart';
+import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 enum RequestStatus { pending, accepted, declined }
@@ -198,10 +200,6 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
     );
   }
 
-  void _setRequestStatus(int index, RequestStatus status) {
-    setState(() => _requests[index] = _requests[index].copyWith(status: status));
-  }
-
   @override
   Widget build(BuildContext context) {
     final tabs = <Widget>[
@@ -222,17 +220,7 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
             .toList(),
         onAction: (msg) => _toast(msg),
       ),
-      _RequestsTab(
-        requests: _requests,
-        onAccept: (i) {
-          _setRequestStatus(i, RequestStatus.accepted);
-          _toast('הבקשה אושרה ✅');
-        },
-        onDecline: (i) {
-          _setRequestStatus(i, RequestStatus.declined);
-          _toast('הבקשה נדחתה');
-        },
-      ),
+      const _ProviderWalksTab(),
       _LostPetsTab(
         onAction: (msg) => _toast(msg),
       ),
@@ -304,9 +292,9 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
               label: 'לוח',
             ),
             NavigationDestination(
-              icon: Icon(Icons.inbox_outlined),
-              selectedIcon: Icon(Icons.inbox_rounded),
-              label: 'בקשות',
+              icon: Icon(Icons.directions_walk_outlined),
+              selectedIcon: Icon(Icons.directions_walk_rounded),
+              label: 'טיולים',
             ),
             NavigationDestination(
               icon: Icon(Icons.pets_outlined),
@@ -1012,87 +1000,358 @@ class _ProviderDashboardTab extends StatelessWidget {
   }
 }
 
-class _RequestsTab extends StatelessWidget {
-  final List<BookingRequestData> requests;
-  final void Function(int index) onAccept;
-  final void Function(int index) onDecline;
+// ── Provider Walks Tab ────────────────────────────────────────────────────────
 
-  const _RequestsTab({
-    required this.requests,
-    required this.onAccept,
-    required this.onDecline,
-  });
+class _ProviderWalksTab extends ConsumerWidget {
+  const _ProviderWalksTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestsAsync = ref.watch(openWalkRequestsProvider);
+
+    return Column(
+      children: [
+        Expanded(
+          child: requestsAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+            ),
+            error: (e, _) => Center(
+              child: Text('שגיאה בטעינת הבקשות: $e'),
+            ),
+            data: (requests) {
+              if (requests.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_walk_rounded,
+                          size: 64,
+                          color: const Color(0xFF64748B).withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'אין בקשות טיול פתוחות כרגע',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'כשבעל חיה יפרסם בקשה — תופיע כאן',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                itemCount: requests.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SectionHeader(
+                        title: 'בקשות טיול פתוחות',
+                        subtitle: '${requests.length} בקשות זמינות כרגע',
+                      ),
+                    );
+                  }
+                  final req = requests[index - 1];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ProviderWalkRequestCard(request: req),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProviderWalkRequestCard extends StatelessWidget {
+  final WalkRequest request;
+  const _ProviderWalkRequestCard({required this.request});
+
+  IconData get _petIcon {
+    switch (request.petType) {
+      case PetType.dog:
+        return Icons.directions_walk_rounded;
+      case PetType.cat:
+        return Icons.pets_rounded;
+      case PetType.other:
+        return Icons.cruelty_free_rounded;
+    }
+  }
+
+  String get _petTypeLabel {
+    switch (request.petType) {
+      case PetType.dog:
+        return 'כלב';
+      case PetType.cat:
+        return 'חתול';
+      case PetType.other:
+        return 'אחר';
+    }
+  }
+
+  String get _timeAgo {
+    if (request.createdAt == null) return '';
+    final diff = DateTime.now().difference(request.createdAt!);
+    if (diff.inMinutes < 1) return 'עכשיו';
+    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
+    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
+    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
+    return '${request.createdAt!.day}/${request.createdAt!.month}/${request.createdAt!.year}';
+  }
+
+  String get _genderSuffix {
+    if (request.petGender == PetGender.male) return ' · זכר';
+    if (request.petGender == PetGender.female) return ' · נקבה';
+    return '';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final pending = requests.where((r) => r.status == RequestStatus.pending);
-    final accepted = requests.where((r) => r.status == RequestStatus.accepted);
-    final declined = requests.where((r) => r.status == RequestStatus.declined);
+    final dateStr = request.preferredDate != null
+        ? '${request.preferredDate!.day.toString().padLeft(2, '0')}/${request.preferredDate!.month.toString().padLeft(2, '0')}'
+        : '';
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      children: [
-        const SectionHeader(
-          title: 'בקשות להזמנה',
-          subtitle: 'אשר/י או דחה/י בקשות נכנסות',
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: GlassCard(
+        useBlur: true,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Owner row ────────────────────────────────────────────────
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: request.ownerPhotoUrl != null &&
+                            request.ownerPhotoUrl!.isNotEmpty
+                        ? null
+                        : const LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                          ),
+                    image: request.ownerPhotoUrl != null &&
+                            request.ownerPhotoUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(request.ownerPhotoUrl!),
+                            fit: BoxFit.cover)
+                        : null,
+                  ),
+                  child: request.ownerPhotoUrl != null &&
+                          request.ownerPhotoUrl!.isNotEmpty
+                      ? null
+                      : Center(
+                          child: Text(
+                            request.ownerName.isNotEmpty
+                                ? request.ownerName.characters.first
+                                    .toUpperCase()
+                                : 'P',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(request.ownerName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                              fontSize: 13)),
+                      Text(_timeAgo,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8))),
+                    ],
+                  ),
+                ),
+                // Open badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22C55E).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: const Color(0xFF22C55E).withOpacity(0.4)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 8, color: Color(0xFF22C55E)),
+                      SizedBox(width: 4),
+                      Text('פתוח',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF16A34A))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // ── Pet photo ────────────────────────────────────────────────
+            if (request.petImageUrl != null &&
+                request.petImageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: request.petImageUrl!,
+                  width: double.infinity,
+                  height: 100,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                      height: 100,
+                      color: const Color(0xFFF1F5F9),
+                      child: const Center(
+                          child: CircularProgressIndicator(
+                              color: Color(0xFF0F766E), strokeWidth: 2))),
+                  errorWidget: (_, __, ___) => Container(
+                      height: 100,
+                      color: const Color(0xFFF1F5F9),
+                      child: const Icon(Icons.broken_image_rounded,
+                          color: Color(0xFF94A3B8))),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 10),
+
+            // ── Pet name + type ──────────────────────────────────────────
+            Row(
+              children: [
+                Icon(_petIcon, size: 15, color: const Color(0xFF0F766E)),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: Text(request.petName,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A)))),
+                Text('$_petTypeLabel$_genderSuffix',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B))),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // ── Info chips ───────────────────────────────────────────────
+            Wrap(
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+                if (dateStr.isNotEmpty)
+                  _MiniInfo(
+                      icon: Icons.calendar_today_rounded, text: dateStr),
+                _MiniInfo(
+                    icon: Icons.access_time_rounded,
+                    text: request.preferredTime),
+                _MiniInfo(
+                    icon: Icons.timer_outlined, text: request.duration),
+                _MiniInfo(
+                    icon: Icons.location_on_outlined, text: request.area),
+                if (request.budget != null && request.budget!.isNotEmpty)
+                  _MiniInfo(
+                      icon: Icons.account_balance_wallet_outlined,
+                      text: request.budget!),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── View details button ──────────────────────────────────────
+            GestureDetector(
+              onTap: () =>
+                  context.push('/walks/detail', extra: request),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('הצג פרטים',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white)),
+                    SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 12, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 10),
+      ),
+    );
+  }
+}
 
-        if (pending.isNotEmpty) ...[
-          const _SubHeader(text: 'ממתינות'),
-          const SizedBox(height: 8),
-          ...pending.toList().asMap().entries.map((entry) {
-            final idx = requests.indexOf(entry.value);
-            final r = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RequestCard(
-                data: r,
-                onAccept: () => onAccept(idx),
-                onDecline: () => onDecline(idx),
-              ),
-            );
-          }),
-          const SizedBox(height: 12),
-        ],
+class _MiniInfo extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _MiniInfo({required this.icon, required this.text});
 
-        if (accepted.isNotEmpty) ...[
-          const _SubHeader(text: 'מאושרות'),
-          const SizedBox(height: 8),
-          ...accepted.map(
-            (r) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RequestCard(
-                data: r,
-                onAccept: null,
-                onDecline: null,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-
-        if (declined.isNotEmpty) ...[
-          const _SubHeader(text: 'נדחו'),
-          const SizedBox(height: 8),
-          ...declined.map(
-            (r) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RequestCard(
-                data: r,
-                onAccept: null,
-                onDecline: null,
-              ),
-            ),
-          ),
-        ],
-
-        if (requests.isEmpty)
-          const EmptyStateCard(
-            title: 'אין בקשות כרגע',
-            subtitle: 'כשבקשה תגיע – תופיע כאן.',
-            icon: Icons.inbox_outlined,
-          ),
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: const Color(0xFF94A3B8)),
+        const SizedBox(width: 3),
+        Text(text,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B))),
       ],
     );
   }
@@ -1341,135 +1600,6 @@ class _MessagesTab extends StatelessWidget {
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  final BookingRequestData data;
-  final VoidCallback? onAccept;
-  final VoidCallback? onDecline;
-
-  const _RequestCard({
-    required this.data,
-    required this.onAccept,
-    required this.onDecline,
-  });
-
-  Color get _accent {
-    if (data.status == RequestStatus.accepted) return const Color(0xFF22C55E);
-    if (data.status == RequestStatus.declined) return const Color(0xFFFB7185);
-    return const Color(0xFF0EA5E9);
-  }
-
-  String get _statusText {
-    switch (data.status) {
-      case RequestStatus.pending:
-        return 'ממתין';
-      case RequestStatus.accepted:
-        return 'אושר';
-      case RequestStatus.declined:
-        return 'נדחה';
-    }
-  }
-
-  IconData get _typeIcon {
-    switch (data.serviceType) {
-      case ProviderServiceType.dogWalk:
-        return Icons.directions_walk_rounded;
-      case ProviderServiceType.petSitting:
-        return Icons.home_work_rounded;
-    }
-  }
-
-  String get _typeLabel {
-    switch (data.serviceType) {
-      case ProviderServiceType.dogWalk:
-        return 'Dog Walk';
-      case ProviderServiceType.petSitting:
-        return 'Pet Sitting';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final actionable = data.status == RequestStatus.pending &&
-        onAccept != null &&
-        onDecline != null;
-
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: _accent.withOpacity(0.14),
-                ),
-                child: Icon(_typeIcon, color: _accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${data.city} • ${data.ownerName}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${data.whenText} • ${data.priceText}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.82),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              TinyChip(
-                text: '$_statusText • $_typeLabel',
-                fill: _accent.withOpacity(0.10),
-                textColor: _accent,
-              ),
-            ],
-          ),
-          if (actionable) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _OutlineButton(
-                    text: 'דחה',
-                    icon: Icons.close_rounded,
-                    onTap: onDecline!,
-                    accent: const Color(0xFFFB7185),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SolidButton(
-                    text: 'אשר',
-                    icon: Icons.check_rounded,
-                    onTap: onAccept!,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _UpcomingBookingCard extends StatelessWidget {
   final BookingRequestData data;
 
@@ -1713,95 +1843,6 @@ class _TimeSlotCard extends StatelessWidget {
           ),
           const Icon(Icons.arrow_back_rounded, color: Color(0xFF64748B)),
         ],
-      ),
-    );
-  }
-}
-
-class _OutlineButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color accent;
-
-  const _OutlineButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-    required this.accent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent.withOpacity(0.38)),
-          color: accent.withOpacity(0.06),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: accent),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: accent,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SolidButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SolidButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
