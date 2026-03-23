@@ -14,7 +14,9 @@ import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/core/widgets/glass_nav_bar.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/walks/data/datasources/walk_remote_datasource.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
+import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
@@ -1002,79 +1004,483 @@ class _ProviderDashboardTab extends StatelessWidget {
 
 // ── Provider Walks Tab ────────────────────────────────────────────────────────
 
-class _ProviderWalksTab extends ConsumerWidget {
+class _ProviderWalksTab extends ConsumerStatefulWidget {
   const _ProviderWalksTab();
+
+  @override
+  ConsumerState<_ProviderWalksTab> createState() => _ProviderWalksTabState();
+}
+
+class _ProviderWalksTabState extends ConsumerState<_ProviderWalksTab> {
+  int _selectedView = 0; // 0 = בקשות טיול, 1 = פרסם שירות
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // ── Toggle bar ────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+          child: GlassCard(
+            useBlur: true,
+            padding: const EdgeInsets.all(6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ProviderToggleChip(
+                    label: 'בקשות טיול',
+                    icon: Icons.list_alt_rounded,
+                    selected: _selectedView == 0,
+                    onTap: () => setState(() => _selectedView = 0),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ProviderToggleChip(
+                    label: 'פרסם שירות',
+                    icon: Icons.campaign_rounded,
+                    selected: _selectedView == 1,
+                    onTap: () => setState(() => _selectedView = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Content ───────────────────────────────────────────────────────
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selectedView == 0
+                ? _ProviderRequestsView(key: const ValueKey('requests'))
+                : _ProviderAdvertiseView(key: const ValueKey('advertise')),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── View 0: pet owner walk requests ──────────────────────────────────────────
+class _ProviderRequestsView extends ConsumerWidget {
+  const _ProviderRequestsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsAsync = ref.watch(openWalkRequestsProvider);
-
-    return Column(
-      children: [
-        Expanded(
-          child: requestsAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+    return requestsAsync.when(
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: Color(0xFF0F766E))),
+      error: (e, _) => Center(child: Text('שגיאה בטעינת הבקשות: $e')),
+      data: (requests) {
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.directions_walk_rounded,
+                    size: 64,
+                    color: const Color(0xFF64748B).withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text('אין בקשות טיול פתוחות כרגע',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF64748B))),
+                const SizedBox(height: 8),
+                const Text('כשבעל חיה יפרסם בקשה — תופיע כאן',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF94A3B8))),
+              ],
             ),
-            error: (e, _) => Center(
-              child: Text('שגיאה בטעינת הבקשות: $e'),
-            ),
-            data: (requests) {
-              if (requests.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.directions_walk_rounded,
-                          size: 64,
-                          color: const Color(0xFF64748B).withOpacity(0.5)),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'אין בקשות טיול פתוחות כרגע',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'כשבעל חיה יפרסם בקשה — תופיע כאן',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF94A3B8),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                itemCount: requests.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: SectionHeader(
-                        title: 'בקשות טיול פתוחות',
-                        subtitle: '${requests.length} בקשות זמינות כרגע',
-                      ),
-                    );
-                  }
-                  final req = requests[index - 1];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ProviderWalkRequestCard(request: req),
-                  );
-                },
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          itemCount: requests.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SectionHeader(
+                  title: 'בקשות טיול פתוחות',
+                  subtitle: '${requests.length} בקשות זמינות כרגע',
+                ),
               );
-            },
+            }
+            final req = requests[index - 1];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ProviderWalkRequestCard(request: req),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ── View 1: advertise my service ──────────────────────────────────────────────
+class _ProviderAdvertiseView extends ConsumerWidget {
+  const _ProviderAdvertiseView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myServicesAsync = ref.watch(myWalkServicesProvider);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        // CTA card
+        GlassCard(
+          useBlur: true,
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                      ),
+                    ),
+                    child: const Icon(Icons.campaign_rounded,
+                        color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('פרסם את שירות הטיולים שלך',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A))),
+                        SizedBox(height: 2),
+                        Text('הגע/י לבעלי חיות מחמד באזורך',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Benefit bullets
+              _BenefitRow(icon: Icons.location_on_rounded, text: 'הגע/י לבעלי חיות מחמד באזורך'),
+              const SizedBox(height: 6),
+              _BenefitRow(icon: Icons.chat_bubble_outline_rounded, text: 'קבל/י פניות ישירות'),
+              const SizedBox(height: 6),
+              _BenefitRow(icon: Icons.star_rounded, text: 'בנה/י את הפרופיל המקצועי שלך'),
+              const SizedBox(height: 14),
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => context.push('/walks/service/create'),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Text('פרסם שירות חדש',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+        const SizedBox(height: 16),
+
+        // My active services
+        myServicesAsync.when(
+          loading: () =>
+              const Center(child: CircularProgressIndicator(color: Color(0xFF0F766E))),
+          error: (e, _) => const SizedBox.shrink(),
+          data: (services) {
+            if (services.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('השירותים שלי',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF334155))),
+                const SizedBox(height: 10),
+                ...services.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _MyServiceCard(service: s, ref: ref),
+                    )),
+              ],
+            );
+          },
+        ),
       ],
+    );
+  }
+}
+
+String _fmtPrice(String price) {
+  if (price.isEmpty || price == 'לפי הסכמה') return price;
+  return price.contains('₪') ? price : '$price₪';
+}
+
+// ── My service card (provider-owned, with delete) ─────────────────────────────
+class _MyServiceCard extends StatelessWidget {
+  final WalkService service;
+  final WidgetRef ref;
+  const _MyServiceCard({required this.service, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    const teal = Color(0xFF0F766E);
+    final isActive = service.isActive;
+
+    return GlassCard(
+      useBlur: true,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row ──────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  color: isActive
+                      ? teal.withOpacity(0.12)
+                      : const Color(0xFF64748B).withOpacity(0.08),
+                ),
+                child: Icon(Icons.directions_walk_rounded,
+                    color: isActive ? teal : const Color(0xFF94A3B8),
+                    size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(service.area,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            fontSize: 15)),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${_fmtPrice(service.priceText)}  ·  ${service.duration}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              // Status badge
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: isActive
+                      ? const Color(0xFF22C55E).withOpacity(0.12)
+                      : const Color(0xFFF59E0B).withOpacity(0.12),
+                ),
+                child: Text(
+                  isActive ? 'פעיל' : 'מושהה',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: isActive
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFD97706),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Pet type chips ───────────────────────────────────────────
+          if (service.petTypes.isNotEmpty) ...[
+            const SizedBox(height: 9),
+            Wrap(
+              spacing: 6,
+              children: service.petTypes.map((type) {
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: teal.withOpacity(0.08),
+                  ),
+                  child: Text(type,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: teal)),
+                );
+              }).toList(),
+            ),
+          ],
+
+          // ── Action buttons ───────────────────────────────────────────
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              // Toggle active/paused
+              _ServiceActionButton(
+                label: isActive ? 'השהה' : 'הפעל',
+                icon: isActive
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                color: isActive
+                    ? const Color(0xFFD97706)
+                    : teal,
+                bgColor: isActive
+                    ? const Color(0xFFF59E0B).withOpacity(0.1)
+                    : teal.withOpacity(0.1),
+                borderColor: isActive
+                    ? const Color(0xFFF59E0B).withOpacity(0.35)
+                    : teal.withOpacity(0.3),
+                onTap: () => ref
+                    .read(walkDatasourceProvider)
+                    .updateWalkService(service.id, {'isActive': !isActive}),
+              ),
+              const SizedBox(width: 8),
+              // Edit button
+              _ServiceActionButton(
+                label: 'ערוך',
+                icon: Icons.edit_rounded,
+                color: const Color(0xFF0EA5E9),
+                bgColor: const Color(0xFF0EA5E9).withOpacity(0.08),
+                borderColor: const Color(0xFF0EA5E9).withOpacity(0.3),
+                onTap: () =>
+                    context.push('/walks/service/create', extra: service),
+              ),
+              const Spacer(),
+              // Delete
+              GestureDetector(
+                onTap: () => ref
+                    .read(walkDatasourceProvider)
+                    .deleteWalkService(service.id),
+                child: const Icon(Icons.delete_outline_rounded,
+                    color: Color(0xFFFB7185), size: 22),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final Color borderColor;
+  final VoidCallback onTap;
+  const _ServiceActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: bgColor,
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Toggle chip for provider tab ──────────────────────────────────────────────
+class _ProviderToggleChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ProviderToggleChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: selected ? const Color(0xFF0F766E) : Colors.transparent,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon,
+                size: 16,
+                color: selected ? Colors.white : const Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : const Color(0xFF64748B))),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1300,33 +1706,78 @@ class _ProviderWalkRequestCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // ── View details button ──────────────────────────────────────
-            GestureDetector(
-              onTap: () =>
-                  context.push('/walks/detail', extra: request),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+            // ── Action buttons ───────────────────────────────────────────
+            Row(
+              children: [
+                // Primary: Apply
+                Expanded(
+                  flex: 3,
+                  child: GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => _ProviderOfferSheet(
+                            ownerName: request.ownerName),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.handshake_outlined,
+                              size: 14, color: Colors.white),
+                          SizedBox(width: 5),
+                          Text('הגש מועמדות',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white)),
+                        ],
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('הצג פרטים',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white)),
-                    SizedBox(width: 6),
-                    Icon(Icons.arrow_forward_ios_rounded,
-                        size: 12, color: Colors.white),
-                  ],
+                const SizedBox(width: 8),
+                // Secondary: View Details
+                Expanded(
+                  flex: 2,
+                  child: GestureDetector(
+                    onTap: () =>
+                        context.push('/walks/detail', extra: request),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E).withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: const Color(0xFF0F766E).withOpacity(0.25)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('פרטים',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F766E))),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_ios_rounded,
+                              size: 11, color: Color(0xFF0F766E)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -1925,6 +2376,182 @@ class _PillIconButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Provider offer bottom sheet ───────────────────────────────────────────────
+class _ProviderOfferSheet extends StatefulWidget {
+  final String ownerName;
+  const _ProviderOfferSheet({required this.ownerName});
+
+  @override
+  State<_ProviderOfferSheet> createState() => _ProviderOfferSheetState();
+}
+
+class _ProviderOfferSheetState extends State<_ProviderOfferSheet> {
+  final _controller = TextEditingController();
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    if (_controller.text.trim().isEmpty) return;
+    // TODO: wire to chat/messaging feature
+    setState(() => _sent = true);
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'הגש מועמדות',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'שלח הודעה ל${widget.ownerName} עם הצעת השירות שלך',
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _controller,
+                maxLines: 4,
+                minLines: 3,
+                textDirection: TextDirection.rtl,
+                decoration: InputDecoration(
+                  hintText: 'למשל: אני זמין בתאריך זה, המחיר שלי הוא...',
+                  hintStyle:
+                      const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF0F766E), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _sent ? null : _send,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: _sent
+                          ? [
+                              const Color(0xFF22C55E),
+                              const Color(0xFF16A34A)
+                            ]
+                          : [
+                              const Color(0xFF0F766E),
+                              const Color(0xFF22C55E)
+                            ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _sent
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BenefitRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _BenefitRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFF0F766E)),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF334155),
+          ),
+        ),
+      ],
     );
   }
 }

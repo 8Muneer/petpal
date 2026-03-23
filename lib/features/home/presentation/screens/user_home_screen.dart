@@ -13,7 +13,9 @@ import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingRequest, SittingStatus, SittingType;
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
+import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
@@ -90,9 +92,6 @@ class _UserHomeScreenState extends State<UserHomeScreen>
       timeText: 'היום',
     ),
   ];
-
-  List<ServiceCardData> get _dogWalkCards =>
-      _cards.where((c) => c.type == ServiceType.dogWalk).toList();
 
   List<ServiceCardData> get _petSittingCards =>
       _cards.where((c) => c.type == ServiceType.petSitting).toList();
@@ -181,10 +180,7 @@ class _UserHomeScreenState extends State<UserHomeScreen>
       _LostPetsTab(
         onAction: (msg) => _toast(msg),
       ),
-      _WalksTab(
-        dogWalkCards: _dogWalkCards,
-        onAction: (msg) => _toast(msg),
-      ),
+      const _WalksTab(),
       _SittingTab(
         petSittingCards: _petSittingCards,
         onAction: (msg) => _toast(msg),
@@ -744,13 +740,7 @@ class _FeedPostCard extends StatelessWidget {
 }
 
 class _WalksTab extends ConsumerStatefulWidget {
-  final List<ServiceCardData> dogWalkCards;
-  final void Function(String msg) onAction;
-
-  const _WalksTab({
-    required this.dogWalkCards,
-    required this.onAction,
-  });
+  const _WalksTab();
 
   @override
   ConsumerState<_WalksTab> createState() => _WalksTabState();
@@ -799,11 +789,7 @@ class _WalksTabState extends ConsumerState<_WalksTab> {
             duration: const Duration(milliseconds: 200),
             child: _selectedView == 0
                 ? _WalkRequestsView(key: const ValueKey('requests'))
-                : _WalkServicesView(
-                    key: const ValueKey('services'),
-                    cards: widget.dogWalkCards,
-                    onAction: widget.onAction,
-                  ),
+                : _WalkServicesView(key: const ValueKey('services')),
           ),
         ),
       ],
@@ -1291,36 +1277,42 @@ class _LabeledChip extends StatelessWidget {
   }
 }
 
-class _WalkServicesView extends StatelessWidget {
-  final List<ServiceCardData> cards;
-  final void Function(String msg) onAction;
-
-  const _WalkServicesView({
-    super.key,
-    required this.cards,
-    required this.onAction,
-  });
+class _WalkServicesView extends ConsumerWidget {
+  const _WalkServicesView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const SectionHeader(
-          title: 'שירותי טיולים',
-          subtitle: 'מצא/י דוג-ווקר קרוב ובזמינות מהירה',
-        ),
-        const SizedBox(height: 10),
-        ...cards.map(
-          (c) => Padding(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final servicesAsync = ref.watch(walkServicesProvider);
+    return servicesAsync.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0F766E))),
+      error: (e, _) => const Center(
+        child: Text('שגיאה בטעינת השירותים',
+            style: TextStyle(
+                color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
+      ),
+      data: (services) {
+        if (services.isEmpty) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            children: const [
+              EmptyStateCard(
+                title: 'אין שירותי טיולים כרגע',
+                subtitle: 'בקרוב יופיעו כאן ספקי שירות באזורך',
+                icon: Icons.directions_walk_rounded,
+              ),
+            ],
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          itemCount: services.length,
+          itemBuilder: (context, index) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _ModernServiceCard(
-              data: c,
-              onPressed: () => onAction('TODO: Booking/Request flow'),
-            ),
+            child: _WalkServiceCard(service: services[index]),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -2075,148 +2067,6 @@ class _LostPetModernCard extends StatelessWidget {
   }
 }
 
-class _ModernServiceCard extends StatelessWidget {
-  final ServiceCardData data;
-  final VoidCallback onPressed;
-
-  const _ModernServiceCard({
-    required this.data,
-    required this.onPressed,
-  });
-
-  String get _typeLabel {
-    switch (data.type) {
-      case ServiceType.dogWalk:
-        return 'Dog Walk';
-      case ServiceType.petSitting:
-        return 'Pet Sitting';
-      case ServiceType.available:
-        return 'זמין';
-    }
-  }
-
-  IconData get _typeIcon {
-    switch (data.type) {
-      case ServiceType.dogWalk:
-        return Icons.directions_walk_rounded;
-      case ServiceType.petSitting:
-        return Icons.home_work_rounded;
-      case ServiceType.available:
-        return Icons.flash_on_rounded;
-    }
-  }
-
-  Color get _accent {
-    switch (data.type) {
-      case ServiceType.dogWalk:
-        return const Color(0xFF0EA5E9);
-      case ServiceType.petSitting:
-        return const Color(0xFF0F766E);
-      case ServiceType.available:
-        return const Color(0xFF22C55E);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: _accent.withOpacity(0.14),
-                ),
-                child: Icon(_typeIcon, color: _accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${data.city} • ${data.name}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${data.timeText} • ${data.priceText}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.82),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 16, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(
-                      data.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: _accent.withOpacity(0.12),
-                ),
-                child: Text(
-                  '$_typeLabel • ${data.type == ServiceType.available ? "🟢" : "✨"}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: _accent,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              _MiniPrimaryButton(
-                text: 'בקשת הזמנה',
-                onTap: onPressed,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MiniPrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
@@ -2280,6 +2130,274 @@ class _PillIconButton extends StatelessWidget {
             child: Icon(Icons.logout_rounded, color: Color(0xFF334155)),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Walk Service Card
+String _fmtServicePrice(String price) {
+  if (price.isEmpty || price == 'לפי הסכמה') return price;
+  return price.contains('₪') ? price : '$price₪';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _WalkServiceCard extends StatelessWidget {
+  final WalkService service;
+
+  const _WalkServiceCard({required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    const teal = Color(0xFF0F766E);
+    final hasAvailability = service.availableDays.isNotEmpty;
+
+    return GlassCard(
+      useBlur: true,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Provider header ──────────────────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: teal.withOpacity(0.12),
+                ),
+                child: service.providerPhotoUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: CachedNetworkImage(
+                          imageUrl: service.providerPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Center(
+                            child: Text(
+                              service.providerName.isNotEmpty
+                                  ? service.providerName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: teal,
+                                  fontSize: 20),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          service.providerName.isNotEmpty
+                              ? service.providerName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: teal,
+                              fontSize: 20),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      service.providerName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    // Price prominent
+                    Text(
+                      _fmtServicePrice(service.priceText),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: teal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Availability badge
+              if (hasAvailability)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFF22C55E).withOpacity(0.1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.circle,
+                          size: 6, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'זמין',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Info chips row ───────────────────────────────────────────
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _ServiceChip(
+                icon: Icons.location_on_rounded,
+                label: service.area,
+                color: teal,
+              ),
+              _ServiceChip(
+                icon: Icons.timer_rounded,
+                label: service.duration,
+                color: const Color(0xFF0EA5E9),
+              ),
+              ...service.petTypes.map((type) {
+                IconData icon;
+                switch (type) {
+                  case 'כלב':
+                    icon = Icons.directions_walk_rounded;
+                    break;
+                  case 'חתול':
+                    icon = Icons.pets_rounded;
+                    break;
+                  default:
+                    icon = Icons.cruelty_free_rounded;
+                }
+                return _ServiceChip(
+                  icon: icon,
+                  label: type,
+                  color: const Color(0xFF7C3AED),
+                );
+              }),
+            ],
+          ),
+
+          // ── Bio ──────────────────────────────────────────────────────
+          if (service.bio != null && service.bio!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              service.bio!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF334155).withOpacity(0.8),
+                height: 1.4,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 14),
+
+          // ── CTA button ───────────────────────────────────────────────
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  margin: const EdgeInsets.all(14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  content: const Text('פיצ׳ר הצ׳אט בקרוב!'),
+                  backgroundColor: teal,
+                ),
+              );
+            },
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                ),
+              ),
+              child: const Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.chat_bubble_outline_rounded,
+                        color: Colors.white, size: 16),
+                    SizedBox(width: 7),
+                    Text(
+                      'צור קשר',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ServiceChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

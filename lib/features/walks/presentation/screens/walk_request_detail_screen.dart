@@ -31,6 +31,16 @@ class _WalkRequestDetailScreenState
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
   bool get _isOwner => _uid != null && _uid == _request.ownerUid;
   bool get _isOpen => _request.status == WalkStatus.open;
+  bool get _showProviderCta => !_isOwner && _isOpen;
+
+  void _showOfferSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OfferBottomSheet(ownerName: _request.ownerName),
+    );
+  }
 
   IconData get _petIcon {
     switch (_request.petType) {
@@ -195,7 +205,9 @@ class _WalkRequestDetailScreenState
     return PetPalScaffold(
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: CustomScrollView(
+        child: Stack(
+          children: [
+            CustomScrollView(
           slivers: [
             // ── Top bar ─────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -571,7 +583,60 @@ class _WalkRequestDetailScreenState
               ),
             ],
 
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            SliverToBoxAdapter(
+                child: SizedBox(height: _showProviderCta ? 100 : 40)),
+          ],
+        ),
+            // ── Provider CTA bar ─────────────────────────────────────────
+            if (_showProviderCta)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: GestureDetector(
+                    onTap: _showOfferSheet,
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.handshake_outlined,
+                              color: Colors.white, size: 20),
+                          SizedBox(width: 10),
+                          Text(
+                            'הצע שירות',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -623,6 +688,154 @@ class _DetailChip extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF0F172A))),
         ],
+      ),
+    );
+  }
+}
+
+// ── Provider offer bottom sheet ───────────────────────────────────────────────
+class _OfferBottomSheet extends StatefulWidget {
+  final String ownerName;
+
+  const _OfferBottomSheet({required this.ownerName});
+
+  @override
+  State<_OfferBottomSheet> createState() => _OfferBottomSheetState();
+}
+
+class _OfferBottomSheetState extends State<_OfferBottomSheet> {
+  final _controller = TextEditingController();
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    if (_controller.text.trim().isEmpty) return;
+    // TODO: wire to chat/messaging feature
+    setState(() => _sent = true);
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'הצע שירות',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'שלח הודעה ל${widget.ownerName} עם הצעת השירות שלך',
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _controller,
+                maxLines: 4,
+                minLines: 3,
+                textDirection: TextDirection.rtl,
+                decoration: InputDecoration(
+                  hintText: 'למשל: אני זמין בתאריך זה, המחיר שלי הוא...',
+                  hintStyle: const TextStyle(
+                      color: Color(0xFFCBD5E1), fontSize: 13),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _sent ? null : _send,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: _sent
+                          ? [const Color(0xFF22C55E), const Color(0xFF16A34A)]
+                          : [const Color(0xFF0F766E), const Color(0xFF22C55E)],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _sent
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
