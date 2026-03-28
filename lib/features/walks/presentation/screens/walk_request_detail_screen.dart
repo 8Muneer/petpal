@@ -31,6 +31,16 @@ class _WalkRequestDetailScreenState
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
   bool get _isOwner => _uid != null && _uid == _request.ownerUid;
   bool get _isOpen => _request.status == WalkStatus.open;
+  bool get _showProviderCta => !_isOwner && _isOpen;
+
+  void _showOfferSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OfferBottomSheet(request: _request),
+    );
+  }
 
   IconData get _petIcon {
     switch (_request.petType) {
@@ -195,7 +205,9 @@ class _WalkRequestDetailScreenState
     return PetPalScaffold(
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: CustomScrollView(
+        child: Stack(
+          children: [
+            CustomScrollView(
           slivers: [
             // ── Top bar ─────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -571,7 +583,60 @@ class _WalkRequestDetailScreenState
               ),
             ],
 
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            SliverToBoxAdapter(
+                child: SizedBox(height: _showProviderCta ? 100 : 40)),
+          ],
+        ),
+            // ── Provider CTA bar ─────────────────────────────────────────
+            if (_showProviderCta)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: GestureDetector(
+                    onTap: _showOfferSheet,
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.handshake_outlined,
+                              color: Colors.white, size: 20),
+                          SizedBox(width: 10),
+                          Text(
+                            'הצע שירות',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -623,6 +688,287 @@ class _DetailChip extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF0F172A))),
         ],
+      ),
+    );
+  }
+}
+
+// ── Provider offer bottom sheet ───────────────────────────────────────────────
+class _OfferBottomSheet extends StatefulWidget {
+  final WalkRequest request;
+  const _OfferBottomSheet({required this.request});
+
+  @override
+  State<_OfferBottomSheet> createState() => _OfferBottomSheetState();
+}
+
+class _OfferBottomSheetState extends State<_OfferBottomSheet> {
+  final _messageController = TextEditingController();
+  final _priceController = TextEditingController();
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    if (_messageController.text.trim().isEmpty) return;
+    // TODO: wire to chat/messaging feature
+    setState(() => _sent = true);
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final req = widget.request;
+    final dateStr = req.preferredDate != null
+        ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
+        : '';
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle + title + close
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('הצע שירות',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A))),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFFF1F5F9),
+                      ),
+                      child: const Icon(Icons.close_rounded,
+                          size: 18, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Request summary card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: const Color(0xFF0F766E).withOpacity(0.06),
+                  border: Border.all(
+                      color: const Color(0xFF0F766E).withOpacity(0.15)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${req.petName}  ·  ${req.ownerName}',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 4,
+                      children: [
+                        _SummaryItem(
+                            icon: Icons.location_on_outlined,
+                            text: req.area),
+                        _SummaryItem(
+                            icon: Icons.access_time_rounded,
+                            text: '${req.preferredTime}'
+                                '${dateStr.isNotEmpty ? '  $dateStr' : ''}'),
+                        if (req.budget != null && req.budget!.isNotEmpty)
+                          _SummaryItem(
+                              icon: Icons.account_balance_wallet_outlined,
+                              text: 'תקציב: ${req.budget!}'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Price field
+              _OfferTextField(
+                hint: 'המחיר שלך (לדוגמה: 80₪)',
+                prefix: '₪',
+                keyboardType: TextInputType.text,
+                controller: _priceController,
+                maxLines: 1,
+              ),
+              const SizedBox(height: 10),
+
+              // Message field
+              _OfferTextField(
+                hint:
+                    'לדוגמה: אני זמין בתאריך זה. יש לי ניסיון עם חיות כמו שלך. ההצעה שלי היא...',
+                controller: _messageController,
+                maxLines: 3,
+                minLines: 2,
+              ),
+              const SizedBox(height: 16),
+
+              // Send button
+              GestureDetector(
+                onTap: _sent ? null : _send,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: _sent
+                          ? [
+                              const Color(0xFF22C55E),
+                              const Color(0xFF16A34A)
+                            ]
+                          : [
+                              const Color(0xFF0F766E),
+                              const Color(0xFF22C55E)
+                            ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _sent
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _SummaryItem({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: const Color(0xFF0F766E)),
+        const SizedBox(width: 4),
+        Text(text,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF334155))),
+      ],
+    );
+  }
+}
+
+class _OfferTextField extends StatelessWidget {
+  final String hint;
+  final TextEditingController controller;
+  final int maxLines;
+  final int minLines;
+  final String? prefix;
+  final TextInputType? keyboardType;
+
+  const _OfferTextField({
+    required this.hint,
+    required this.controller,
+    this.maxLines = 4,
+    this.minLines = 1,
+    this.prefix,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      minLines: minLines,
+      textDirection: TextDirection.rtl,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+        prefixText: prefix,
+        prefixStyle: const TextStyle(
+            color: Color(0xFF0F766E),
+            fontWeight: FontWeight.w800,
+            fontSize: 14),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide:
+              const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:petpal/features/walks/data/datasources/walk_image_service.dart';
 import 'package:petpal/features/walks/data/datasources/walk_remote_datasource.dart';
 import 'package:petpal/features/walks/data/repositories/walk_repository_impl.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
+import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/domain/repositories/walk_repository.dart';
 
 final walkDatasourceProvider = Provider<WalkRemoteDatasource>((ref) {
@@ -36,4 +37,46 @@ final walkRequestsProvider = StreamProvider<List<WalkRequest>>((ref) {
 
 final walkImageServiceProvider = Provider<WalkImageService>((ref) {
   return WalkImageService(storage: FirebaseStorage.instance);
+});
+
+final openWalkRequestsProvider = StreamProvider<List<WalkRequest>>((ref) {
+  final datasource = ref.watch(walkDatasourceProvider);
+  return datasource.watchAllOpenRequests().map((requests) {
+    final sorted = [...requests];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
+});
+
+final walkServicesProvider = StreamProvider<List<WalkService>>((ref) {
+  final datasource = ref.watch(walkDatasourceProvider);
+  return datasource.watchWalkServices().map((services) {
+    final sorted = [...services];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
+});
+
+final myWalkServicesProvider = StreamProvider<List<WalkService>>((ref) {
+  final userAsync = ref.watch(authStateChangesProvider);
+  final uid = userAsync.asData?.value?.uid ?? '';
+  if (uid.isEmpty) return const Stream.empty();
+  final datasource = ref.watch(walkDatasourceProvider);
+  return datasource.watchMyServices(uid).map((services) {
+    final sorted = [...services];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
 });
