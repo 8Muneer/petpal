@@ -14,6 +14,11 @@ class WalkService extends Equatable {
   final List<String> availableDays; // ["א", "ב", ...]
   final bool isActive;
   final DateTime? createdAt;
+  // UI-ready stats (null = not yet available)
+  final double? rating;
+  final int? reviewCount;
+  final int? viewCount;
+  final int? requestCount;
 
   const WalkService({
     required this.id,
@@ -29,6 +34,10 @@ class WalkService extends Equatable {
     this.availableDays = const [],
     this.isActive = true,
     this.createdAt,
+    this.rating,
+    this.reviewCount,
+    this.viewCount,
+    this.requestCount,
   });
 
   @override
@@ -46,5 +55,9 @@ class WalkService extends Equatable {
         availableDays,
         isActive,
         createdAt,
+        rating,
+        reviewCount,
+        viewCount,
+        requestCount,
       ];
 }
