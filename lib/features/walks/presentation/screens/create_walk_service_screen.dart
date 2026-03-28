@@ -593,14 +593,18 @@ class _CreateWalkServiceScreenState
                             ),
                           ),
                           const SizedBox(height: 10),
-                          // Individual day chips
+                          // Individual day chips (disabled when "all days" is selected)
                           Row(
                             mainAxisAlignment:
                                 MainAxisAlignment.spaceBetween,
                             children: _days.map((day) {
                               final selected =
                                   _availableDays.contains(day);
-                              return InkWell(
+                              return Opacity(
+                                opacity: _allDaysSelected ? 0.38 : 1.0,
+                                child: IgnorePointer(
+                                  ignoring: _allDaysSelected,
+                                  child: InkWell(
                                 borderRadius: BorderRadius.circular(10),
                                 onTap: () => setState(() {
                                   if (selected) {
@@ -640,7 +644,9 @@ class _CreateWalkServiceScreenState
                                     ),
                                   ),
                                 ),
-                              );
+                              ), // InkWell
+                                ),  // IgnorePointer
+                              ); // Opacity
                             }).toList(),
                           ),
                         ],
@@ -661,6 +667,24 @@ class _CreateWalkServiceScreenState
                         controller: _bioController,
                         textDirection: TextDirection.rtl,
                         maxLines: 4,
+                        maxLength: 200,
+                        buildCounter: (context,
+                                {required currentLength,
+                                required isFocused,
+                                maxLength}) =>
+                            Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            '$currentLength / $maxLength',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: currentLength > (maxLength! * 0.85)
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ),
                         decoration: InputDecoration(
                           hintText:
                               'תאר/י את הניסיון שלך, הזמינות, ומה מייחד אותך כמטייל/ת חיות מחמד...',

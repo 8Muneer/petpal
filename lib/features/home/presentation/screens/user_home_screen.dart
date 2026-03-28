@@ -14,6 +14,7 @@ import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingRequest, SittingStatus, SittingType;
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
+import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
@@ -2137,22 +2138,36 @@ class _PillIconButton extends StatelessWidget {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Walk Service Card
-String _fmtServicePrice(String price) {
-  if (price.isEmpty || price == 'לפי הסכמה') return price;
-  return price.contains('₪') ? price : '$price₪';
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
+
+String _timeAgo(DateTime dt) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 60) return 'לפני פחות משעה';
+  if (diff.inHours < 24) {
+    final h = diff.inHours;
+    return 'לפני ${h == 1 ? 'שעה' : '$h שעות'}';
+  }
+  final d = diff.inDays;
+  if (d == 1) return 'לפני יום';
+  if (d < 30) return 'לפני $d ימים';
+  final m = (d / 30).floor();
+  if (m == 1) return 'לפני חודש';
+  if (m < 12) return 'לפני $m חודשים';
+  final y = (d / 365).floor();
+  return 'לפני ${y == 1 ? 'שנה' : '$y שנים'}';
+}
 
 class _WalkServiceCard extends StatelessWidget {
   final WalkService service;
-
   const _WalkServiceCard({required this.service});
 
   @override
   Widget build(BuildContext context) {
     const teal = Color(0xFF0F766E);
-    final hasAvailability = service.availableDays.isNotEmpty;
+    const blue = Color(0xFF0EA5E9);
+    const purple = Color(0xFF7C3AED);
+    final displayPrice = formatPrice(service.priceText, service.priceType);
+    final isExperienced = (service.reviewCount ?? 0) > 0;
 
     return GlassCard(
       useBlur: true,
@@ -2160,48 +2175,30 @@ class _WalkServiceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Provider header ──────────────────────────────────────────
+          // ── Header: avatar + name + rating + availability ────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Avatar
               Container(
-                width: 52,
-                height: 52,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(17),
                   color: teal.withOpacity(0.12),
                 ),
                 child: service.providerPhotoUrl != null
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(17),
                         child: CachedNetworkImage(
                           imageUrl: service.providerPhotoUrl!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Center(
-                            child: Text(
-                              service.providerName.isNotEmpty
-                                  ? service.providerName[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: teal,
-                                  fontSize: 20),
-                            ),
-                          ),
+                          errorWidget: (_, __, ___) => _AvatarFallback(
+                              name: service.providerName, color: teal),
                         ),
                       )
-                    : Center(
-                        child: Text(
-                          service.providerName.isNotEmpty
-                              ? service.providerName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: teal,
-                              fontSize: 20),
-                        ),
-                      ),
+                    : _AvatarFallback(
+                        name: service.providerName, color: teal),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -2217,11 +2214,27 @@ class _WalkServiceCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    // Price prominent
+                    // Rating row (shown only when available)
+                    if (service.rating != null)
+                      _RatingRow(
+                        rating: service.rating!,
+                        reviewCount: service.reviewCount,
+                      )
+                    else if (service.createdAt != null)
+                      Text(
+                        _timeAgo(service.createdAt!),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    // Price — large and prominent
                     Text(
-                      _fmtServicePrice(service.priceText),
+                      displayPrice,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
                         color: teal,
                       ),
@@ -2230,28 +2243,27 @@ class _WalkServiceCard extends StatelessWidget {
                 ),
               ),
               // Availability badge
-              if (hasAvailability)
+              if (service.isActive)
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     color: const Color(0xFF22C55E).withOpacity(0.1),
+                    border: Border.all(
+                        color: const Color(0xFF22C55E).withOpacity(0.3)),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.circle,
-                          size: 6, color: Color(0xFF16A34A)),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'זמין',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF16A34A),
-                        ),
-                      ),
+                      Icon(Icons.circle, size: 6, color: Color(0xFF16A34A)),
+                      SizedBox(width: 4),
+                      Text('זמין',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF16A34A),
+                          )),
                     ],
                   ),
                 ),
@@ -2260,21 +2272,19 @@ class _WalkServiceCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // ── Info chips row ───────────────────────────────────────────
+          // ── Info chips ───────────────────────────────────────────────
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
               _ServiceChip(
-                icon: Icons.location_on_rounded,
-                label: service.area,
-                color: teal,
-              ),
+                  icon: Icons.location_on_rounded,
+                  label: service.area,
+                  color: teal),
               _ServiceChip(
-                icon: Icons.timer_rounded,
-                label: service.duration,
-                color: const Color(0xFF0EA5E9),
-              ),
+                  icon: Icons.timer_rounded,
+                  label: service.duration,
+                  color: blue),
               ...service.petTypes.map((type) {
                 IconData icon;
                 switch (type) {
@@ -2287,14 +2297,28 @@ class _WalkServiceCard extends StatelessWidget {
                   default:
                     icon = Icons.cruelty_free_rounded;
                 }
-                return _ServiceChip(
-                  icon: icon,
-                  label: type,
-                  color: const Color(0xFF7C3AED),
-                );
+                return _ServiceChip(icon: icon, label: type, color: purple);
               }),
+              if (service.availableDays.isNotEmpty)
+                _ServiceChip(
+                  icon: Icons.calendar_today_rounded,
+                  label: service.availableDays.length == 7
+                      ? 'כל הימים'
+                      : service.availableDays.join(' '),
+                  color: const Color(0xFFD97706),
+                ),
             ],
           ),
+
+          // ── Trust badges ─────────────────────────────────────────────
+          if (isExperienced) ...[
+            const SizedBox(height: 8),
+            _TrustBadge(
+              icon: Icons.verified_rounded,
+              label: 'מנוסה',
+              color: const Color(0xFF0F766E),
+            ),
+          ],
 
           // ── Bio ──────────────────────────────────────────────────────
           if (service.bio != null && service.bio!.isNotEmpty) ...[
@@ -2307,14 +2331,14 @@ class _WalkServiceCard extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF334155).withOpacity(0.8),
-                height: 1.4,
+                height: 1.45,
               ),
             ),
           ],
 
           const SizedBox(height: 14),
 
-          // ── CTA button ───────────────────────────────────────────────
+          // ── CTA ──────────────────────────────────────────────────────
           InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: () {
@@ -2330,7 +2354,7 @@ class _WalkServiceCard extends StatelessWidget {
               );
             },
             child: Container(
-              height: 44,
+              height: 46,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 gradient: const LinearGradient(
@@ -2338,6 +2362,13 @@ class _WalkServiceCard extends StatelessWidget {
                   end: Alignment.bottomLeft,
                   colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: teal.withOpacity(0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: const Center(
                 child: Row(
@@ -2346,14 +2377,12 @@ class _WalkServiceCard extends StatelessWidget {
                     Icon(Icons.chat_bubble_outline_rounded,
                         color: Colors.white, size: 16),
                     SizedBox(width: 7),
-                    Text(
-                      'צור קשר',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                      ),
-                    ),
+                    Text('צור קשר',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        )),
                   ],
                 ),
               ),
@@ -2361,6 +2390,61 @@ class _WalkServiceCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Shared reusable widgets ───────────────────────────────────────────────────
+
+class _AvatarFallback extends StatelessWidget {
+  final String name;
+  final Color color;
+  const _AvatarFallback({required this.name, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: TextStyle(
+            fontWeight: FontWeight.w900, color: color, fontSize: 20),
+      ),
+    );
+  }
+}
+
+class _RatingRow extends StatelessWidget {
+  final double rating;
+  final int? reviewCount;
+  const _RatingRow({required this.rating, this.reviewCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFBBF24)),
+        const SizedBox(width: 3),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        if (reviewCount != null) ...[
+          const SizedBox(width: 3),
+          Text(
+            '($reviewCount)',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF94A3B8),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -2380,6 +2464,7 @@ class _ServiceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      constraints: const BoxConstraints(minHeight: 28),
       decoration: BoxDecoration(
         color: color.withOpacity(0.10),
         borderRadius: BorderRadius.circular(12),
@@ -2393,6 +2478,45 @@ class _ServiceChip extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrustBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _TrustBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: color,
             ),

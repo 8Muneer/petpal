@@ -16,6 +16,10 @@ class WalkServiceModel extends WalkService {
     super.availableDays,
     super.isActive,
     super.createdAt,
+    super.rating,
+    super.reviewCount,
+    super.viewCount,
+    super.requestCount,
   });
 
   factory WalkServiceModel.fromFirestore(DocumentSnapshot doc) {
@@ -35,6 +39,10 @@ class WalkServiceModel extends WalkService {
       availableDays: List<String>.from(data['availableDays'] as List? ?? []),
       isActive: data['isActive'] as bool? ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      rating: (data['rating'] as num?)?.toDouble(),
+      reviewCount: data['reviewCount'] as int?,
+      viewCount: data['viewCount'] as int?,
+      requestCount: data['requestCount'] as int?,
     );
   }
 
