@@ -5,6 +5,7 @@ import 'package:petpal/features/sitting/data/datasources/sitting_image_service.d
 import 'package:petpal/features/sitting/data/datasources/sitting_remote_datasource.dart';
 import 'package:petpal/features/sitting/data/repositories/sitting_repository_impl.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/domain/repositories/sitting_repository.dart';
 
 final sittingDatasourceProvider = Provider<SittingRemoteDatasource>((ref) {
@@ -36,4 +37,46 @@ final sittingRequestsProvider = StreamProvider<List<SittingRequest>>((ref) {
 
 final sittingImageServiceProvider = Provider<SittingImageService>((ref) {
   return SittingImageService(storage: FirebaseStorage.instance);
+});
+
+final openSittingRequestsProvider = StreamProvider<List<SittingRequest>>((ref) {
+  final datasource = ref.watch(sittingDatasourceProvider);
+  return datasource.watchAllOpenRequests().map((requests) {
+    final sorted = [...requests];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
+});
+
+final sittingServicesProvider = StreamProvider<List<SittingService>>((ref) {
+  final datasource = ref.watch(sittingDatasourceProvider);
+  return datasource.watchSittingServices().map((services) {
+    final sorted = [...services];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
+});
+
+final mySittingServicesProvider = StreamProvider<List<SittingService>>((ref) {
+  final userAsync = ref.watch(authStateChangesProvider);
+  final uid = userAsync.asData?.value?.uid ?? '';
+  if (uid.isEmpty) return const Stream.empty();
+  final datasource = ref.watch(sittingDatasourceProvider);
+  return datasource.watchMyServices(uid).map((services) {
+    final sorted = [...services];
+    sorted.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(0);
+      final bTime = b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sorted;
+  });
 });

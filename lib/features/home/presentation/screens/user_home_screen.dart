@@ -12,6 +12,7 @@ import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingRequest, SittingStatus, SittingType;
+import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
@@ -51,52 +52,6 @@ class _UserHomeScreenState extends State<UserHomeScreen>
   int _currentIndex = 0;
 
   // Mock cards (later replace with Firestore)
-  final List<ServiceCardData> _cards = const [
-    ServiceCardData(
-      type: ServiceType.dogWalk,
-      name: 'איה לוי',
-      rating: 4.9,
-      city: 'ירושלים',
-      priceText: '₪90/טיול',
-      timeText: 'היום 18:00',
-    ),
-    ServiceCardData(
-      type: ServiceType.petSitting,
-      name: 'דניאל כהן',
-      rating: 4.7,
-      city: 'ירושלים',
-      priceText: '₪120/יום',
-      timeText: 'מחר - 3 ימים',
-    ),
-    ServiceCardData(
-      type: ServiceType.dogWalk,
-      name: 'נועה מזרחי',
-      rating: 4.8,
-      city: 'ירושלים',
-      priceText: '₪70/טיול',
-      timeText: 'היום 20:30',
-    ),
-    ServiceCardData(
-      type: ServiceType.petSitting,
-      name: 'רוני אבו-סאלח',
-      rating: 4.9,
-      city: 'ירושלים',
-      priceText: '₪95/יום',
-      timeText: 'סופ"ש',
-    ),
-    ServiceCardData(
-      type: ServiceType.available,
-      name: 'סאמר ח\'טיב',
-      rating: 4.6,
-      city: 'ירושלים',
-      priceText: 'זמין עכשיו',
-      timeText: 'היום',
-    ),
-  ];
-
-  List<ServiceCardData> get _petSittingCards =>
-      _cards.where((c) => c.type == ServiceType.petSitting).toList();
-
   User? get _user => FirebaseAuth.instance.currentUser;
 
   String get _displayName {
@@ -183,7 +138,6 @@ class _UserHomeScreenState extends State<UserHomeScreen>
       ),
       const _WalksTab(),
       _SittingTab(
-        petSittingCards: _petSittingCards,
         onAction: (msg) => _toast(msg),
       ),
     ];
@@ -1323,13 +1277,9 @@ class _WalkServicesView extends ConsumerWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _SittingTab extends ConsumerStatefulWidget {
-  final List<ServiceCardData> petSittingCards;
   final void Function(String msg) onAction;
 
-  const _SittingTab({
-    required this.petSittingCards,
-    required this.onAction,
-  });
+  const _SittingTab({required this.onAction});
 
   @override
   ConsumerState<_SittingTab> createState() => _SittingTabState();
@@ -1380,8 +1330,6 @@ class _SittingTabState extends ConsumerState<_SittingTab> {
                 ? _SittingRequestsView(key: const ValueKey('sitting_requests'))
                 : _SittingServicesView(
                     key: const ValueKey('sitting_services'),
-                    cards: widget.petSittingCards,
-                    onAction: widget.onAction,
                   ),
           ),
         ),
@@ -1799,143 +1747,265 @@ class _SittingRequestCard extends StatelessWidget {
   }
 }
 
-class _SittingServicesView extends StatelessWidget {
-  final List<ServiceCardData> cards;
-  final void Function(String msg) onAction;
-
-  const _SittingServicesView({
-    super.key,
-    required this.cards,
-    required this.onAction,
-  });
+class _SittingServicesView extends ConsumerWidget {
+  const _SittingServicesView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const SectionHeader(
-          title: 'שירותי שמירה',
-          subtitle: 'מצא/י שומר/ת חיות קרוב/ה ובזמינות מהירה',
-        ),
-        const SizedBox(height: 10),
-        ...cards.map(
-          (c) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _SittingServiceCard(
-              data: c,
-              onPressed: () => onAction('TODO: Sitting booking flow'),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final servicesAsync = ref.watch(sittingServicesProvider);
+    return servicesAsync.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF7C3AED))),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (services) {
+        if (services.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.home_work_rounded,
+                    size: 64,
+                    color: const Color(0xFF64748B).withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text('אין שירותי שמירה זמינים כרגע',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF64748B))),
+              ],
             ),
-          ),
-        ),
-      ],
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          itemCount: services.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: SectionHeader(
+                  title: 'שירותי שמירה',
+                  subtitle: 'מצא/י שומר/ת חיות קרוב/ה ובזמינות מהירה',
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _SittingServiceCard(service: services[index - 1]),
+            );
+          },
+        );
+      },
     );
   }
 }
 
 class _SittingServiceCard extends StatelessWidget {
-  final ServiceCardData data;
-  final VoidCallback onPressed;
+  final SittingService service;
+  const _SittingServiceCard({required this.service});
 
-  const _SittingServiceCard({
-    required this.data,
-    required this.onPressed,
-  });
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return 'לפני פחות משעה';
+    if (diff.inHours < 24) {
+      final h = diff.inHours;
+      return 'לפני ${h == 1 ? 'שעה' : '$h שעות'}';
+    }
+    final d = diff.inDays;
+    if (d == 1) return 'לפני יום';
+    if (d < 30) return 'לפני $d ימים';
+    final m = (d / 30).floor();
+    return m == 1 ? 'לפני חודש' : 'לפני $m חודשים';
+  }
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF7C3AED);
+    const purple = Color(0xFF7C3AED);
+    const blue = Color(0xFF0EA5E9);
+    const amber = Color(0xFFD97706);
+    final displayPrice = formatPrice(service.priceText, service.priceType);
+
     return GlassCard(
       useBlur: true,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header ────────────────────────────────────────────────────
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: accent.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(17),
+                  color: purple.withOpacity(0.12),
                 ),
-                child: const Icon(Icons.home_work_rounded, color: accent),
+                child: service.providerPhotoUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(17),
+                        child: CachedNetworkImage(
+                          imageUrl: service.providerPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const Icon(
+                              Icons.person_rounded,
+                              color: purple),
+                        ),
+                      )
+                    : const Icon(Icons.person_rounded,
+                        color: purple, size: 26),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${data.city} • ${data.name}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
+                    Text(service.providerName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                            color: Color(0xFF0F172A))),
+                    const SizedBox(height: 3),
+                    if (service.rating != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 14, color: Colors.amber),
+                          const SizedBox(width: 3),
+                          Text(service.rating!.toStringAsFixed(1),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A))),
+                          if (service.reviewCount != null)
+                            Text(' (${service.reviewCount})',
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF94A3B8))),
+                        ],
+                      )
+                    else if (service.createdAt != null)
+                      Text(_timeAgo(service.createdAt!),
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8))),
                     const SizedBox(height: 4),
-                    Text(
-                      '${data.timeText} • ${data.priceText}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.82),
-                      ),
-                    ),
+                    Text(displayPrice,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: purple)),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 16, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(
-                      data.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: accent.withOpacity(0.12),
-                ),
-                child: const Text(
-                  'Pet Sitting ✨',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: accent,
+              if (service.isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFF22C55E).withOpacity(0.1),
+                    border: Border.all(
+                        color: const Color(0xFF22C55E).withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 6, color: Color(0xFF16A34A)),
+                      SizedBox(width: 4),
+                      Text('זמין',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF16A34A))),
+                    ],
                   ),
                 ),
-              ),
-              const Spacer(),
-              _MiniPrimaryButton(
-                text: 'בקשת הזמנה',
-                onTap: onPressed,
-              ),
             ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Info chips ────────────────────────────────────────────────
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _ServiceChip(
+                  icon: Icons.location_on_rounded,
+                  label: service.area,
+                  color: purple),
+              _ServiceChip(
+                  icon: Icons.home_work_rounded,
+                  label: service.sittingLocation,
+                  color: blue),
+              ...service.petTypes.map((type) {
+                IconData icon;
+                switch (type) {
+                  case 'כלב':
+                    icon = Icons.directions_walk_rounded;
+                    break;
+                  case 'חתול':
+                    icon = Icons.pets_rounded;
+                    break;
+                  default:
+                    icon = Icons.cruelty_free_rounded;
+                }
+                return _ServiceChip(
+                    icon: icon, label: type, color: purple);
+              }),
+              if (service.availableDays.isNotEmpty)
+                _ServiceChip(
+                  icon: Icons.calendar_today_rounded,
+                  label: service.availableDays.length == 7
+                      ? 'כל הימים'
+                      : service.availableDays.join(' '),
+                  color: amber,
+                ),
+            ],
+          ),
+
+          if (service.bio != null && service.bio!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(service.bio!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF475569),
+                    height: 1.5)),
+          ],
+
+          // ── Contact button ────────────────────────────────────────────
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            height: 42,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: const LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.chat_bubble_outline_rounded,
+                    size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text('צור קשר',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white)),
+              ],
+            ),
           ),
         ],
       ),

@@ -25,6 +25,8 @@ import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/screens/create_walk_request_screen.dart';
 import 'package:petpal/features/walks/presentation/screens/walk_request_detail_screen.dart';
 import 'package:petpal/features/walks/presentation/screens/create_walk_service_screen.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
+import 'package:petpal/features/sitting/presentation/screens/create_sitting_service_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -125,6 +127,12 @@ class AppRouter {
         path: '/sitting/detail',
         builder: (context, state) => SittingRequestDetailScreen(
           request: state.extra as SittingRequest,
+        ),
+      ),
+      GoRoute(
+        path: '/sitting/service/create',
+        builder: (context, state) => CreateSittingServiceScreen(
+          service: state.extra as SittingService?,
         ),
       ),
     ],
