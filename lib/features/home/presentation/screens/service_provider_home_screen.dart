@@ -19,6 +19,10 @@ import 'package:petpal/features/walks/data/datasources/walk_remote_datasource.da
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
+    show SittingRequest, PetType, PetGender, SittingType;
+import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
+import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 enum RequestStatus { pending, accepted, declined }
@@ -224,6 +228,7 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
         onAction: (msg) => _toast(msg),
       ),
       const _ProviderWalksTab(),
+      const _ProviderSittingTab(),
       _LostPetsTab(
         onAction: (msg) => _toast(msg),
       ),
@@ -298,6 +303,11 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
               icon: Icon(Icons.directions_walk_outlined),
               selectedIcon: Icon(Icons.directions_walk_rounded),
               label: 'טיולים',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.home_work_outlined),
+              selectedIcon: Icon(Icons.home_work_rounded),
+              label: 'שמירה',
             ),
             NavigationDestination(
               icon: Icon(Icons.pets_outlined),
@@ -2741,6 +2751,999 @@ class _OfferInputField extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.5),
         ),
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Provider Sitting Tab
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _ProviderSittingTab extends ConsumerStatefulWidget {
+  const _ProviderSittingTab();
+
+  @override
+  ConsumerState<_ProviderSittingTab> createState() =>
+      _ProviderSittingTabState();
+}
+
+class _ProviderSittingTabState extends ConsumerState<_ProviderSittingTab> {
+  int _selectedView = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+          child: GlassCard(
+            useBlur: true,
+            padding: const EdgeInsets.all(6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ProviderToggleChip(
+                    label: 'בקשות שמירה',
+                    icon: Icons.list_alt_rounded,
+                    selected: _selectedView == 0,
+                    onTap: () => setState(() => _selectedView = 0),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ProviderToggleChip(
+                    label: 'פרסם שירות',
+                    icon: Icons.campaign_rounded,
+                    selected: _selectedView == 1,
+                    onTap: () => setState(() => _selectedView = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selectedView == 0
+                ? _ProviderSittingRequestsView(
+                    key: const ValueKey('sitting_req'))
+                : _ProviderSittingAdvertiseView(
+                    key: const ValueKey('sitting_adv')),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Open sitting requests (provider view) ─────────────────────────────────────
+
+class _ProviderSittingRequestsView extends ConsumerWidget {
+  const _ProviderSittingRequestsView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestsAsync = ref.watch(openSittingRequestsProvider);
+    return requestsAsync.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF7C3AED))),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (requests) {
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.home_work_rounded,
+                    size: 64,
+                    color: const Color(0xFF64748B).withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text('אין בקשות שמירה פתוחות כרגע',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF64748B))),
+                const SizedBox(height: 8),
+                const Text('כשבעל חיה יפרסם בקשה — תופיע כאן',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF94A3B8))),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          itemCount: requests.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SectionHeader(
+                  title: 'בקשות שמירה פתוחות',
+                  subtitle: '${requests.length} בקשות זמינות כרגע',
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ProviderSittingRequestCard(
+                  request: requests[index - 1]),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ── Advertise sitting service ─────────────────────────────────────────────────
+
+class _ProviderSittingAdvertiseView extends ConsumerWidget {
+  const _ProviderSittingAdvertiseView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myServicesAsync = ref.watch(mySittingServicesProvider);
+    const purple = Color(0xFF7C3AED);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        GlassCard(
+          useBlur: true,
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
+                    ),
+                    child: const Icon(Icons.campaign_rounded,
+                        color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('פרסם את שירות השמירה שלך',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A))),
+                        SizedBox(height: 2),
+                        Text('הגע/י לבעלי חיות מחמד באזורך',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _BenefitRow(
+                  icon: Icons.location_on_rounded,
+                  text: 'הגע/י לבעלי חיות מחמד באזורך'),
+              const SizedBox(height: 6),
+              _BenefitRow(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  text: 'קבל/י פניות ישירות'),
+              const SizedBox(height: 6),
+              _BenefitRow(
+                  icon: Icons.star_rounded,
+                  text: 'בנה/י את הפרופיל המקצועי שלך'),
+              const SizedBox(height: 14),
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => context.push('/sitting/service/create'),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Text('פרסם שירות חדש',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        myServicesAsync.when(
+          loading: () => const Center(
+              child: CircularProgressIndicator(color: purple)),
+          error: (e, _) => const SizedBox.shrink(),
+          data: (services) {
+            if (services.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('השירותים שלי',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A))),
+                const SizedBox(height: 10),
+                ...services.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _MySittingServiceCard(service: s, ref: ref),
+                    )),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ── Provider sitting request card ─────────────────────────────────────────────
+
+class _ProviderSittingRequestCard extends StatelessWidget {
+  final SittingRequest request;
+  const _ProviderSittingRequestCard({required this.request});
+
+  IconData get _petIcon {
+    switch (request.petType) {
+      case PetType.dog:
+        return Icons.directions_walk_rounded;
+      case PetType.cat:
+        return Icons.pets_rounded;
+      case PetType.other:
+        return Icons.cruelty_free_rounded;
+    }
+  }
+
+  String get _petTypeLabel {
+    switch (request.petType) {
+      case PetType.dog:
+        return 'כלב';
+      case PetType.cat:
+        return 'חתול';
+      case PetType.other:
+        return 'אחר';
+    }
+  }
+
+  String get _timeAgo {
+    if (request.createdAt == null) return '';
+    final diff = DateTime.now().difference(request.createdAt!);
+    if (diff.inMinutes < 1) return 'עכשיו';
+    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
+    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
+    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
+    return '${request.createdAt!.day}/${request.createdAt!.month}/${request.createdAt!.year}';
+  }
+
+  String get _genderSuffix {
+    if (request.petGender == PetGender.male) return ' · זכר';
+    if (request.petGender == PetGender.female) return ' · נקבה';
+    return '';
+  }
+
+  String _fmt(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    const purple = Color(0xFF7C3AED);
+    final startStr = request.startDate != null ? _fmt(request.startDate!) : '';
+    final endStr = request.endDate != null ? _fmt(request.endDate!) : '';
+    final nights = request.numberOfNights;
+    final locationLabel = request.sittingType == SittingType.atOwnerHome
+        ? 'בבית הבעלים'
+        : 'בבית השומר/ת';
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: GlassCard(
+        useBlur: true,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Owner row ─────────────────────────────────────────────
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: (request.ownerPhotoUrl == null ||
+                            request.ownerPhotoUrl!.isEmpty)
+                        ? const LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                          )
+                        : null,
+                    image: (request.ownerPhotoUrl != null &&
+                            request.ownerPhotoUrl!.isNotEmpty)
+                        ? DecorationImage(
+                            image: NetworkImage(request.ownerPhotoUrl!),
+                            fit: BoxFit.cover)
+                        : null,
+                  ),
+                  child: (request.ownerPhotoUrl == null ||
+                          request.ownerPhotoUrl!.isEmpty)
+                      ? Center(
+                          child: Text(
+                            request.ownerName.isNotEmpty
+                                ? request.ownerName.characters.first
+                                    .toUpperCase()
+                                : 'P',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13),
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(request.ownerName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                              color: Color(0xFF0F172A))),
+                      Text(_timeAgo,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8))),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22C55E).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: const Color(0xFF22C55E).withOpacity(0.4)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 8, color: Color(0xFF22C55E)),
+                      SizedBox(width: 4),
+                      Text('פתוח',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF16A34A))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // ── Pet photo ──────────────────────────────────────────────
+            if (request.petImageUrl != null &&
+                request.petImageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: request.petImageUrl!,
+                  width: double.infinity,
+                  height: 100,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                      height: 100,
+                      color: const Color(0xFFF1F5F9),
+                      child: const Center(
+                          child: CircularProgressIndicator(
+                              color: purple, strokeWidth: 2))),
+                  errorWidget: (_, __, ___) => Container(
+                      height: 100,
+                      color: const Color(0xFFF1F5F9),
+                      child: const Icon(Icons.broken_image_rounded,
+                          color: Color(0xFF94A3B8))),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 10),
+
+            // ── Pet name + type ────────────────────────────────────────
+            Row(
+              children: [
+                Icon(_petIcon, size: 15, color: purple),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: Text(request.petName,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A)))),
+                Text('$_petTypeLabel$_genderSuffix',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B))),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // ── Info chips ─────────────────────────────────────────────
+            Wrap(
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+                if (startStr.isNotEmpty && endStr.isNotEmpty)
+                  _SittingMiniInfo(
+                      icon: Icons.date_range_rounded,
+                      text: '$startStr – $endStr'),
+                if (nights > 0)
+                  _SittingMiniInfo(
+                      icon: Icons.nights_stay_rounded,
+                      text: '$nights לילות'),
+                _SittingMiniInfo(
+                    icon: request.sittingType == SittingType.atOwnerHome
+                        ? Icons.home_rounded
+                        : Icons.house_rounded,
+                    text: locationLabel),
+                _SittingMiniInfo(
+                    icon: Icons.location_on_outlined, text: request.area),
+                if (request.budget != null && request.budget!.isNotEmpty)
+                  _SittingMiniInfo(
+                      icon: Icons.account_balance_wallet_outlined,
+                      text: request.budget!),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Action buttons ─────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: GestureDetector(
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) =>
+                          _SittingProviderOfferSheet(request: request),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.handshake_outlined,
+                              size: 14, color: Colors.white),
+                          SizedBox(width: 5),
+                          Text('הגש מועמדות',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: GestureDetector(
+                    onTap: () =>
+                        context.push('/sitting/detail', extra: request),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: purple.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: purple.withOpacity(0.25)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('פרטים',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: purple)),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_ios_rounded,
+                              size: 11, color: purple),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sitting provider offer bottom sheet ───────────────────────────────────────
+
+class _SittingProviderOfferSheet extends StatefulWidget {
+  final SittingRequest request;
+  const _SittingProviderOfferSheet({required this.request});
+
+  @override
+  State<_SittingProviderOfferSheet> createState() =>
+      _SittingProviderOfferSheetState();
+}
+
+class _SittingProviderOfferSheetState
+    extends State<_SittingProviderOfferSheet> {
+  final _messageController = TextEditingController();
+  final _priceController = TextEditingController();
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    if (_messageController.text.trim().isEmpty) return;
+    // TODO: wire to chat/messaging feature
+    setState(() => _sent = true);
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final req = widget.request;
+    const purple = Color(0xFF7C3AED);
+    final startStr = req.startDate != null
+        ? '${req.startDate!.day.toString().padLeft(2, '0')}/${req.startDate!.month.toString().padLeft(2, '0')}'
+        : '';
+    final endStr = req.endDate != null
+        ? '${req.endDate!.day.toString().padLeft(2, '0')}/${req.endDate!.month.toString().padLeft(2, '0')}'
+        : '';
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('הגש מועמדות',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A))),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFFF1F5F9),
+                      ),
+                      child: const Icon(Icons.close_rounded,
+                          size: 18, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: purple.withOpacity(0.06),
+                  border: Border.all(color: purple.withOpacity(0.15)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${req.petName}  ·  ${req.ownerName}',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 4,
+                      children: [
+                        _OfferSummaryItem(
+                            icon: Icons.location_on_outlined, text: req.area),
+                        if (startStr.isNotEmpty && endStr.isNotEmpty)
+                          _OfferSummaryItem(
+                              icon: Icons.date_range_rounded,
+                              text: '$startStr – $endStr'),
+                        if (req.numberOfNights > 0)
+                          _OfferSummaryItem(
+                              icon: Icons.nights_stay_rounded,
+                              text: '${req.numberOfNights} לילות'),
+                        if (req.budget != null && req.budget!.isNotEmpty)
+                          _OfferSummaryItem(
+                              icon: Icons.account_balance_wallet_outlined,
+                              text: 'תקציב: ${req.budget!}'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _OfferInputField(
+                hint: 'המחיר שלך (לדוגמה: 80₪ ללילה)',
+                prefix: '₪',
+                keyboardType: TextInputType.text,
+                controller: _priceController,
+                maxLines: 1,
+              ),
+              const SizedBox(height: 10),
+              _OfferInputField(
+                hint: 'לדוגמה: אני זמין בתאריכים אלה. יש לי ניסיון עם חיות כמו שלך...',
+                controller: _messageController,
+                maxLines: 3,
+                minLines: 2,
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _sent ? null : _send,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: _sent
+                          ? [
+                              const Color(0xFF22C55E),
+                              const Color(0xFF16A34A),
+                            ]
+                          : [
+                              purple,
+                              const Color(0xFFA78BFA),
+                            ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _sent
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── My sitting service card ───────────────────────────────────────────────────
+
+class _MySittingServiceCard extends StatelessWidget {
+  final SittingService service;
+  final WidgetRef ref;
+  const _MySittingServiceCard({required this.service, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    const purple = Color(0xFF7C3AED);
+    final isActive = service.isActive;
+
+    return GlassCard(
+      useBlur: true,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  color: isActive
+                      ? purple.withOpacity(0.12)
+                      : const Color(0xFF64748B).withOpacity(0.08),
+                ),
+                child: service.providerPhotoUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.network(
+                          service.providerPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                              Icons.person_rounded,
+                              color: isActive
+                                  ? purple
+                                  : const Color(0xFF94A3B8),
+                              size: 24),
+                        ),
+                      )
+                    : Icon(Icons.person_rounded,
+                        color: isActive ? purple : const Color(0xFF94A3B8),
+                        size: 24),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(service.providerName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            fontSize: 15)),
+                    Text(service.area,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                            fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(
+                      formatPrice(service.priceText, service.priceType),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: purple),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(service.sittingLocation,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B))),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: isActive
+                      ? const Color(0xFF22C55E).withOpacity(0.12)
+                      : const Color(0xFFF59E0B).withOpacity(0.12),
+                ),
+                child: Text(
+                  isActive ? 'פעיל' : 'מושהה',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: isActive
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFD97706),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (service.petTypes.isNotEmpty) ...[
+            const SizedBox(height: 9),
+            Wrap(
+              spacing: 6,
+              children: service.petTypes.map((type) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: purple.withOpacity(0.08),
+                  ),
+                  child: Text(type,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: purple)),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => context.push('/sitting/service/create',
+                    extra: service),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: purple.withOpacity(0.4)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_rounded, size: 14, color: purple),
+                      SizedBox(width: 4),
+                      Text('עריכה',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: purple)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () async {
+                  final ds = ref.read(sittingDatasourceProvider);
+                  await ds.updateSittingService(
+                      service.id, {'isActive': !service.isActive});
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: isActive
+                        ? const Color(0xFFF59E0B).withOpacity(0.12)
+                        : purple.withOpacity(0.12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isActive
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        size: 14,
+                        color: isActive
+                            ? const Color(0xFFD97706)
+                            : purple,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isActive ? 'השהה' : 'הפעל',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: isActive
+                              ? const Color(0xFFD97706)
+                              : purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () async {
+                  final ds = ref.read(sittingDatasourceProvider);
+                  await ds.deleteSittingService(service.id);
+                },
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Color(0xFFFB7185), size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Small info row helper (sitting-specific to avoid name clash) ───────────────
+
+class _SittingMiniInfo extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _SittingMiniInfo({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: const Color(0xFF64748B)),
+        const SizedBox(width: 3),
+        Text(text,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B))),
+      ],
     );
   }
 }
