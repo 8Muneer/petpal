@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
@@ -64,7 +69,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: profileAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -108,8 +113,8 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                     const SizedBox(height: 14),
 
                     // Info card
-                    GlassCard(
-                      useBlur: false,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
@@ -140,8 +145,8 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                     const SizedBox(height: 14),
 
                     // Privacy toggles
-                    GlassCard(
-                      useBlur: false,
+                    AppCard(
+                      
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Column(
                         children: [

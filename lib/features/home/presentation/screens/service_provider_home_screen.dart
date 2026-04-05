@@ -4,24 +4,31 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/app_bottom_nav.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/core/widgets/tiny_chip.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
-import 'package:petpal/core/widgets/glass_nav_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
-import 'package:petpal/features/walks/data/datasources/walk_remote_datasource.dart';
+import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingRequest, PetType, PetGender, SittingType;
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
+import 'package:petpal/core/providers/firebase_providers.dart';
+import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
@@ -66,15 +73,15 @@ class ChatPreviewData {
   });
 }
 
-class ServiceProviderHomeScreen extends StatefulWidget {
+class ServiceProviderHomeScreen extends ConsumerStatefulWidget {
   const ServiceProviderHomeScreen({super.key});
 
   @override
-  State<ServiceProviderHomeScreen> createState() =>
+  ConsumerState<ServiceProviderHomeScreen> createState() =>
       _ServiceProviderHomeScreenState();
 }
 
-class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
+class _ServiceProviderHomeScreenState extends ConsumerState<ServiceProviderHomeScreen> {
   int _currentIndex = 0;
 
   // Mock requests (later replace with Firestore)
@@ -107,24 +114,6 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
 
   bool _isAvailable = true;
 
-  // Mock chats
-  final List<ChatPreviewData> _chats = const [
-    ChatPreviewData(
-      name: 'מוניר',
-      lastMessage: 'מעולה, נפגש בכניסה לבניין 😊',
-      timeAgo: 'לפני 5 דק׳',
-    ),
-    ChatPreviewData(
-      name: 'לוג׳יין',
-      lastMessage: 'יש לך ניסיון עם חתולים?',
-      timeAgo: 'לפני שעה',
-    ),
-    ChatPreviewData(
-      name: 'סאמר',
-      lastMessage: 'תודה רבה על הטיול!',
-      timeAgo: 'אתמול',
-    ),
-  ];
 
   User? get _user => FirebaseAuth.instance.currentUser;
 
@@ -240,22 +229,19 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
         },
         onAction: (msg) => _toast(msg),
       ),
-      _MessagesTab(
-        chats: _chats,
-        onAction: (msg) => _toast(msg),
-      ),
+      const _MessagesTab(),
     ];
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
               if (_currentIndex == 0)
                 _ModernTopBar(
                   displayName: _displayName,
-                  photoUrl: _user?.photoURL,
+                  photoUrl: ref.watch(currentUserProfileProvider).asData?.value?.photoUrl ?? _user?.photoURL,
                   badgeText:
                       _pendingCount > 0 ? '$_pendingCount בקשות' : null,
                   onLogoutPressed: _confirmLogout,
@@ -285,43 +271,43 @@ class _ServiceProviderHomeScreenState extends State<ServiceProviderHomeScreen> {
             ],
           ),
         ),
-        bottomNavigationBar: GlassNavBar(
+        bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
+          items: const [
+            AppNavItem(
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
               label: 'בית',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard_rounded),
+            AppNavItem(
+              icon: Icons.dashboard_outlined,
+              activeIcon: Icons.dashboard_rounded,
               label: 'לוח',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.directions_walk_outlined),
-              selectedIcon: Icon(Icons.directions_walk_rounded),
+            AppNavItem(
+              icon: Icons.directions_walk_outlined,
+              activeIcon: Icons.directions_walk_rounded,
               label: 'טיולים',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.home_work_outlined),
-              selectedIcon: Icon(Icons.home_work_rounded),
+            AppNavItem(
+              icon: Icons.home_work_outlined,
+              activeIcon: Icons.home_work_rounded,
               label: 'שמירה',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.pets_outlined),
-              selectedIcon: Icon(Icons.pets_rounded),
+            AppNavItem(
+              icon: Icons.pets_outlined,
+              activeIcon: Icons.pets_rounded,
               label: 'אבודים',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.event_available_outlined),
-              selectedIcon: Icon(Icons.event_available_rounded),
+            AppNavItem(
+              icon: Icons.event_available_outlined,
+              activeIcon: Icons.event_available_rounded,
               label: 'לו״ז',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.chat_bubble_outline),
-              selectedIcon: Icon(Icons.chat_bubble_rounded),
+            AppNavItem(
+              icon: Icons.chat_bubble_outline,
+              activeIcon: Icons.chat_bubble_rounded,
               label: 'צ׳אט',
             ),
           ],
@@ -346,88 +332,41 @@ class _ModernTopBar extends StatelessWidget {
     this.photoUrl,
   });
 
-  String get _initial {
-    final s = displayName.trim();
-    if (s.isEmpty) return 'P';
-    return s.characters.first.toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: GlassCard(
-        useBlur: true,
+      child: AppCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            // Profile avatar — RIGHT side in RTL (first child)
-            InkWell(
-              borderRadius: BorderRadius.circular(20),
+            // Avatar — RIGHT in RTL
+            AppAvatar(
+              name: displayName,
+              photoUrl: photoUrl,
+              size: 46,
               onTap: onAvatarPressed,
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: photoUrl != null && photoUrl!.isNotEmpty
-                      ? null
-                      : const LinearGradient(
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                        ),
-                  image: photoUrl != null && photoUrl!.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(photoUrl!), fit: BoxFit.cover)
-                      : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.10),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: photoUrl != null && photoUrl!.isNotEmpty
-                    ? null
-                    : Center(
-                        child: Text(
-                          _initial,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 17,
-                          ),
-                        ),
-                      ),
-              ),
             ),
             const SizedBox(width: 12),
-            // Greeting — CENTER
+            // Greeting
             Expanded(
               child: Text(
                 'שלום, $displayName 👋',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
+                style: AppTextStyles.h3,
               ),
             ),
-            // Pending badge (optional)
+            // Pending badge
             if (badgeText != null) ...[
               const SizedBox(width: 8),
               TinyChip(
                 text: badgeText!,
-                fill: const Color(0xFF0EA5E9).withOpacity(0.10),
-                textColor: const Color(0xFF0EA5E9),
+                color: AppColors.sitting,
               ),
             ],
             const SizedBox(width: 10),
-            // Logout — LEFT side in RTL (last child)
+            // Logout
             _PillIconButton(
               icon: Icons.logout_rounded,
               tooltip: 'התנתקות',
@@ -619,42 +558,11 @@ class _FeedPostCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: post.authorPhotoUrl != null &&
-                            post.authorPhotoUrl!.isNotEmpty
-                        ? null
-                        : const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                          ),
-                    image: post.authorPhotoUrl != null &&
-                            post.authorPhotoUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(post.authorPhotoUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: post.authorPhotoUrl != null &&
-                          post.authorPhotoUrl!.isNotEmpty
-                      ? null
-                      : Center(
-                          child: Text(
-                            post.authorName.isNotEmpty
-                                ? post.authorName.characters.first.toUpperCase()
-                                : 'P',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
+                LiveUserAvatar(
+                  uid: post.authorUid,
+                  fallbackName: post.authorName,
+                  fallbackPhotoUrl: post.authorPhotoUrl,
+                  size: 40,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -966,7 +874,7 @@ class _ProviderDashboardTab extends StatelessWidget {
                   end: Alignment.bottomLeft,
                   colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
                 ),
-                onTap: () => onAction('TODO: Availability flow'),
+                onTap: () => context.push('/provider/availability'),
               ),
             ),
             const SizedBox(width: 12),
@@ -980,7 +888,7 @@ class _ProviderDashboardTab extends StatelessWidget {
                   end: Alignment.bottomLeft,
                   colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
                 ),
-                onTap: () => onAction('TODO: Services settings'),
+                onTap: () => context.push('/provider/services'),
               ),
             ),
           ],
@@ -1271,30 +1179,11 @@ class _MyServiceCard extends StatelessWidget {
           // ── Header row ──────────────────────────────────────────────
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  color: isActive
-                      ? teal.withOpacity(0.12)
-                      : const Color(0xFF64748B).withOpacity(0.08),
-                ),
-                child: service.providerPhotoUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: CachedNetworkImage(
-                          imageUrl: service.providerPhotoUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Icon(
-                              Icons.person_rounded,
-                              color: isActive ? teal : const Color(0xFF94A3B8),
-                              size: 24),
-                        ),
-                      )
-                    : Icon(Icons.person_rounded,
-                        color: isActive ? teal : const Color(0xFF94A3B8),
-                        size: 24),
+              LiveUserAvatar(
+                uid: service.providerUid,
+                fallbackName: service.providerName,
+                fallbackPhotoUrl: service.providerPhotoUrl,
+                size: 48,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1625,41 +1514,11 @@ class _ProviderWalkRequestCard extends StatelessWidget {
             // ── Owner row ────────────────────────────────────────────────
             Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: request.ownerPhotoUrl != null &&
-                            request.ownerPhotoUrl!.isNotEmpty
-                        ? null
-                        : const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                          ),
-                    image: request.ownerPhotoUrl != null &&
-                            request.ownerPhotoUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(request.ownerPhotoUrl!),
-                            fit: BoxFit.cover)
-                        : null,
-                  ),
-                  child: request.ownerPhotoUrl != null &&
-                          request.ownerPhotoUrl!.isNotEmpty
-                      ? null
-                      : Center(
-                          child: Text(
-                            request.ownerName.isNotEmpty
-                                ? request.ownerName.characters.first
-                                    .toUpperCase()
-                                : 'P',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13),
-                          ),
-                        ),
+                LiveUserAvatar(
+                  uid: request.ownerUid,
+                  fallbackName: request.ownerName,
+                  fallbackPhotoUrl: request.ownerPhotoUrl,
+                  size: 38,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1943,15 +1802,15 @@ class _LostPetsTab extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        PrimaryGradientButton(
-          text: 'דיווח על חיה נמצאה',
-          icon: Icons.add_photo_alternate_rounded,
+        AppButton(
+          label: 'דיווח על חיה נמצאה',
+          leadingIcon: Icons.add_photo_alternate_rounded,
           onTap: () => onAction('TODO: Report found pet'),
         ),
         const SizedBox(height: 12),
-        PrimaryGradientButton(
-          text: 'חיפוש חיה אבודה',
-          icon: Icons.search_rounded,
+        AppButton(
+          label: 'חיפוש חיה אבודה',
+          leadingIcon: Icons.search_rounded,
           onTap: () => onAction('TODO: Search lost pets'),
         ),
 
@@ -2060,10 +1919,10 @@ class _ScheduleTab extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        PrimaryGradientButton(
-          text: 'עריכת חלונות זמן',
-          icon: Icons.edit_calendar_rounded,
-          onTap: () => onAction('TODO: Edit time slots'),
+        AppButton(
+          label: 'עריכת חלונות זמן',
+          leadingIcon: Icons.edit_calendar_rounded,
+          onTap: () => context.push('/provider/availability'),
         ),
 
         const SizedBox(height: 18),
@@ -2087,38 +1946,89 @@ class _ScheduleTab extends StatelessWidget {
   }
 }
 
-class _MessagesTab extends StatelessWidget {
-  final List<ChatPreviewData> chats;
-  final void Function(String msg) onAction;
-
-  const _MessagesTab({required this.chats, required this.onAction});
+class _MessagesTab extends ConsumerWidget {
+  const _MessagesTab();
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      children: [
-        const SectionHeader(
-          title: 'צ׳אט',
-          subtitle: 'שיחות עם בעלי חיות המחמד',
-        ),
-        const SizedBox(height: 10),
-        ...chats.map(
-          (c) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _ChatCard(
-              data: c,
-              onTap: () => onAction('TODO: Open chat with ${c.name}'),
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myUid =
+        ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
+    final async = ref.watch(conversationsProvider);
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (convos) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        children: [
+          const SectionHeader(
+            title: 'צ׳אט',
+            subtitle: 'שיחות עם בעלי חיות המחמד',
           ),
-        ),
-        if (chats.isEmpty)
-          const EmptyStateCard(
-            title: 'אין שיחות עדיין',
-            subtitle: 'שיחות יופיעו כאן אחרי בקשה/הזמנה.',
-            icon: Icons.chat_bubble_outline,
-          ),
-      ],
+          const SizedBox(height: 10),
+          if (convos.isEmpty)
+            const EmptyStateCard(
+              title: 'אין שיחות עדיין',
+              subtitle: 'שיחות יופיעו כאן אחרי בקשה/הזמנה.',
+              icon: Icons.chat_bubble_outline,
+            )
+          else
+            ...convos.map((c) {
+              final names =
+                  Map<String, String>.from(c['participantNames'] ?? {});
+              final photoUrls =
+                  Map<String, String>.from(c['participantPhotoUrls'] ?? {});
+              final otherEntry = names.entries.firstWhere(
+                (e) => e.key != myUid,
+                orElse: () => const MapEntry('', 'לא ידוע'),
+              );
+              final otherUid = otherEntry.key;
+              final otherName = otherEntry.value;
+              final otherPhotoUrl = photoUrls[otherUid] ?? '';
+              final lastMsg = c['lastMessage'] as String? ?? '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AppCard(
+                  onTap: () => context.push(
+                    '/chat/${c['id']}',
+                    extra: {
+                      'otherName': otherName,
+                      'otherPhotoUrl': otherPhotoUrl,
+                      'otherUid': otherUid,
+                    },
+                  ),
+                  child: Row(
+                    children: [
+                      LiveUserAvatar(
+                        uid: otherUid,
+                        fallbackName: otherName,
+                        fallbackPhotoUrl: otherPhotoUrl.isNotEmpty ? otherPhotoUrl : null,
+                        size: 48,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(otherName, style: AppTextStyles.bodyBold),
+                            const SizedBox(height: 2),
+                            Text(
+                              lastMsg.isEmpty ? 'התחל שיחה...' : lastMsg,
+                              style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
     );
   }
 }
@@ -2180,74 +2090,6 @@ class _UpcomingBookingCard extends StatelessWidget {
           const SizedBox(width: 10),
           const Icon(Icons.arrow_back_rounded, color: Color(0xFF64748B)),
         ],
-      ),
-    );
-  }
-}
-
-class _ChatCard extends StatelessWidget {
-  final ChatPreviewData data;
-  final VoidCallback onTap;
-
-  const _ChatCard({required this.data, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: GlassCard(
-        useBlur: true,
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: const Color(0xFF0EA5E9).withOpacity(0.14),
-              ),
-              child:
-                  const Icon(Icons.person_rounded, color: Color(0xFF0EA5E9)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    data.lastMessage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF334155).withOpacity(0.82),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              data.timeAgo,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -2453,18 +2295,19 @@ class _PillIconButton extends StatelessWidget {
 }
 
 // ── Provider offer bottom sheet ───────────────────────────────────────────────
-class _ProviderOfferSheet extends StatefulWidget {
+class _ProviderOfferSheet extends ConsumerStatefulWidget {
   final WalkRequest request;
   const _ProviderOfferSheet({required this.request});
 
   @override
-  State<_ProviderOfferSheet> createState() => _ProviderOfferSheetState();
+  ConsumerState<_ProviderOfferSheet> createState() =>
+      _ProviderOfferSheetState();
 }
 
-class _ProviderOfferSheetState extends State<_ProviderOfferSheet> {
+class _ProviderOfferSheetState extends ConsumerState<_ProviderOfferSheet> {
   final _messageController = TextEditingController();
   final _priceController = TextEditingController();
-  bool _sent = false;
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -2473,13 +2316,63 @@ class _ProviderOfferSheetState extends State<_ProviderOfferSheet> {
     super.dispose();
   }
 
-  void _send() {
-    if (_messageController.text.trim().isEmpty) return;
-    // TODO: wire to chat/messaging feature
-    setState(() => _sent = true);
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) Navigator.pop(context);
-    });
+  Future<void> _send() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+
+    setState(() => _sending = true);
+
+    final req = widget.request;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
+
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: req.ownerUid,
+      otherName: req.ownerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: ownerPhotoUrl,
+    );
+
+    final dateStr = req.preferredDate != null
+        ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
+        : '';
+    await ds.sendContextMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      metadata: {
+        'requestType': 'walk',
+        'requestId': req.id,
+        'petName': req.petName,
+        'petImageUrl': req.petImageUrl ?? '',
+        'ownerName': req.ownerName,
+        'ownerPhotoUrl': ownerPhotoUrl,
+        'date': dateStr,
+        'time': req.preferredTime,
+        'area': req.area,
+        'budget': req.budget ?? '',
+      },
+    );
+
+    await ds.sendMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      senderName: me.displayName ?? me.email ?? 'מטפל',
+      senderPhotoUrl: myPhotoUrl,
+      text:
+          '${_priceController.text.trim().isNotEmpty ? "₪${_priceController.text.trim()} — " : ""}$text',
+    );
+
+    if (mounted) {
+      final router = GoRouter.of(context);
+      Navigator.pop(context);
+      router.push('/chat/$convoId', extra: {'otherName': req.ownerName, 'otherPhotoUrl': ownerPhotoUrl, 'otherUid': req.ownerUid});
+    }
   }
 
   @override
@@ -2604,40 +2497,35 @@ class _ProviderOfferSheetState extends State<_ProviderOfferSheet> {
 
               // Send button
               GestureDetector(
-                onTap: _sent ? null : _send,
+                onTap: _sending ? null : _send,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   width: double.infinity,
                   height: 52,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: _sent
-                          ? [
-                              const Color(0xFF22C55E),
-                              const Color(0xFF16A34A)
-                            ]
-                          : [
-                              const Color(0xFF0F766E),
-                              const Color(0xFF22C55E)
-                            ],
+                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _sent
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      if (_sending)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      else
+                        const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 20),
                       const SizedBox(width: 10),
                       Text(
-                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        _sending ? 'שולח...' : 'שלח הצעה',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -3076,41 +2964,11 @@ class _ProviderSittingRequestCard extends StatelessWidget {
             // ── Owner row ─────────────────────────────────────────────
             Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: (request.ownerPhotoUrl == null ||
-                            request.ownerPhotoUrl!.isEmpty)
-                        ? const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
-                          )
-                        : null,
-                    image: (request.ownerPhotoUrl != null &&
-                            request.ownerPhotoUrl!.isNotEmpty)
-                        ? DecorationImage(
-                            image: NetworkImage(request.ownerPhotoUrl!),
-                            fit: BoxFit.cover)
-                        : null,
-                  ),
-                  child: (request.ownerPhotoUrl == null ||
-                          request.ownerPhotoUrl!.isEmpty)
-                      ? Center(
-                          child: Text(
-                            request.ownerName.isNotEmpty
-                                ? request.ownerName.characters.first
-                                    .toUpperCase()
-                                : 'P',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13),
-                          ),
-                        )
-                      : null,
+                LiveUserAvatar(
+                  uid: request.ownerUid,
+                  fallbackName: request.ownerName,
+                  fallbackPhotoUrl: request.ownerPhotoUrl,
+                  size: 38,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -3310,20 +3168,20 @@ class _ProviderSittingRequestCard extends StatelessWidget {
 
 // ── Sitting provider offer bottom sheet ───────────────────────────────────────
 
-class _SittingProviderOfferSheet extends StatefulWidget {
+class _SittingProviderOfferSheet extends ConsumerStatefulWidget {
   final SittingRequest request;
   const _SittingProviderOfferSheet({required this.request});
 
   @override
-  State<_SittingProviderOfferSheet> createState() =>
+  ConsumerState<_SittingProviderOfferSheet> createState() =>
       _SittingProviderOfferSheetState();
 }
 
 class _SittingProviderOfferSheetState
-    extends State<_SittingProviderOfferSheet> {
+    extends ConsumerState<_SittingProviderOfferSheet> {
   final _messageController = TextEditingController();
   final _priceController = TextEditingController();
-  bool _sent = false;
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -3332,13 +3190,73 @@ class _SittingProviderOfferSheetState
     super.dispose();
   }
 
-  void _send() {
-    if (_messageController.text.trim().isEmpty) return;
-    // TODO: wire to chat/messaging feature
-    setState(() => _sent = true);
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) Navigator.pop(context);
-    });
+  Future<void> _send() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+
+    setState(() => _sending = true);
+
+    final req = widget.request;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
+
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: req.ownerUid,
+      otherName: req.ownerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: ownerPhotoUrl,
+    );
+
+    final startStr = req.startDate != null
+        ? '${req.startDate!.day.toString().padLeft(2, '0')}/${req.startDate!.month.toString().padLeft(2, '0')}'
+        : '';
+    final endStr = req.endDate != null
+        ? '${req.endDate!.day.toString().padLeft(2, '0')}/${req.endDate!.month.toString().padLeft(2, '0')}'
+        : '';
+
+    await ds.sendContextMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      metadata: {
+        'requestType': 'sitting',
+        'requestId': req.id,
+        'petName': req.petName,
+        'petImageUrl': req.petImageUrl ?? '',
+        'ownerName': req.ownerName,
+        'ownerPhotoUrl': ownerPhotoUrl,
+        'date': startStr.isNotEmpty && endStr.isNotEmpty
+            ? '$startStr – $endStr'
+            : '',
+        'time': '${req.numberOfNights} לילות',
+        'area': req.area,
+        'budget': req.budget ?? '',
+      },
+    );
+
+    await ds.sendMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      senderName: me.displayName ?? me.email ?? 'מטפל',
+      senderPhotoUrl: myPhotoUrl,
+      text:
+          '${_priceController.text.trim().isNotEmpty ? "₪${_priceController.text.trim()} — " : ""}$text',
+    );
+
+    if (mounted) {
+      final router = GoRouter.of(context);
+      Navigator.pop(context);
+      router.push('/chat/$convoId', extra: {
+        'otherName': req.ownerName,
+        'otherPhotoUrl': ownerPhotoUrl,
+        'otherUid': req.ownerUid,
+      });
+    }
   }
 
   @override
@@ -3460,7 +3378,7 @@ class _SittingProviderOfferSheetState
               ),
               const SizedBox(height: 16),
               GestureDetector(
-                onTap: _sent ? null : _send,
+                onTap: _sending ? null : _send,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   width: double.infinity,
@@ -3470,10 +3388,10 @@ class _SittingProviderOfferSheetState
                     gradient: LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: _sent
+                      colors: _sending
                           ? [
-                              const Color(0xFF22C55E),
-                              const Color(0xFF16A34A),
+                              const Color(0xFF94A3B8),
+                              const Color(0xFF64748B),
                             ]
                           : [
                               purple,
@@ -3484,16 +3402,19 @@ class _SittingProviderOfferSheetState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _sent
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      if (_sending)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      else
+                        const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 20),
                       const SizedBox(width: 10),
                       Text(
-                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        _sending ? 'שולח...' : 'שלח הצעה',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -3531,32 +3452,11 @@ class _MySittingServiceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  color: isActive
-                      ? purple.withOpacity(0.12)
-                      : const Color(0xFF64748B).withOpacity(0.08),
-                ),
-                child: service.providerPhotoUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: Image.network(
-                          service.providerPhotoUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(
-                              Icons.person_rounded,
-                              color: isActive
-                                  ? purple
-                                  : const Color(0xFF94A3B8),
-                              size: 24),
-                        ),
-                      )
-                    : Icon(Icons.person_rounded,
-                        color: isActive ? purple : const Color(0xFF94A3B8),
-                        size: 24),
+              LiveUserAvatar(
+                uid: service.providerUid,
+                fallbackName: service.providerName,
+                fallbackPhotoUrl: service.providerPhotoUrl,
+                size: 48,
               ),
               const SizedBox(width: 10),
               Expanded(

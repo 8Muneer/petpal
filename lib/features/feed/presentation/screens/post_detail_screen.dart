@@ -5,10 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/features/feed/domain/entities/feed_comment.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
@@ -43,7 +50,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       await repo.addComment(widget.postId, {
         'authorUid': user.uid,
         'authorName': user.displayName ?? user.email?.split('@').first ?? '',
-        'authorPhotoUrl': user.photoURL,
+        'authorPhotoUrl': ref.read(currentUserProfileProvider).asData?.value?.photoUrl ?? user.photoURL,
         'content': text,
       });
 
@@ -164,7 +171,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -440,50 +447,19 @@ class _FullPostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLiked = post.isLikedBy(currentUid);
 
-    return GlassCard(
-      useBlur: true,
+    return AppCard(
+      
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: post.authorPhotoUrl != null &&
-                          post.authorPhotoUrl!.isNotEmpty
-                      ? null
-                      : const LinearGradient(
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                        ),
-                  image: post.authorPhotoUrl != null &&
-                          post.authorPhotoUrl!.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(post.authorPhotoUrl!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: post.authorPhotoUrl != null &&
-                        post.authorPhotoUrl!.isNotEmpty
-                    ? null
-                    : Center(
-                        child: Text(
-                          post.authorName.isNotEmpty
-                              ? post.authorName.characters.first.toUpperCase()
-                              : 'P',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
+              LiveUserAvatar(
+                uid: post.authorUid,
+                fallbackName: post.authorName,
+                fallbackPhotoUrl: post.authorPhotoUrl,
+                size: 44,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -638,48 +614,17 @@ class _CommentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      useBlur: false,
+    return AppCard(
+      
       padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: comment.authorPhotoUrl != null &&
-                      comment.authorPhotoUrl!.isNotEmpty
-                  ? null
-                  : const LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                    ),
-              image: comment.authorPhotoUrl != null &&
-                      comment.authorPhotoUrl!.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(comment.authorPhotoUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: comment.authorPhotoUrl != null &&
-                    comment.authorPhotoUrl!.isNotEmpty
-                ? null
-                : Center(
-                    child: Text(
-                      comment.authorName.isNotEmpty
-                          ? comment.authorName.characters.first.toUpperCase()
-                          : 'P',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
+          LiveUserAvatar(
+            uid: comment.authorUid,
+            fallbackName: comment.authorName,
+            fallbackPhotoUrl: comment.authorPhotoUrl,
+            size: 32,
           ),
           const SizedBox(width: 10),
           Expanded(

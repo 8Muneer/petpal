@@ -1,10 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
@@ -202,7 +211,7 @@ class _WalkRequestDetailScreenState
             color: const Color(0xFF8B5CF6)),
     ];
 
-    return PetPalScaffold(
+    return AppScaffold(
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Stack(
@@ -337,50 +346,16 @@ class _WalkRequestDetailScreenState
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GlassCard(
-                  useBlur: true,
+                child: AppCard(
+                  
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: _request.ownerPhotoUrl != null &&
-                                  _request.ownerPhotoUrl!.isNotEmpty
-                              ? null
-                              : const LinearGradient(
-                                  begin: Alignment.topRight,
-                                  end: Alignment.bottomLeft,
-                                  colors: [
-                                    Color(0xFF0F766E),
-                                    Color(0xFF22C55E)
-                                  ],
-                                ),
-                          image: _request.ownerPhotoUrl != null &&
-                                  _request.ownerPhotoUrl!.isNotEmpty
-                              ? DecorationImage(
-                                  image:
-                                      NetworkImage(_request.ownerPhotoUrl!),
-                                  fit: BoxFit.cover)
-                              : null,
-                        ),
-                        child: _request.ownerPhotoUrl != null &&
-                                _request.ownerPhotoUrl!.isNotEmpty
-                            ? null
-                            : Center(
-                                child: Text(
-                                  _request.ownerName.isNotEmpty
-                                      ? _request.ownerName.characters.first
-                                          .toUpperCase()
-                                      : 'P',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16),
-                                ),
-                              ),
+                      LiveUserAvatar(
+                        uid: _request.ownerUid,
+                        fallbackName: _request.ownerName,
+                        fallbackPhotoUrl: _request.ownerPhotoUrl,
+                        size: 46,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -443,8 +418,8 @@ class _WalkRequestDetailScreenState
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GlassCard(
-                  useBlur: true,
+                child: AppCard(
+                  
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,18 +669,18 @@ class _DetailChip extends StatelessWidget {
 }
 
 // ── Provider offer bottom sheet ───────────────────────────────────────────────
-class _OfferBottomSheet extends StatefulWidget {
+class _OfferBottomSheet extends ConsumerStatefulWidget {
   final WalkRequest request;
   const _OfferBottomSheet({required this.request});
 
   @override
-  State<_OfferBottomSheet> createState() => _OfferBottomSheetState();
+  ConsumerState<_OfferBottomSheet> createState() => _OfferBottomSheetState();
 }
 
-class _OfferBottomSheetState extends State<_OfferBottomSheet> {
+class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
   final _messageController = TextEditingController();
   final _priceController = TextEditingController();
-  bool _sent = false;
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -714,13 +689,62 @@ class _OfferBottomSheetState extends State<_OfferBottomSheet> {
     super.dispose();
   }
 
-  void _send() {
-    if (_messageController.text.trim().isEmpty) return;
-    // TODO: wire to chat/messaging feature
-    setState(() => _sent = true);
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) Navigator.pop(context);
-    });
+  Future<void> _send() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+
+    setState(() => _sending = true);
+
+    final req = widget.request;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
+
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: req.ownerUid,
+      otherName: req.ownerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: ownerPhotoUrl,
+    );
+
+    final dateStr = req.preferredDate != null
+        ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
+        : '';
+    await ds.sendContextMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      metadata: {
+        'requestType': 'walk',
+        'requestId': req.id,
+        'petName': req.petName,
+        'petImageUrl': req.petImageUrl ?? '',
+        'ownerName': req.ownerName,
+        'ownerPhotoUrl': ownerPhotoUrl,
+        'date': dateStr,
+        'time': req.preferredTime,
+        'area': req.area,
+        'budget': req.budget ?? '',
+      },
+    );
+
+    await ds.sendMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      senderName: me.displayName ?? me.email ?? 'מטפל',
+      senderPhotoUrl: myPhotoUrl,
+      text: '${_priceController.text.trim().isNotEmpty ? "₪${_priceController.text.trim()} — " : ""}$text',
+    );
+
+    if (mounted) {
+      final router = GoRouter.of(context);
+      Navigator.pop(context);
+      router.push('/chat/$convoId', extra: {'otherName': req.ownerName, 'otherPhotoUrl': ownerPhotoUrl, 'otherUid': req.ownerUid});
+    }
   }
 
   @override
@@ -846,40 +870,35 @@ class _OfferBottomSheetState extends State<_OfferBottomSheet> {
 
               // Send button
               GestureDetector(
-                onTap: _sent ? null : _send,
+                onTap: _sending ? null : _send,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   width: double.infinity,
                   height: 52,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: _sent
-                          ? [
-                              const Color(0xFF22C55E),
-                              const Color(0xFF16A34A)
-                            ]
-                          : [
-                              const Color(0xFF0F766E),
-                              const Color(0xFF22C55E)
-                            ],
+                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _sent
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      if (_sending)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      else
+                        const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 20),
                       const SizedBox(width: 10),
                       Text(
-                        _sent ? 'ההצעה נשלחה!' : 'שלח הצעה',
+                        _sending ? 'שולח...' : 'שלח הצעה',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,

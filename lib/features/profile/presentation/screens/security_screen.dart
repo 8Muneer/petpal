@@ -7,6 +7,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/core/constants/app_constants.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/primary_gradient_button.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
@@ -206,7 +211,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
@@ -234,8 +239,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                 const SizedBox(height: 14),
 
                 // Change password section
-                GlassCard(
-                  useBlur: false,
+                AppCard(
+                  
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,9 +301,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 
                 const SizedBox(height: 18),
 
-                PrimaryGradientButton(
-                  text: _isLoading ? 'שומר...' : 'שנה סיסמה',
-                  icon: _isLoading
+                AppButton(
+                  label: 'שנה סיסמה',
+                      isLoading: _isLoading,
+                  leadingIcon: _isLoading
                       ? Icons.hourglass_top_rounded
                       : Icons.check_rounded,
                   onTap: _isLoading ? null : _changePassword,
@@ -307,8 +313,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                 const SizedBox(height: 28),
 
                 // Delete account section
-                GlassCard(
-                  useBlur: false,
+                AppCard(
+                  
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

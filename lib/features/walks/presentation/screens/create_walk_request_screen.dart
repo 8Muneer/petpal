@@ -7,6 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
@@ -245,7 +250,7 @@ class _CreateWalkRequestScreenState
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -280,8 +285,8 @@ class _CreateWalkRequestScreenState
                     // Pet name
                     _FieldLabel('שם חיית המחמד'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _petNameController,
@@ -311,8 +316,8 @@ class _CreateWalkRequestScreenState
                     // Pet type
                     _FieldLabel('סוג חיית המחמד'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -333,8 +338,8 @@ class _CreateWalkRequestScreenState
                     // Pet gender
                     _FieldLabel('מין חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -454,8 +459,8 @@ class _CreateWalkRequestScreenState
                       InkWell(
                         borderRadius: BorderRadius.circular(18),
                         onTap: _pickImage,
-                        child: GlassCard(
-                          useBlur: true,
+                        child: AppCard(
+                          
                           padding:
                               const EdgeInsets.symmetric(vertical: 22),
                           child: Column(
@@ -495,8 +500,8 @@ class _CreateWalkRequestScreenState
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
                                 onTap: _pickDate,
-                                child: GlassCard(
-                                  useBlur: true,
+                                child: AppCard(
+                                  
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 14),
                                   child: Row(
@@ -538,8 +543,8 @@ class _CreateWalkRequestScreenState
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
                                 onTap: _pickTime,
-                                child: GlassCard(
-                                  useBlur: true,
+                                child: AppCard(
+                                  
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 14),
                                   child: Row(
@@ -579,8 +584,8 @@ class _CreateWalkRequestScreenState
                     // Duration
                     _FieldLabel('משך הטיול'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: _durations
@@ -602,8 +607,8 @@ class _CreateWalkRequestScreenState
                     // Area
                     _FieldLabel('אזור / שכונה'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _areaController,
@@ -634,8 +639,8 @@ class _CreateWalkRequestScreenState
                     // Special instructions
                     _FieldLabel('הוראות מיוחדות (אופציונלי)'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _instructionsController,
@@ -666,8 +671,8 @@ class _CreateWalkRequestScreenState
                     // Budget
                     _FieldLabel('תקציב (אופציונלי)'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _budgetController,

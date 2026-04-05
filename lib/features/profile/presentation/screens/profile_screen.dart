@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/core/widgets/tiny_chip.dart';
@@ -178,8 +181,12 @@ class ProfileScreen extends ConsumerWidget {
                     onEdit: () => context.push('/profile/edit'),
                     onSecurity: () => context.push('/profile/security'),
                     onPrivacy: () => context.push('/profile/privacy'),
-                    onShare: () =>
-                        _toast(context, 'TODO: \u05e9\u05d9\u05ea\u05d5\u05e3 \u05e4\u05e8\u05d5\u05e4\u05d9\u05dc'),
+                    onShare: () {
+                      Clipboard.setData(ClipboardData(
+                        text: 'PetPal — ${profile.name}\n${profile.email}',
+                      ));
+                      _toast(context, 'הפרופיל הועתק ללוח');
+                    },
                     onLogout: () => _confirmLogout(context),
                     onToast: (msg) => _toast(context, msg),
                   );
@@ -262,8 +269,8 @@ class _ProfileBody extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
-        GlassCard(
-          useBlur: true,
+        AppCard(
+          
           child: Column(
             children: [
               _SettingTile(
@@ -306,7 +313,7 @@ class _ProfileBody extends StatelessWidget {
                 value: '${profile.totalBookings}',
                 icon: Icons.calendar_month_rounded,
                 accent: const Color(0xFF0F766E),
-                onTap: () => onToast('TODO: My bookings'),
+                onTap: () => context.push('/profile/bookings'),
               ),
             ),
             const SizedBox(width: 12),
@@ -358,8 +365,8 @@ class _ProfileBody extends StatelessWidget {
             subtitle: '\u05de\u05d9\u05d3\u05e2 \u05e0\u05d5\u05e1\u05e3',
           ),
           const SizedBox(height: 10),
-          GlassCard(
-            useBlur: true,
+          AppCard(
+            
             padding: const EdgeInsets.all(14),
             child: Text(
               profile.bio!,
@@ -380,8 +387,8 @@ class _ProfileBody extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
-        GlassCard(
-          useBlur: true,
+        AppCard(
+          
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,8 +501,8 @@ class _ProfileHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      useBlur: true,
+    return AppCard(
+      
       child: Row(
         children: [
           Container(
@@ -698,8 +705,8 @@ class _StatCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: GlassCard(
-        useBlur: true,
+      child: AppCard(
+        
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [

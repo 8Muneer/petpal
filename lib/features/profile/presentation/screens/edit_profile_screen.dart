@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/input_field.dart';
 import 'package:petpal/core/widgets/primary_gradient_button.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/profile/domain/entities/user_profile.dart';
@@ -134,6 +140,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _isUploadingImage = true);
 
     try {
+      // Evict old URL from CachedNetworkImage cache BEFORE uploading so that
+      // any widget still showing the old URL re-fetches and gets the new file.
+      final oldUrl = profile.photoUrl;
+      if (oldUrl != null && oldUrl.isNotEmpty) {
+        await CachedNetworkImage.evictFromCache(oldUrl);
+      }
+
       final url = await imageService.uploadProfileImage(profile.uid, file);
 
       // Save URL to Firestore
@@ -247,7 +260,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: profileAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -289,8 +302,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     const SizedBox(height: 18),
 
                     // ── Avatar Hero Card ──
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       child: Column(
                         children: [
                           const SizedBox(height: 6),
@@ -449,12 +462,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       label: 'פרטים אישיים',
                     ),
                     const SizedBox(height: 10),
-                    GlassCard(
-                      useBlur: false,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          InputField(
+                          AppInput(
                             controller: _nameController,
                             label: 'שם מלא',
                             hint: 'הזן/י שם',
@@ -502,12 +515,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       label: 'פרטי התקשרות',
                     ),
                     const SizedBox(height: 10),
-                    GlassCard(
-                      useBlur: false,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          InputField(
+                          AppInput(
                             controller: _phoneController,
                             label: 'טלפון',
                             hint: '050-1234567',
@@ -515,7 +528,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             keyboardType: TextInputType.phone,
                           ),
                           const SizedBox(height: 14),
-                          InputField(
+                          AppInput(
                             controller: _locationController,
                             label: 'מיקום',
                             hint: 'תל אביב',
@@ -532,8 +545,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       label: 'קצת עלי',
                     ),
                     const SizedBox(height: 10),
-                    GlassCard(
-                      useBlur: false,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(16),
                       child: TextField(
                         controller: _bioController,
@@ -570,9 +583,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     const SizedBox(height: 24),
 
                     // ── Save Button ──
-                    PrimaryGradientButton(
-                      text: _isLoading ? 'שומר...' : 'שמור שינויים',
-                      icon: _isLoading
+                    AppButton(
+                      label: 'שמור שינויים',
+                      isLoading: _isLoading,
+                      leadingIcon: _isLoading
                           ? Icons.hourglass_top_rounded
                           : Icons.check_rounded,
                       onTap: _isLoading ? null : () => _save(profile),

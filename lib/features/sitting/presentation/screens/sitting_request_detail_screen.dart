@@ -1,10 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 
@@ -75,6 +84,15 @@ class _SittingRequestDetailScreenState
 
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  void _showOfferSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SittingOfferBottomSheet(request: _request),
+    );
+  }
 
   Future<void> _toggleStatus() async {
     final newStatus =
@@ -213,10 +231,14 @@ class _SittingRequestDetailScreenState
             color: const Color(0xFF0F766E)),
     ];
 
-    return PetPalScaffold(
+    final showProviderCta = !_isOwner && _isOpen;
+
+    return AppScaffold(
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: CustomScrollView(
+        child: Stack(
+          children: [
+            CustomScrollView(
           slivers: [
             // ── Top bar ──────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -345,50 +367,16 @@ class _SittingRequestDetailScreenState
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GlassCard(
-                  useBlur: true,
+                child: AppCard(
+                  
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: _request.ownerPhotoUrl != null &&
-                                  _request.ownerPhotoUrl!.isNotEmpty
-                              ? null
-                              : const LinearGradient(
-                                  begin: Alignment.topRight,
-                                  end: Alignment.bottomLeft,
-                                  colors: [
-                                    Color(0xFF7C3AED),
-                                    Color(0xFFA78BFA),
-                                  ],
-                                ),
-                          image: _request.ownerPhotoUrl != null &&
-                                  _request.ownerPhotoUrl!.isNotEmpty
-                              ? DecorationImage(
-                                  image:
-                                      NetworkImage(_request.ownerPhotoUrl!),
-                                  fit: BoxFit.cover)
-                              : null,
-                        ),
-                        child: _request.ownerPhotoUrl != null &&
-                                _request.ownerPhotoUrl!.isNotEmpty
-                            ? null
-                            : Center(
-                                child: Text(
-                                  _request.ownerName.isNotEmpty
-                                      ? _request.ownerName.characters.first
-                                          .toUpperCase()
-                                      : 'P',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16),
-                                ),
-                              ),
+                      LiveUserAvatar(
+                        uid: _request.ownerUid,
+                        fallbackName: _request.ownerName,
+                        fallbackPhotoUrl: _request.ownerPhotoUrl,
+                        size: 46,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -451,8 +439,8 @@ class _SittingRequestDetailScreenState
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GlassCard(
-                  useBlur: true,
+                child: AppCard(
+                  
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +573,34 @@ class _SittingRequestDetailScreenState
               ),
             ],
 
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            SliverToBoxAdapter(
+                child: SizedBox(height: showProviderCta ? 100 : 40)),
+          ],
+        ),
+            if (showProviderCta)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: AppButton(
+                    label: 'שלח הודעה לבעלים',
+                    leadingIcon: Icons.chat_bubble_outline_rounded,
+                    onTap: _showOfferSheet,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -638,6 +653,241 @@ class _DetailChip extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF0F172A))),
         ],
+      ),
+    );
+  }
+}
+
+// ── Offer bottom sheet ────────────────────────────────────────────────────────
+
+class _SittingOfferBottomSheet extends ConsumerStatefulWidget {
+  final SittingRequest request;
+  const _SittingOfferBottomSheet({required this.request});
+
+  @override
+  ConsumerState<_SittingOfferBottomSheet> createState() =>
+      _SittingOfferBottomSheetState();
+}
+
+class _SittingOfferBottomSheetState
+    extends ConsumerState<_SittingOfferBottomSheet> {
+  final _messageController = TextEditingController();
+  final _priceController = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+
+    setState(() => _sending = true);
+
+    final req = widget.request;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
+
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: req.ownerUid,
+      otherName: req.ownerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: ownerPhotoUrl,
+    );
+
+    String fmtDate(DateTime? d) => d != null
+        ? '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}'
+        : '';
+    await ds.sendContextMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      metadata: {
+        'requestType': 'sitting',
+        'requestId': req.id,
+        'petName': req.petName,
+        'petImageUrl': req.petImageUrl ?? '',
+        'ownerName': req.ownerName,
+        'ownerPhotoUrl': ownerPhotoUrl,
+        'startDate': fmtDate(req.startDate),
+        'endDate': fmtDate(req.endDate),
+        'area': req.area,
+        'budget': req.budget ?? '',
+      },
+    );
+
+    await ds.sendMessage(
+      conversationId: convoId,
+      senderId: me.uid,
+      senderName: me.displayName ?? me.email ?? 'מטפל',
+      senderPhotoUrl: myPhotoUrl,
+      text:
+          '${_priceController.text.trim().isNotEmpty ? "₪${_priceController.text.trim()} — " : ""}$text',
+    );
+
+    if (mounted) {
+      final router = GoRouter.of(context);
+      Navigator.pop(context);
+      router.push('/chat/$convoId', extra: {'otherName': req.ownerName, 'otherPhotoUrl': ownerPhotoUrl, 'otherUid': req.ownerUid});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final req = widget.request;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle + title + close
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.close_rounded,
+                        size: 20, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'הגש מועמדות',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Request summary chip
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.home_rounded,
+                        size: 15, color: Color(0xFF7C3AED)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${req.ownerName} · ${req.petName}',
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Price field
+              TextField(
+                controller: _priceController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.right,
+                decoration: InputDecoration(
+                  hintText: 'מחיר מוצע (₪)',
+                  hintStyle: const TextStyle(
+                      color: Color(0xFFCBD5E1), fontSize: 14),
+                  prefixText: '₪ ',
+                  prefixStyle: const TextStyle(
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w700),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF7C3AED), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Message field
+              TextField(
+                controller: _messageController,
+                maxLines: 3,
+                textAlign: TextAlign.right,
+                decoration: InputDecoration(
+                  hintText: 'כתוב הודעה לבעל החיה...',
+                  hintStyle: const TextStyle(
+                      color: Color(0xFFCBD5E1), fontSize: 14),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF7C3AED), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Send button
+              AppButton(
+                label: 'שלח הצעה',
+                leadingIcon: Icons.send_rounded,
+                isLoading: _sending,
+                onTap: _sending ? null : _send,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

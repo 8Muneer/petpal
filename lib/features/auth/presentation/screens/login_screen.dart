@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/validators.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/input_field.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -17,336 +18,306 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
 
-  bool _isPasswordVisible = false;
   bool _isLoading = false;
-
-  static const String _logTag = '[LoginScreen]';
-
-  void _log(String message, {Object? error, StackTrace? stackTrace}) {
-    debugPrint('$_logTag $message');
-    if (error != null) debugPrint('$_logTag   error: $error');
-    if (stackTrace != null) debugPrint('$_logTag   stackTrace: $stackTrace');
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _log('initState');
-  }
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
-    _log('dispose');
-    _emailController.dispose();
-    _passwordController.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
+  // ── Validation ──────────────────────────────────────────────────────────────
+  void _validateEmail(String value) {
+    setState(() {
+      if (value.trim().isEmpty) {
+        _emailError = 'אנא הזן/י כתובת אימייל';
+      } else if (!Validators.isValidEmail(value.trim())) {
+        _emailError = 'כתובת אימייל לא תקינה';
+      } else {
+        _emailError = null;
+      }
+    });
+  }
+
+  void _validatePassword(String value) {
+    setState(() {
+      _passwordError = value.isEmpty ? 'אנא הזן/י סיסמה' : null;
+    });
+  }
+
+  bool get _formValid =>
+      _emailError == null &&
+      _passwordError == null &&
+      _emailCtrl.text.isNotEmpty &&
+      _passwordCtrl.text.isNotEmpty;
+
+  // ── Friendly Firebase errors ─────────────────────────────────────────────────
+  String _authError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-email':
+        return 'כתובת אימייל לא תקינה';
+      case 'user-disabled':
+        return 'המשתמש חסום';
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+      case 'INVALID_LOGIN_CREDENTIALS':
+        return 'אימייל או סיסמה שגויים';
+      case 'network-request-failed':
+        return 'בעיית רשת. בדוק/י את החיבור ונסה/י שוב';
+      case 'too-many-requests':
+        return 'יותר מדי ניסיונות. נסה/י שוב מאוחר יותר';
+      default:
+        return 'שגיאה בהתחברות: ${e.message ?? e.code}';
+    }
+  }
+
   void _showSnack(String msg, {bool isError = false}) {
-    _log('SnackBar: $msg');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor: isError ? const Color(0xFFB91C1C) : const Color(0xFF0F766E),
+        backgroundColor: isError ? AppColors.danger : AppColors.primary,
       ),
     );
   }
 
-  String _friendlyAuthErrorHe(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'invalid-email':
-        return '\u05db\u05ea\u05d5\u05d1\u05ea \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05ea\u05e7\u05d9\u05e0\u05d4';
-      case 'user-disabled':
-        return '\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d7\u05e1\u05d5\u05dd';
-      case 'user-not-found':
-        return '\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05de\u05e9\u05ea\u05de\u05e9 \u05e2\u05dd \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d6\u05d4';
-      case 'wrong-password':
-        return '\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4';
-      case 'invalid-credential':
-      case 'INVALID_LOGIN_CREDENTIALS':
-        return '\u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd';
-      case 'network-request-failed':
-        return '\u05d1\u05e2\u05d9\u05d9\u05ea \u05e8\u05e9\u05ea. \u05d1\u05d3\u05d5\u05e7/\u05d9 \u05d0\u05ea \u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05d5\u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1';
-      case 'too-many-requests':
-        return '\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1 \u05de\u05d0\u05d5\u05d7\u05e8 \u05d9\u05d5\u05ea\u05e8';
-      default:
-        return '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea: ${e.message ?? e.code}';
-    }
-  }
-
+  // ── Actions ──────────────────────────────────────────────────────────────────
   Future<void> _handleLogin() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+    _validateEmail(_emailCtrl.text);
+    _validatePassword(_passwordCtrl.text);
+    if (!_formValid) return;
 
-    if (email.isEmpty || password.isEmpty) {
-      _showSnack('\u05d0\u05e0\u05d0 \u05de\u05dc\u05d0/\u05d9 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d5\u05e1\u05d9\u05e1\u05de\u05d4', isError: true);
-      _log('validation failed: empty email/password');
-      return;
-    }
-
-    if (!Validators.isValidEmail(email)) {
-      _showSnack('\u05d0\u05e0\u05d0 \u05d4\u05d6\u05df/\u05d9 \u05db\u05ea\u05d5\u05d1\u05ea \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05ea\u05e7\u05d9\u05e0\u05d4', isError: true);
-      _log('validation failed: invalid email', error: email);
-      return;
-    }
-
-    _log('attempting login', error: 'email=$email, passwordLength=${password.length}');
     setState(() => _isLoading = true);
-
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text,
       );
-
       if (!mounted) return;
-
-      _log('login success, navigating to AuthGate (/) for role-based routing');
       context.go('/');
     } on FirebaseAuthException catch (e) {
-      _log('FirebaseAuthException during login: ${e.code} | ${e.message}');
       if (!mounted) return;
-      _showSnack(_friendlyAuthErrorHe(e), isError: true);
-    } catch (e, st) {
-      _log('Unexpected error during login', error: e, stackTrace: st);
+      _showSnack(_authError(e), isError: true);
+    } catch (_) {
       if (!mounted) return;
-      _showSnack('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05dc\u05d0 \u05e6\u05e4\u05d5\u05d9\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.', isError: true);
+      _showSnack('שגיאה לא צפויה. נסה/י שוב.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _handleForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      _showSnack('\u05d0\u05e0\u05d0 \u05d4\u05d6\u05df/\u05d9 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d9\u05e4\u05d5\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4', isError: true);
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !Validators.isValidEmail(email)) {
+      _showSnack('אנא הזן/י כתובת אימייל תקינה לאיפוס סיסמה', isError: true);
       return;
     }
-
-    if (!Validators.isValidEmail(email)) {
-      _showSnack('\u05d0\u05e0\u05d0 \u05d4\u05d6\u05df/\u05d9 \u05db\u05ea\u05d5\u05d1\u05ea \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05ea\u05e7\u05d9\u05e0\u05d4', isError: true);
-      return;
-    }
-
     setState(() => _isLoading = true);
-
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (!mounted) return;
-      _showSnack('\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0\u05d9\u05e4\u05d5\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e0\u05e9\u05dc\u05d7 \u05dc\u05d0\u05d9\u05de\u05d9\u05d9\u05dc');
+      _showSnack('קישור לאיפוס סיסמה נשלח לאימייל');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _showSnack(_friendlyAuthErrorHe(e), isError: true);
-    } catch (_) {
-      if (!mounted) return;
-      _showSnack('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05dc\u05d0 \u05e6\u05e4\u05d5\u05d9\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.', isError: true);
+      _showSnack(_authError(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ── UI ───────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header row
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      '\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
+            padding: AppSpacing.pagePadding,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Back + title row
+                  Row(
+                    children: [
+                      _BackButton(onTap: () => context.pop()),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text('התחברות', style: AppTextStyles.h2),
+                    ],
+                  ),
 
-                const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.xl),
 
-                // Small hero icon
-                Center(
-                  child: Container(
-                    width: 82,
-                    height: 82,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      color: Colors.white.withOpacity(0.65),
-                      border: Border.all(color: Colors.white.withOpacity(0.48)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 26,
-                          offset: const Offset(0, 16),
+                  // Hero icon
+                  Center(child: _HeroIcon()),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Greeting
+                  Text(
+                    'שמחים שחזרת!',
+                    style: AppTextStyles.h1,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'התחבר/י כדי להמשיך',
+                    style: AppTextStyles.caption,
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Form card
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      children: [
+                        AppInput(
+                          controller: _emailCtrl,
+                          label: 'אימייל',
+                          hint: 'name@example.com',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          textDirection: TextDirection.ltr,
+                          errorText: _emailError,
+                          onChanged: _validateEmail,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        AppInput(
+                          controller: _passwordCtrl,
+                          label: 'סיסמה',
+                          icon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          textDirection: TextDirection.ltr,
+                          errorText: _passwordError,
+                          onChanged: _validatePassword,
+                          onEditingComplete: _isLoading ? null : _handleLogin,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Forgot password
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed:
+                                _isLoading ? null : _handleForgotPassword,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'שכחת סיסמה?',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.md),
+
+                        AppButton(
+                          label: 'התחברות',
+                          onTap: _isLoading ? null : _handleLogin,
+                          isLoading: _isLoading,
+                          leadingIcon: Icons.login_rounded,
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.pets_rounded,
-                      size: 42,
-                      color: Color(0xFF0F766E),
-                    ),
                   ),
-                ),
 
-                const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.lg),
 
-                const Text(
-                  '\u05e9\u05de\u05d7\u05d9\u05dd \u05e9\u05d7\u05d6\u05e8\u05ea!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '\u05d4\u05ea\u05d7\u05d1\u05e8/\u05d9 \u05db\u05d3\u05d9 \u05dc\u05d4\u05de\u05e9\u05d9\u05da',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.80),
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // Glass card form
-                GlassCard(
-                  useBlur: false,
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
+                  // Sign-up link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      InputField(
-                        controller: _emailController,
-                        label: '\u05d0\u05d9\u05de\u05d9\u05d9\u05dc',
-                        hint: 'name@example.com',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // password with toggle
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        textDirection: TextDirection.ltr,
-                        decoration: InputDecoration(
-                          labelText: '\u05e1\u05d9\u05e1\u05de\u05d4',
-                          hintText: '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            onPressed: () => setState(
-                              () => _isPasswordVisible = !_isPasswordVisible,
-                            ),
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.65),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: const Color(0xFFE2E8F0).withOpacity(0.9),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF0F766E),
-                              width: 1.6,
-                            ),
-                          ),
+                      Text('אין לך חשבון?', style: AppTextStyles.caption),
+                      TextButton(
+                        onPressed:
+                            _isLoading ? null : () => context.push('/signup'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: _isLoading ? null : _handleForgotPassword,
-                          child: Text(
-                            '\u05e9\u05db\u05d7\u05ea \u05e1\u05d9\u05e1\u05de\u05d4?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF0F766E).withOpacity(0.95),
-                            ),
-                          ),
+                        child: Text(
+                          'הרשמה',
+                          style: AppTextStyles.bodyBold
+                              .copyWith(color: AppColors.primary),
                         ),
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      PrimaryGradientButton(
-                        text: _isLoading ? '\u05de\u05ea\u05d7\u05d1\u05e8...' : '\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea',
-                        icon: _isLoading
-                            ? Icons.hourglass_top_rounded
-                            : Icons.login_rounded,
-                        onTap: _isLoading ? null : _handleLogin,
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 14),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '\u05d0\u05d9\u05df \u05dc\u05da \u05d7\u05e9\u05d1\u05d5\u05df?',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.85),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => context.push('/signup'),
-                      child: const Text(
-                        '\u05d4\u05e8\u05e9\u05de\u05d4',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F766E),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Sub-widgets ────────────────────────────────────────────────────────────────
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: AppRadius.mdRadius,
+          boxShadow: AppShadows.card,
+        ),
+        child: const Icon(
+          Icons.arrow_forward_rounded,
+          size: 20,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 76,
+      height: 76,
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.xlRadius,
+        gradient: AppColors.primaryGradient,
+        boxShadow: AppShadows.button,
+      ),
+      child: const Icon(
+        Icons.pets_rounded,
+        size: 36,
+        color: Colors.white,
       ),
     );
   }
