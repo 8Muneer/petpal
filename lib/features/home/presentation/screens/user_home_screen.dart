@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/app_bottom_nav.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/glass_nav_bar.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
@@ -19,6 +22,11 @@ import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:petpal/core/providers/firebase_providers.dart';
+import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
+import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -40,14 +48,14 @@ class ServiceCardData {
   });
 }
 
-class UserHomeScreen extends StatefulWidget {
+class UserHomeScreen extends ConsumerStatefulWidget {
   const UserHomeScreen({super.key});
 
   @override
-  State<UserHomeScreen> createState() => _UserHomeScreenState();
+  ConsumerState<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
-class _UserHomeScreenState extends State<UserHomeScreen>
+class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
@@ -140,18 +148,19 @@ class _UserHomeScreenState extends State<UserHomeScreen>
       _SittingTab(
         onAction: (msg) => _toast(msg),
       ),
+      const _ChatTab(),
     ];
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
               if (_currentIndex == 0)
                 _ModernTopBar(
                   displayName: _displayName,
-                  photoUrl: _user?.photoURL,
+                  photoUrl: ref.watch(currentUserProfileProvider).asData?.value?.photoUrl ?? _user?.photoURL,
                   onProfilePressed: () => context.push('/profile'),
                   onLogoutPressed: _confirmLogout,
                 ),
@@ -179,31 +188,34 @@ class _UserHomeScreenState extends State<UserHomeScreen>
             ],
           ),
         ),
-
-        // Floating glass bottom nav
-        bottomNavigationBar: GlassNavBar(
+        bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
+          items: const [
+            AppNavItem(
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
               label: 'בית',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.pets_outlined),
-              selectedIcon: Icon(Icons.pets_rounded),
+            AppNavItem(
+              icon: Icons.pets_outlined,
+              activeIcon: Icons.pets_rounded,
               label: 'אבודים',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.directions_walk_outlined),
-              selectedIcon: Icon(Icons.directions_walk_rounded),
+            AppNavItem(
+              icon: Icons.directions_walk_outlined,
+              activeIcon: Icons.directions_walk_rounded,
               label: 'טיולים',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.home_work_outlined),
-              selectedIcon: Icon(Icons.home_work_rounded),
+            AppNavItem(
+              icon: Icons.home_work_outlined,
+              activeIcon: Icons.home_work_rounded,
               label: 'שמירה',
+            ),
+            AppNavItem(
+              icon: Icons.chat_bubble_outline_rounded,
+              activeIcon: Icons.chat_bubble_rounded,
+              label: 'צ׳אט',
             ),
           ],
         ),
@@ -225,79 +237,33 @@ class _ModernTopBar extends StatelessWidget {
     this.photoUrl,
   });
 
-  String get _initial {
-    final s = displayName.trim();
-    if (s.isEmpty) return 'P';
-    return s.characters.first.toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: GlassCard(
-        useBlur: true,
+      child: AppCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            // Profile avatar — RIGHT side in RTL (first child)
-            InkWell(
-              borderRadius: BorderRadius.circular(20),
+            // Avatar — RIGHT in RTL
+            AppAvatar(
+              name: displayName,
+              photoUrl: photoUrl,
+              size: 46,
               onTap: onProfilePressed,
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: photoUrl != null && photoUrl!.isNotEmpty
-                      ? null
-                      : const LinearGradient(
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                        ),
-                  image: photoUrl != null && photoUrl!.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(photoUrl!), fit: BoxFit.cover)
-                      : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.10),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: photoUrl != null && photoUrl!.isNotEmpty
-                    ? null
-                    : Center(
-                        child: Text(
-                          _initial,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 17,
-                          ),
-                        ),
-                      ),
-              ),
             ),
             const SizedBox(width: 12),
-            // Greeting — CENTER
+            // Greeting
             Expanded(
               child: Text(
                 'שלום, $displayName 👋',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
+                style: AppTextStyles.h3,
               ),
             ),
             const SizedBox(width: 10),
-            // Logout — LEFT side in RTL (last child)
+            // Logout button
             _PillIconButton(
               icon: Icons.logout_rounded,
               tooltip: 'התנתקות',
@@ -327,35 +293,10 @@ class _HomeTab extends ConsumerWidget {
         // Create post button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
+          child: AppButton(
+            label: 'פוסט חדש',
+            leadingIcon: Icons.add_rounded,
             onTap: () => context.push('/feed/create'),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_rounded, size: 20, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'פוסט חדש',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -491,42 +432,11 @@ class _FeedPostCard extends StatelessWidget {
             // Author row
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: post.authorPhotoUrl != null &&
-                            post.authorPhotoUrl!.isNotEmpty
-                        ? null
-                        : const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                          ),
-                    image: post.authorPhotoUrl != null &&
-                            post.authorPhotoUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(post.authorPhotoUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: post.authorPhotoUrl != null &&
-                          post.authorPhotoUrl!.isNotEmpty
-                      ? null
-                      : Center(
-                          child: Text(
-                            post.authorName.isNotEmpty
-                                ? post.authorName.characters.first.toUpperCase()
-                                : 'P',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
+                LiveUserAvatar(
+                  uid: post.authorUid,
+                  fallbackName: post.authorName,
+                  fallbackPhotoUrl: post.authorPhotoUrl,
+                  size: 40,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -809,35 +719,10 @@ class _WalkRequestsView extends ConsumerWidget {
         // Create request button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
+          child: AppButton(
+            label: 'בקשת טיול חדשה',
+            leadingIcon: Icons.add_rounded,
             onTap: () => context.push('/walks/create'),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_rounded, size: 20, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'בקשת טיול חדשה',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
 
@@ -995,30 +880,11 @@ class _WalkRequestCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: request.ownerPhotoUrl != null && request.ownerPhotoUrl!.isNotEmpty
-                        ? null
-                        : const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                          ),
-                    image: request.ownerPhotoUrl != null && request.ownerPhotoUrl!.isNotEmpty
-                        ? DecorationImage(image: NetworkImage(request.ownerPhotoUrl!), fit: BoxFit.cover)
-                        : null,
-                  ),
-                  child: request.ownerPhotoUrl != null && request.ownerPhotoUrl!.isNotEmpty
-                      ? null
-                      : Center(
-                          child: Text(
-                            request.ownerName.isNotEmpty ? request.ownerName.characters.first.toUpperCase() : 'P',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
-                          ),
-                        ),
+                LiveUserAvatar(
+                  uid: request.ownerUid,
+                  fallbackName: request.ownerName,
+                  fallbackPhotoUrl: request.ownerPhotoUrl,
+                  size: 38,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1349,35 +1215,10 @@ class _SittingRequestsView extends ConsumerWidget {
         // Create request button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
+          child: AppButton(
+            label: 'בקשת שמירה חדשה',
+            leadingIcon: Icons.add_rounded,
             onTap: () => context.push('/sitting/create'),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_rounded, size: 20, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'בקשת שמירה חדשה',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
 
@@ -1541,41 +1382,11 @@ class _SittingRequestCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: request.ownerPhotoUrl != null &&
-                            request.ownerPhotoUrl!.isNotEmpty
-                        ? null
-                        : const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
-                          ),
-                    image: request.ownerPhotoUrl != null &&
-                            request.ownerPhotoUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(request.ownerPhotoUrl!),
-                            fit: BoxFit.cover)
-                        : null,
-                  ),
-                  child: request.ownerPhotoUrl != null &&
-                          request.ownerPhotoUrl!.isNotEmpty
-                      ? null
-                      : Center(
-                          child: Text(
-                            request.ownerName.isNotEmpty
-                                ? request.ownerName.characters.first
-                                    .toUpperCase()
-                                : 'P',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13),
-                          ),
-                        ),
+                LiveUserAvatar(
+                  uid: request.ownerUid,
+                  fallbackName: request.ownerName,
+                  fallbackPhotoUrl: request.ownerPhotoUrl,
+                  size: 38,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1800,7 +1611,7 @@ class _SittingServicesView extends ConsumerWidget {
   }
 }
 
-class _SittingServiceCard extends StatelessWidget {
+class _SittingServiceCard extends ConsumerWidget {
   final SittingService service;
   const _SittingServiceCard({required this.service});
 
@@ -1818,8 +1629,28 @@ class _SittingServiceCard extends StatelessWidget {
     return m == 1 ? 'לפני חודש' : 'לפני $m חודשים';
   }
 
+  Future<void> _startChat(BuildContext context, WidgetRef ref) async {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final providerPhotoUrl = service.providerPhotoUrl ?? '';
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'משתמש',
+      otherUid: service.providerUid,
+      otherName: service.providerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: providerPhotoUrl,
+    );
+    if (context.mounted) {
+      context.push('/chat/$convoId', extra: {'otherName': service.providerName, 'otherPhotoUrl': providerPhotoUrl, 'otherUid': service.providerUid});
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const purple = Color(0xFF7C3AED);
     const blue = Color(0xFF0EA5E9);
     const amber = Color(0xFFD97706);
@@ -1835,26 +1666,11 @@ class _SittingServiceCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(17),
-                  color: purple.withOpacity(0.12),
-                ),
-                child: service.providerPhotoUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(17),
-                        child: CachedNetworkImage(
-                          imageUrl: service.providerPhotoUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(
-                              Icons.person_rounded,
-                              color: purple),
-                        ),
-                      )
-                    : const Icon(Icons.person_rounded,
-                        color: purple, size: 26),
+              LiveUserAvatar(
+                uid: service.providerUid,
+                fallbackName: service.providerName,
+                fallbackPhotoUrl: service.providerPhotoUrl,
+                size: 54,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1982,29 +1798,32 @@ class _SittingServiceCard extends StatelessWidget {
 
           // ── Contact button ────────────────────────────────────────────
           const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            height: 42,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: const LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+          GestureDetector(
+            onTap: () => _startChat(context, ref),
+            child: Container(
+              width: double.infinity,
+              height: 42,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                ),
               ),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.chat_bubble_outline_rounded,
-                    size: 16, color: Colors.white),
-                SizedBox(width: 8),
-                Text('צור קשר',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white)),
-              ],
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 16, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('צור קשר',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white)),
+                ],
+              ),
             ),
           ),
         ],
@@ -2046,9 +1865,9 @@ class _LostPetsTab extends StatelessWidget {
         ),
         const SizedBox(height: 18),
 
-        PrimaryGradientButton(
-          text: 'דווח/י על חיה אבודה',
-          icon: Icons.add_rounded,
+        AppButton(
+          label: 'דווח/י על חיה אבודה',
+          leadingIcon: Icons.add_rounded,
           onTap: () => onAction('TODO: Report lost pet'),
         ),
       ],
@@ -2227,12 +2046,32 @@ String _timeAgo(DateTime dt) {
   return 'לפני ${y == 1 ? 'שנה' : '$y שנים'}';
 }
 
-class _WalkServiceCard extends StatelessWidget {
+class _WalkServiceCard extends ConsumerWidget {
   final WalkService service;
   const _WalkServiceCard({required this.service});
 
+  Future<void> _startChat(BuildContext context, WidgetRef ref) async {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final providerPhotoUrl = service.providerPhotoUrl ?? '';
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'משתמש',
+      otherUid: service.providerUid,
+      otherName: service.providerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: providerPhotoUrl,
+    );
+    if (context.mounted) {
+      context.push('/chat/$convoId', extra: {'otherName': service.providerName, 'otherPhotoUrl': providerPhotoUrl, 'otherUid': service.providerUid});
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const teal = Color(0xFF0F766E);
     const blue = Color(0xFF0EA5E9);
     const purple = Color(0xFF7C3AED);
@@ -2250,25 +2089,11 @@ class _WalkServiceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Avatar
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(17),
-                  color: teal.withOpacity(0.12),
-                ),
-                child: service.providerPhotoUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(17),
-                        child: CachedNetworkImage(
-                          imageUrl: service.providerPhotoUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _AvatarFallback(
-                              name: service.providerName, color: teal),
-                        ),
-                      )
-                    : _AvatarFallback(
-                        name: service.providerName, color: teal),
+              LiveUserAvatar(
+                uid: service.providerUid,
+                fallbackName: service.providerName,
+                fallbackPhotoUrl: service.providerPhotoUrl,
+                size: 54,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -2411,18 +2236,7 @@ class _WalkServiceCard extends StatelessWidget {
           // ── CTA ──────────────────────────────────────────────────────
           InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  margin: const EdgeInsets.all(14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  content: const Text('פיצ׳ר הצ׳אט בקרוב!'),
-                  backgroundColor: teal,
-                ),
-              );
-            },
+            onTap: () => _startChat(context, ref),
             child: Container(
               height: 46,
               decoration: BoxDecoration(
@@ -2465,23 +2279,6 @@ class _WalkServiceCard extends StatelessWidget {
 }
 
 // ── Shared reusable widgets ───────────────────────────────────────────────────
-
-class _AvatarFallback extends StatelessWidget {
-  final String name;
-  final Color color;
-  const _AvatarFallback({required this.name, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        name.isNotEmpty ? name[0].toUpperCase() : '?',
-        style: TextStyle(
-            fontWeight: FontWeight.w900, color: color, fontSize: 20),
-      ),
-    );
-  }
-}
 
 class _RatingRow extends StatelessWidget {
   final double rating;
@@ -2591,6 +2388,93 @@ class _TrustBadge extends StatelessWidget {
               color: color,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Chat Tab ──────────────────────────────────────────────────────────────────
+
+class _ChatTab extends ConsumerWidget {
+  const _ChatTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myUid =
+        ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
+    final async = ref.watch(conversationsProvider);
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (convos) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        children: [
+          const SectionHeader(
+            title: 'צ׳אט',
+            subtitle: 'שיחות עם נותני שירות',
+          ),
+          const SizedBox(height: 10),
+          if (convos.isEmpty)
+            const EmptyStateCard(
+              title: 'אין שיחות עדיין',
+              subtitle: 'שיחות יופיעו כאן לאחר פנייה לנותן שירות.',
+              icon: Icons.chat_bubble_outline_rounded,
+            )
+          else
+            ...convos.map((c) {
+              final names =
+                  Map<String, String>.from(c['participantNames'] ?? {});
+              final photoUrls =
+                  Map<String, String>.from(c['participantPhotoUrls'] ?? {});
+              final otherEntry = names.entries.firstWhere(
+                (e) => e.key != myUid,
+                orElse: () => const MapEntry('', 'לא ידוע'),
+              );
+              final otherName = otherEntry.value;
+              final otherPhotoUrl = photoUrls[otherEntry.key] ?? '';
+              final lastMsg = c['lastMessage'] as String? ?? '';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AppCard(
+                  onTap: () => context.push(
+                    '/chat/${c['id']}',
+                    extra: {'otherName': otherName, 'otherPhotoUrl': otherPhotoUrl, 'otherUid': otherEntry.key},
+                  ),
+                  child: Row(
+                    children: [
+                      LiveUserAvatar(
+                        uid: otherEntry.key,
+                        fallbackName: otherName,
+                        fallbackPhotoUrl: otherPhotoUrl.isNotEmpty ? otherPhotoUrl : null,
+                        size: 48,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(otherName, style: AppTextStyles.bodyBold),
+                            const SizedBox(height: 2),
+                            Text(
+                              lastMsg.isEmpty ? 'התחל שיחה...' : lastMsg,
+                              style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 14, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
+              );
+            }),
         ],
       ),
     );

@@ -19,6 +19,10 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 
 final profileStreamProvider =
     StreamProvider.family<UserProfile?, String>((ref, uid) {
+  // Re-subscribe when auth state changes (e.g. logout → login) so the
+  // Firestore listener is recreated with a fresh auth token.
+  final authState = ref.watch(authStateChangesProvider);
+  if (authState.valueOrNull == null) return const Stream.empty();
   final datasource = ref.watch(profileDatasourceProvider);
   return datasource.watchProfile(uid);
 });

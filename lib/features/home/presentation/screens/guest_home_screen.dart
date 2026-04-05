@@ -5,11 +5,21 @@ import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/glass_nav_bar.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_bottom_nav.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/walks/domain/entities/walk_service.dart';
+import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
+import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:petpal/core/widgets/empty_state_card.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -41,55 +51,6 @@ class GuestHomeScreen extends StatefulWidget {
 class _GuestHomeScreenState extends State<GuestHomeScreen> {
   int _currentIndex = 0;
 
-  // Mock cards (later replace with Firestore)
-  final List<ServiceCardData> _cards = const [
-    ServiceCardData(
-      type: ServiceType.dogWalk,
-      name: 'איה לוי',
-      rating: 4.9,
-      city: 'ירושלים',
-      priceText: '₪90/טיול',
-      timeText: 'היום 18:00',
-    ),
-    ServiceCardData(
-      type: ServiceType.petSitting,
-      name: 'דניאל כהן',
-      rating: 4.7,
-      city: 'ירושלים',
-      priceText: '₪120/יום',
-      timeText: 'מחר - 3 ימים',
-    ),
-    ServiceCardData(
-      type: ServiceType.dogWalk,
-      name: 'נועה מזרחי',
-      rating: 4.8,
-      city: 'ירושלים',
-      priceText: '₪70/טיול',
-      timeText: 'היום 20:30',
-    ),
-    ServiceCardData(
-      type: ServiceType.petSitting,
-      name: 'רוני אבו-סאלח',
-      rating: 4.9,
-      city: 'ירושלים',
-      priceText: '₪95/יום',
-      timeText: 'סופ"ש',
-    ),
-    ServiceCardData(
-      type: ServiceType.available,
-      name: 'סאמר ח\'טיב',
-      rating: 4.6,
-      city: 'ירושלים',
-      priceText: 'זמין עכשיו',
-      timeText: 'היום',
-    ),
-  ];
-
-  List<ServiceCardData> get _dogWalkCards =>
-      _cards.where((c) => c.type == ServiceType.dogWalk).toList();
-
-  List<ServiceCardData> get _petSittingCards =>
-      _cards.where((c) => c.type == ServiceType.petSitting).toList();
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -115,23 +76,13 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
         onRequireLogin: _requireLogin,
         onToast: _toast,
       ),
-      _CardsListTab(
-        title: 'טיולים (Dog Walk)',
-        subtitle: 'תצוגה בלבד כאורח • התחבר/י להזמנה',
-        cards: _dogWalkCards,
-        onRequireLogin: _requireLogin,
-      ),
-      _CardsListTab(
-        title: 'שמירה (Pet Sitting)',
-        subtitle: 'תצוגה בלבד כאורח • התחבר/י להזמנה',
-        cards: _petSittingCards,
-        onRequireLogin: _requireLogin,
-      ),
+      _WalkServicesTab(onRequireLogin: _requireLogin),
+      _SittingServicesTab(onRequireLogin: _requireLogin),
     ];
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -164,28 +115,28 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
             ],
           ),
         ),
-        bottomNavigationBar: GlassNavBar(
+        bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
+          items: const [
+            AppNavItem(
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
               label: 'בית',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.pets_outlined),
-              selectedIcon: Icon(Icons.pets_rounded),
+            AppNavItem(
+              icon: Icons.pets_outlined,
+              activeIcon: Icons.pets_rounded,
               label: 'אבודים',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.directions_walk_outlined),
-              selectedIcon: Icon(Icons.directions_walk_rounded),
+            AppNavItem(
+              icon: Icons.directions_walk_outlined,
+              activeIcon: Icons.directions_walk_rounded,
               label: 'טיולים',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.home_work_outlined),
-              selectedIcon: Icon(Icons.home_work_rounded),
+            AppNavItem(
+              icon: Icons.home_work_outlined,
+              activeIcon: Icons.home_work_rounded,
               label: 'שמירה',
             ),
           ],
@@ -236,7 +187,7 @@ class _GuestTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: GlassCard(
+            child: AppCard(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
@@ -347,9 +298,9 @@ class _HomeTab extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                PrimaryGradientButton(
-                  text: 'התחבר/י',
-                  icon: Icons.login_rounded,
+                AppButton(
+                  label: 'התחבר/י',
+                  leadingIcon: Icons.login_rounded,
                   onTap: () => context.push('/login'),
                 ),
               ],
@@ -368,7 +319,7 @@ class _HomeTab extends ConsumerWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(22),
                   onTap: onRequireLogin,
-                  child: GlassCard(
+                  child: AppCard(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     child: Row(
@@ -452,9 +403,9 @@ class _LostPetsTab extends StatelessWidget {
         ),
         const SizedBox(height: 18),
 
-        PrimaryGradientButton(
-          text: 'דווח/י על חיה אבודה (נעול)',
-          icon: Icons.lock_rounded,
+        AppButton(
+          label: 'דווח/י על חיה אבודה (נעול)',
+          leadingIcon: Icons.lock_rounded,
           onTap: onRequireLogin,
         ),
       ],
@@ -462,36 +413,96 @@ class _LostPetsTab extends StatelessWidget {
   }
 }
 
-class _CardsListTab extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final List<ServiceCardData> cards;
+class _WalkServicesTab extends ConsumerWidget {
   final VoidCallback onRequireLogin;
-
-  const _CardsListTab({
-    required this.title,
-    required this.subtitle,
-    required this.cards,
-    required this.onRequireLogin,
-  });
+  const _WalkServicesTab({required this.onRequireLogin});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      children: [
-        SectionHeader(title: title, subtitle: subtitle),
-        const SizedBox(height: 10),
-        ...cards.map(
-          (c) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _ModernServiceCardLocked(
-              data: c,
-              onPressed: onRequireLogin,
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(walkServicesProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (services) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        children: [
+          const SectionHeader(
+            title: 'טיולים (Dog Walk)',
+            subtitle: 'תצוגה בלבד כאורח • התחבר/י להזמנה',
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          if (services.isEmpty)
+            const EmptyStateCard(
+              title: 'אין שירותי טיול זמינים',
+              subtitle: 'נסה/י שוב מאוחר יותר.',
+              icon: Icons.directions_walk_rounded,
+            )
+          else
+            ...services.map(
+              (s) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ModernServiceCardLocked(
+                  data: ServiceCardData(
+                    type: ServiceType.dogWalk,
+                    name: s.providerName,
+                    rating: s.rating ?? 0,
+                    city: s.area,
+                    priceText: s.priceText,
+                    timeText: s.duration,
+                  ),
+                  onPressed: onRequireLogin,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SittingServicesTab extends ConsumerWidget {
+  final VoidCallback onRequireLogin;
+  const _SittingServicesTab({required this.onRequireLogin});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(sittingServicesProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (services) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        children: [
+          const SectionHeader(
+            title: 'שמירה (Pet Sitting)',
+            subtitle: 'תצוגה בלבד כאורח • התחבר/י להזמנה',
+          ),
+          const SizedBox(height: 10),
+          if (services.isEmpty)
+            const EmptyStateCard(
+              title: 'אין שירותי שמירה זמינים',
+              subtitle: 'נסה/י שוב מאוחר יותר.',
+              icon: Icons.house_rounded,
+            )
+          else
+            ...services.map(
+              (s) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ModernServiceCardLocked(
+                  data: ServiceCardData(
+                    type: ServiceType.petSitting,
+                    name: s.providerName,
+                    rating: s.rating ?? 0,
+                    city: s.area,
+                    priceText: s.priceText,
+                    timeText: s.sittingLocation,
+                  ),
+                  onPressed: onRequireLogin,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -524,7 +535,7 @@ class _GuestPostCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: GlassCard(
+      child: AppCard(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,7 +756,7 @@ class _LostPetModernCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    return AppCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -855,7 +866,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [

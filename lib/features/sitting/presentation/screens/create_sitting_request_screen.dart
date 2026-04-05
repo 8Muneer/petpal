@@ -7,6 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
@@ -255,7 +260,7 @@ class _CreateSittingRequestScreenState
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -290,8 +295,8 @@ class _CreateSittingRequestScreenState
                     // Pet name
                     _FieldLabel('שם חיית המחמד'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _petNameController,
@@ -320,8 +325,8 @@ class _CreateSittingRequestScreenState
                     // Pet type
                     _FieldLabel('סוג חיית המחמד'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -342,8 +347,8 @@ class _CreateSittingRequestScreenState
                     // Pet gender
                     _FieldLabel('מין חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -399,8 +404,8 @@ class _CreateSittingRequestScreenState
                     // Sitting type
                     _FieldLabel('מיקום השמירה'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -481,8 +486,8 @@ class _CreateSittingRequestScreenState
                       InkWell(
                         borderRadius: BorderRadius.circular(18),
                         onTap: _pickImage,
-                        child: GlassCard(
-                          useBlur: true,
+                        child: AppCard(
+                          
                           padding: const EdgeInsets.symmetric(vertical: 22),
                           child: Column(
                             children: [
@@ -521,8 +526,8 @@ class _CreateSittingRequestScreenState
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
                                 onTap: _pickStartDate,
-                                child: GlassCard(
-                                  useBlur: true,
+                                child: AppCard(
+                                  
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 14),
                                   child: Row(
@@ -564,8 +569,8 @@ class _CreateSittingRequestScreenState
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
                                 onTap: _pickEndDate,
-                                child: GlassCard(
-                                  useBlur: true,
+                                child: AppCard(
+                                  
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 14),
                                   child: Row(
@@ -629,8 +634,8 @@ class _CreateSittingRequestScreenState
                     // Area
                     _FieldLabel('אזור / שכונה'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _areaController,
@@ -659,8 +664,8 @@ class _CreateSittingRequestScreenState
                     // Special instructions
                     _FieldLabel('הוראות מיוחדות (אופציונלי)'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _instructionsController,
@@ -690,8 +695,8 @@ class _CreateSittingRequestScreenState
                     // Budget
                     _FieldLabel('תקציב (אופציונלי)'),
                     const SizedBox(height: 6),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _budgetController,

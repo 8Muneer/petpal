@@ -8,9 +8,15 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -52,6 +58,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // Read photoUrl from Firestore (source of truth — Firebase Auth photoURL can be stale)
+      final profile = ref.read(currentUserProfileProvider).asData?.value;
+      final photoUrl = profile?.photoUrl ?? user.photoURL;
+
       String? imageUrl;
 
       // Upload image if exists and type is post
@@ -67,7 +77,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       await repo.createPost({
         'authorUid': user.uid,
         'authorName': user.displayName ?? user.email?.split('@').first ?? '',
-        'authorPhotoUrl': user.photoURL,
+        'authorPhotoUrl': photoUrl,
         'type': _type == PostType.tip ? 'tip' : 'post',
         'content': content,
         'imageUrl': imageUrl,
@@ -103,7 +113,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -136,8 +146,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   children: [
                     // Type selector
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -171,8 +181,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     const SizedBox(height: 14),
 
                     // Content field
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _contentController,
@@ -240,8 +250,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         InkWell(
                           borderRadius: BorderRadius.circular(18),
                           onTap: _pickImage,
-                          child: GlassCard(
-                            useBlur: true,
+                          child: AppCard(
+                            
                             padding: const EdgeInsets.symmetric(vertical: 24),
                             child: Column(
                               children: [

@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 
 class CreateSittingServiceScreen extends ConsumerStatefulWidget {
@@ -98,7 +104,7 @@ class _CreateSittingServiceScreenState
       final data = {
         'providerUid': user.uid,
         'providerName': user.displayName ?? user.email ?? '',
-        'providerPhotoUrl': user.photoURL,
+        'providerPhotoUrl': ref.read(currentUserProfileProvider).asData?.value?.photoUrl ?? user.photoURL,
         'area': area,
         'priceText': priceText,
         'priceType': _priceType,
@@ -153,7 +159,7 @@ class _CreateSittingServiceScreenState
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -189,8 +195,8 @@ class _CreateSittingServiceScreenState
                     const _SectionHeader(
                         icon: Icons.location_on_rounded, title: 'מיקום'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _areaController,
@@ -221,8 +227,8 @@ class _CreateSittingServiceScreenState
                         icon: Icons.account_balance_wallet_rounded,
                         title: 'תמחור'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
@@ -376,8 +382,8 @@ class _CreateSittingServiceScreenState
                     const _SectionHeader(
                         icon: Icons.home_work_rounded, title: 'סוג שמירה'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(10),
                       child: Row(
                         children: _locationOptions.map((option) {
@@ -454,8 +460,8 @@ class _CreateSittingServiceScreenState
                         icon: Icons.pets_rounded,
                         title: 'סוגי חיות מחמד'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(10),
                       child: Row(
                         children: _allPetTypes.map((type) {
@@ -536,8 +542,8 @@ class _CreateSittingServiceScreenState
                         icon: Icons.calendar_month_rounded,
                         title: 'ימי זמינות (אופציונלי)'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -652,8 +658,8 @@ class _CreateSittingServiceScreenState
                         icon: Icons.notes_rounded,
                         title: 'תיאור (אופציונלי)'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _bioController,

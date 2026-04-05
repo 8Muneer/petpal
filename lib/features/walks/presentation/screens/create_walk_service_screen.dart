@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
 class CreateWalkServiceScreen extends ConsumerStatefulWidget {
@@ -111,7 +117,7 @@ class _CreateWalkServiceScreenState
       final data = {
         'providerUid': user.uid,
         'providerName': user.displayName ?? user.email ?? '',
-        'providerPhotoUrl': user.photoURL,
+        'providerPhotoUrl': ref.read(currentUserProfileProvider).asData?.value?.photoUrl ?? user.photoURL,
         'area': area,
         'priceText': priceText,
         'priceType': _priceType,
@@ -167,7 +173,7 @@ class _CreateWalkServiceScreenState
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -205,8 +211,8 @@ class _CreateWalkServiceScreenState
                     const _SectionHeader(
                         icon: Icons.location_on_rounded, title: 'מיקום'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _areaController,
@@ -237,8 +243,8 @@ class _CreateWalkServiceScreenState
                         icon: Icons.account_balance_wallet_rounded,
                         title: 'תמחור'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
@@ -396,8 +402,8 @@ class _CreateWalkServiceScreenState
                         icon: Icons.pets_rounded,
                         title: 'סוגי חיות מחמד'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(10),
                       child: Row(
                         children: _allPetTypes.map((type) {
@@ -477,8 +483,8 @@ class _CreateWalkServiceScreenState
                     const _SectionHeader(
                         icon: Icons.timer_rounded, title: 'משך הטיול'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,8 +544,8 @@ class _CreateWalkServiceScreenState
                         icon: Icons.calendar_month_rounded,
                         title: 'ימי זמינות (אופציונלי)'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,8 +666,8 @@ class _CreateWalkServiceScreenState
                         icon: Icons.notes_rounded,
                         title: 'תיאור (אופציונלי)'),
                     const SizedBox(height: 8),
-                    GlassCard(
-                      useBlur: true,
+                    AppCard(
+                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _bioController,
