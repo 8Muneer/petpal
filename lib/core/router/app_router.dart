@@ -27,6 +27,11 @@ import 'package:petpal/features/walks/presentation/screens/walk_request_detail_s
 import 'package:petpal/features/walks/presentation/screens/create_walk_service_screen.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/screens/create_sitting_service_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/bookings_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/availability_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/service_settings_screen.dart';
+import 'package:petpal/features/messaging/presentation/screens/chat_list_screen.dart';
+import 'package:petpal/features/messaging/presentation/screens/chat_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -134,6 +139,37 @@ class AppRouter {
         builder: (context, state) => CreateSittingServiceScreen(
           service: state.extra as SittingService?,
         ),
+      ),
+      GoRoute(
+        path: '/profile/bookings',
+        builder: (context, state) => const BookingsScreen(),
+      ),
+      GoRoute(
+        path: '/provider/availability',
+        builder: (context, state) => const AvailabilityScreen(),
+      ),
+      GoRoute(
+        path: '/provider/services',
+        builder: (context, state) => const ServiceSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        builder: (context, state) => const ChatListScreen(),
+      ),
+      GoRoute(
+        path: '/chat/:conversationId',
+        builder: (context, state) {
+          final extra = state.extra;
+          final otherName = extra is Map ? (extra['otherName'] as String? ?? '') : (extra as String? ?? '');
+          final otherPhotoUrl = extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
+          final otherUid = extra is Map ? (extra['otherUid'] as String?) : null;
+          return ChatScreen(
+            conversationId: state.pathParameters['conversationId']!,
+            otherName: otherName,
+            otherPhotoUrl: otherPhotoUrl,
+            otherUid: otherUid,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),

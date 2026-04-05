@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/primary_gradient_button.dart';
 
@@ -41,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: AppColors.surfaceAlabaster,
+          backgroundColor: AppColors.surfaceBase,
           body: Stack(
             children: [
               // Background gradient (same family)
@@ -128,7 +130,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     Icon(
                                       Icons.pets_rounded,
                                       size: 16,
-                                      color: AppColors.secondarySlate.withOpacity(0.75),
+                                      color: AppColors.textSecondary.withOpacity(0.75),
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
@@ -136,7 +138,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w900,
-                                        color: AppColors.secondarySlate.withOpacity(0.80),
+                                        color: AppColors.textSecondary.withOpacity(0.80),
                                       ),
                                     ),
                                   ],
@@ -186,7 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e, st) {
       _log('build failed', error: e, stackTrace: st);
       return Scaffold(
-        backgroundColor: AppColors.surfaceAlabaster,
+        backgroundColor: AppColors.surfaceBase,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -194,7 +196,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: AppColors.alertCoral),
+                  const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
                   const SizedBox(height: 12),
                   const Text(
                     '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05e4\u05ea\u05d9\u05d7\u05d4',
@@ -202,14 +204,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.secondarySlate,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '$e',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.secondarySlate),
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -297,7 +299,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.warmMist,
+      color: AppColors.surfaceBase,
       child: Row(
         children: List.generate(3, (columnIndex) {
           return Expanded(
@@ -319,7 +321,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                       child: Container(
                         height: height,
                         decoration: BoxDecoration(
-                          color: AppColors.warmMist,
+                          color: AppColors.surfaceBase,
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: Image.network(
@@ -327,23 +329,23 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
-                              color: AppColors.warmMist,
+                              color: AppColors.surfaceBase,
                               child: Icon(
                                 Icons.pets,
                                 size: 40,
-                                color: AppColors.primarySage.withOpacity(0.5),
+                                color: AppColors.primary.withOpacity(0.5),
                               ),
                             );
                           },
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return Container(
-                              color: AppColors.warmMist,
+                              color: AppColors.surfaceBase,
                               child: Center(
                                 child: Icon(
                                   Icons.pets,
                                   size: 40,
-                                  color: AppColors.primarySage.withOpacity(0.28),
+                                  color: AppColors.primary.withOpacity(0.28),
                                 ),
                               ),
                             );
@@ -379,8 +381,8 @@ class _ContentSection extends StatelessWidget {
         children: [
           const SizedBox(height: 10),
 
-          GlassCard(
-            useBlur: false,
+          AppCard(
+            
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Column(
@@ -391,14 +393,14 @@ class _ContentSection extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.secondarySlate,
+                        color: AppColors.textSecondary,
                         height: 1.2,
                       ),
                       children: const [
                         TextSpan(text: '\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc'),
                         TextSpan(
                           text: 'PetPal',
-                          style: TextStyle(color: AppColors.primarySage),
+                          style: TextStyle(color: AppColors.primary),
                         ),
                       ],
                     ),
@@ -410,15 +412,15 @@ class _ContentSection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.secondarySlate.withOpacity(0.68),
+                      color: AppColors.textSecondary.withOpacity(0.68),
                       height: 1.55,
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  PrimaryGradientButton(
-                    text: '\u05d1\u05d5\u05d0\u05d5 \u05e0\u05ea\u05d7\u05d9\u05dc',
-                    icon: Icons.rocket_launch_rounded,
+                  AppButton(
+                    label: '\u05d1\u05d5\u05d0\u05d5 \u05e0\u05ea\u05d7\u05d9\u05dc',
+                    leadingIcon: Icons.rocket_launch_rounded,
                     onTap: onStartPressed,
                   ),
 
@@ -431,7 +433,7 @@ class _ContentSection extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.secondarySlate.withOpacity(0.68),
+                        color: AppColors.textSecondary.withOpacity(0.68),
                       ),
                     ),
                   ),

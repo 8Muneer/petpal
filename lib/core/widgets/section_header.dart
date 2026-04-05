@@ -1,42 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:petpal/core/theme/app_theme.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Widget? trailing;
 
   const SectionHeader({
     super.key,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF334155).withOpacity(0.78),
-                ),
-              ),
+              Text(title, style: AppTextStyles.h3),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(subtitle!, style: AppTextStyles.caption),
+              ],
             ],
           ),
         ),

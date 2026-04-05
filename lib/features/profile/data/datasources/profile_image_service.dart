@@ -24,13 +24,16 @@ class ProfileImageService {
   }
 
   /// Upload the picked image to Firebase Storage and return the download URL.
+  /// A timestamp query param is appended so each upload produces a unique URL,
+  /// forcing CachedNetworkImage to bypass its cache on every update.
   Future<String> uploadProfileImage(String uid, XFile file) async {
     final ref = _storage.ref().child('profile_images/$uid');
     await ref.putFile(
       File(file.path),
       SettableMetadata(contentType: 'image/jpeg'),
     );
-    return ref.getDownloadURL();
+    final url = await ref.getDownloadURL();
+    return '$url&v=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   /// Delete the profile image from Firebase Storage.
