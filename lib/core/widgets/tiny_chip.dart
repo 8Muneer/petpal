@@ -1,40 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:petpal/core/theme/app_theme.dart';
 
+/// Small label chip. Pass [color] for the text/border color;
+/// fill is auto-derived as 12% opacity of that color.
 class TinyChip extends StatelessWidget {
   final String text;
+  final Color? color;
   final Color? fill;
   final Color? textColor;
-  /// Backwards-compatible alias for [textColor] / auto-derived fill.
-  final Color? color;
+  final IconData? icon;
 
   const TinyChip({
     super.key,
     required this.text,
+    this.color,
     this.fill,
     this.textColor,
-    this.color,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     final effectiveTextColor =
-        textColor ?? color ?? const Color(0xFF0F766E);
+        textColor ?? color ?? AppColors.primary;
     final effectiveFill =
-        fill ?? effectiveTextColor.withOpacity(0.12);
+        fill ?? effectiveTextColor.withValues(alpha: 0.12);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: EdgeInsets.symmetric(
+        horizontal: icon != null ? AppSpacing.sm : 10,
+        vertical: 5,
+      ),
       decoration: BoxDecoration(
         color: effectiveFill,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.fullRadius,
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: effectiveTextColor,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: effectiveTextColor),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: AppTextStyles.label.copyWith(
+              color: effectiveTextColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

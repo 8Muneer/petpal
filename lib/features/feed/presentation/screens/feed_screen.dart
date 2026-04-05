@@ -5,7 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_card.dart';
+import 'package:petpal/core/widgets/app_input.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
@@ -19,7 +25,7 @@ class FeedScreen extends ConsumerWidget {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: PetPalScaffold(
+      child: AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -238,8 +244,8 @@ class _PostCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: GlassCard(
-        useBlur: true,
+      child: AppCard(
+        
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,42 +253,11 @@ class _PostCard extends StatelessWidget {
             // Author row
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: post.authorPhotoUrl != null &&
-                            post.authorPhotoUrl!.isNotEmpty
-                        ? null
-                        : const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                          ),
-                    image: post.authorPhotoUrl != null &&
-                            post.authorPhotoUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(post.authorPhotoUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: post.authorPhotoUrl != null &&
-                          post.authorPhotoUrl!.isNotEmpty
-                      ? null
-                      : Center(
-                          child: Text(
-                            post.authorName.isNotEmpty
-                                ? post.authorName.characters.first.toUpperCase()
-                                : 'P',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
+                LiveUserAvatar(
+                  uid: post.authorUid,
+                  fallbackName: post.authorName,
+                  fallbackPhotoUrl: post.authorPhotoUrl,
+                  size: 40,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
