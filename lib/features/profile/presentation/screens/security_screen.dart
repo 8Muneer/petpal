@@ -39,7 +39,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFB91C1C) : const Color(0xFF0F766E),
+            isError ? const Color(0xFFB91C1C) : AppColors.primary,
       ),
     );
   }
@@ -231,7 +231,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
@@ -252,10 +252,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
-                              color: const Color(0xFF0F766E).withOpacity(0.12),
+                              color: AppColors.primary.withOpacity(0.12),
                             ),
                             child: const Icon(Icons.lock_outline_rounded,
-                                color: Color(0xFF0F766E)),
+                                color: AppColors.primary),
                           ),
                           const SizedBox(width: 12),
                           const Text(
@@ -263,7 +263,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ],
@@ -420,7 +420,7 @@ class _PasswordField extends StatelessWidget {
         suffixIcon: IconButton(
           icon: Icon(
             showPassword ? Icons.visibility_off : Icons.visibility,
-            color: const Color(0xFF64748B),
+            color: AppColors.textSecondary,
           ),
           onPressed: onToggle,
         ),
@@ -433,12 +433,12 @@ class _PasswordField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide:
-              BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.9)),
+              BorderSide(color: AppColors.border.withOpacity(0.9)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide:
-              const BorderSide(color: Color(0xFF0F766E), width: 1.6),
+              const BorderSide(color: AppColors.primary, width: 1.6),
         ),
       ),
     );

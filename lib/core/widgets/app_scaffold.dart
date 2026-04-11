@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
-/// Unified scaffold replacing [PetPalScaffold].
-///
-/// Improvements over original:
-/// - Blob sizes derived from [MediaQuery] — no clipping on small screens
-/// - Gradient and blob colors pulled from [AppColors] tokens
-/// - Optional [appBar] slot
-/// - Optional [floatingActionButton]
+/// Unified app scaffold — clean flat background, no decorative blobs.
 class AppScaffold extends StatelessWidget {
   final Widget body;
   final Widget? bottomNavigationBar;
@@ -30,9 +24,6 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final blobSize = size.width * 0.72; // ~72% of screen width
-
     return Scaffold(
       extendBody: extendBody,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
@@ -40,67 +31,8 @@ class AppScaffold extends StatelessWidget {
       appBar: appBar,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
-      body: Stack(
-        children: [
-          // Background gradient
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: AppColors.backgroundGradient,
-              ),
-            ),
-          ),
-
-          // Top-left decorative blob
-          Positioned(
-            top: -(blobSize * 0.42),
-            left: -(blobSize * 0.30),
-            child: _Blob(
-              size: blobSize,
-              colors: const [
-                Color(0x3852B788), // primaryLight 22%
-                Color(0x240EA5E9), // blue 14%
-              ],
-            ),
-          ),
-
-          // Bottom-right decorative blob
-          Positioned(
-            bottom: blobSize * 0.20,
-            right: -(blobSize * 0.36),
-            child: _Blob(
-              size: blobSize * 0.90,
-              colors: const [
-                Color(0x1F40916C), // walks 12%
-                Color(0x242D6A4F), // primary 14%
-              ],
-            ),
-          ),
-
-          // Main content
-          body,
-        ],
-      ),
+      body: body,
       bottomNavigationBar: bottomNavigationBar,
-    );
-  }
-}
-
-class _Blob extends StatelessWidget {
-  final double size;
-  final List<Color> colors;
-
-  const _Blob({required this.size, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(colors: colors),
-      ),
     );
   }
 }

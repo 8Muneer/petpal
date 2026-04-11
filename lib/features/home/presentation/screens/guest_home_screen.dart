@@ -59,7 +59,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
         margin: const EdgeInsets.all(14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor: const Color(0xFF0F766E),
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -182,7 +182,7 @@ class _GuestTopBar extends StatelessWidget {
                 ],
               ),
               child: const Icon(Icons.person_outline_rounded,
-                  color: Color(0xFF0F172A)),
+                  color: AppColors.textPrimary),
             ),
           ),
           const SizedBox(width: 12),
@@ -200,7 +200,7 @@ class _GuestTopBar extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                             height: 1.1,
                           ),
                         ),
@@ -249,7 +249,7 @@ class _HomeTab extends ConsumerWidget {
 
     return postsAsync.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => Center(
         child: Column(
@@ -264,7 +264,7 @@ class _HomeTab extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF64748B),
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -278,14 +278,14 @@ class _HomeTab extends ConsumerWidget {
               children: [
                 Icon(Icons.feed_outlined,
                     size: 64,
-                    color: const Color(0xFF64748B).withOpacity(0.5)),
+                    color: AppColors.textSecondary.withOpacity(0.5)),
                 const SizedBox(height: 16),
                 const Text(
                   'אין פוסטים עדיין',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF64748B),
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -294,7 +294,7 @@ class _HomeTab extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF94A3B8),
+                    color: AppColors.textMuted,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -329,10 +329,10 @@ class _HomeTab extends ConsumerWidget {
                           height: 40,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            color: const Color(0xFFF1F5F9),
+                            color: AppColors.borderFaint,
                           ),
                           child: const Icon(Icons.person_outline_rounded,
-                              color: Color(0xFF94A3B8)),
+                              color: AppColors.textMuted),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -342,12 +342,12 @@ class _HomeTab extends ConsumerWidget {
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color:
-                                  const Color(0xFF64748B).withOpacity(0.7),
+                                  AppColors.textSecondary.withOpacity(0.7),
                             ),
                           ),
                         ),
                         const Icon(Icons.lock_outline_rounded,
-                            size: 18, color: Color(0xFF94A3B8)),
+                            size: 18, color: AppColors.textMuted),
                       ],
                     ),
                   ),
@@ -554,7 +554,7 @@ class _GuestPostCard extends StatelessWidget {
                         : const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                            colors: [AppColors.primary, AppColors.statusOpen],
                           ),
                     image: post.authorPhotoUrl != null &&
                             post.authorPhotoUrl!.isNotEmpty
@@ -590,7 +590,7 @@ class _GuestPostCard extends StatelessWidget {
                         post.authorName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           fontSize: 13,
                         ),
                       ),
@@ -599,7 +599,7 @@ class _GuestPostCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF64748B).withOpacity(0.8),
+                          color: AppColors.textSecondary.withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -610,21 +610,21 @@ class _GuestPostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.12),
+                      color: AppColors.warning.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.lightbulb_outline_rounded,
-                            size: 13, color: Color(0xFFF59E0B)),
+                            size: 13, color: AppColors.warning),
                         SizedBox(width: 3),
                         Text(
                           'טיפ',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFFF59E0B),
+                            color: AppColors.warning,
                           ),
                         ),
                       ],
@@ -643,7 +643,7 @@ class _GuestPostCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
+                color: AppColors.textPrimary,
                 height: 1.4,
               ),
             ),
@@ -660,19 +660,19 @@ class _GuestPostCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
                     height: 160,
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.borderFaint,
                     child: const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF0F766E),
+                        color: AppColors.primary,
                         strokeWidth: 2,
                       ),
                     ),
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 160,
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.borderFaint,
                     child: const Icon(Icons.broken_image_rounded,
-                        color: Color(0xFF94A3B8)),
+                        color: AppColors.textMuted),
                   ),
                 ),
               ),
@@ -693,14 +693,14 @@ class _GuestPostCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.favorite_border_rounded,
-                            size: 18, color: Color(0xFF64748B)),
+                            size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 5),
                         Text(
                           '${post.likes.length}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF64748B),
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -718,14 +718,14 @@ class _GuestPostCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.chat_bubble_outline_rounded,
-                            size: 18, color: Color(0xFF64748B)),
+                            size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 5),
                         Text(
                           '${post.commentCount}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF64748B),
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -785,7 +785,7 @@ class _LostPetModernCard extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -804,7 +804,7 @@ class _LostPetModernCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: AppColors.borderFaint,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
@@ -858,9 +858,9 @@ class _ModernServiceCardLocked extends StatelessWidget {
       case ServiceType.dogWalk:
         return const Color(0xFF0EA5E9);
       case ServiceType.petSitting:
-        return const Color(0xFF0F766E);
+        return AppColors.primary;
       case ServiceType.available:
-        return const Color(0xFF22C55E);
+        return AppColors.statusOpen;
     }
   }
 
@@ -890,7 +890,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                       '${data.city} • ${data.name}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -910,7 +910,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppColors.borderFaint,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
@@ -923,7 +923,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                       data.rating.toStringAsFixed(1),
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
@@ -984,19 +984,19 @@ class _PillButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: AppColors.borderFaint,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: const Color(0xFF0F766E)),
+            Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 8),
             const Text(
               'התחבר/י',
               style: TextStyle(
-                color: Color(0xFF0F172A),
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1025,7 +1025,7 @@ class _MiniLockButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+            colors: [AppColors.primary, AppColors.statusOpen],
           ),
         ),
         child: Row(
@@ -1077,7 +1077,7 @@ void _requireLoginDialog(BuildContext context) {
               context.push('/login');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F766E),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(

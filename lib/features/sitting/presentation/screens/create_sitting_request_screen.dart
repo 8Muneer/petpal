@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
@@ -32,8 +33,8 @@ class CreateSittingRequestScreen extends ConsumerStatefulWidget {
 class _CreateSittingRequestScreenState
     extends ConsumerState<CreateSittingRequestScreen> {
   final _petNameController = TextEditingController();
-  final _areaController = TextEditingController();
   final _instructionsController = TextEditingController();
+  String _area = '';
   final _budgetController = TextEditingController();
 
   PetType _petType = PetType.dog;
@@ -51,7 +52,7 @@ class _CreateSittingRequestScreenState
     final r = widget.initialRequest;
     if (r != null) {
       _petNameController.text = r.petName;
-      _areaController.text = r.area;
+      _area = r.area;
       _instructionsController.text = r.specialInstructions ?? '';
       _budgetController.text = r.budget ?? '';
       _petType = r.petType;
@@ -66,7 +67,6 @@ class _CreateSittingRequestScreenState
   @override
   void dispose() {
     _petNameController.dispose();
-    _areaController.dispose();
     _instructionsController.dispose();
     _budgetController.dispose();
     super.dispose();
@@ -149,7 +149,7 @@ class _CreateSittingRequestScreenState
 
   Future<void> _save() async {
     final petName = _petNameController.text.trim();
-    final area = _areaController.text.trim();
+    final area = _area.trim();
 
     if (petName.isEmpty) {
       _showSnack('יש להזין את שם חיית המחמד', isError: true);
@@ -272,7 +272,7 @@ class _CreateSittingRequestScreenState
                     IconButton(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      color: const Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                     Expanded(
                       child: Text(
@@ -280,7 +280,7 @@ class _CreateSittingRequestScreenState
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -304,7 +304,7 @@ class _CreateSittingRequestScreenState
                         decoration: InputDecoration(
                           hintText: 'לדוגמה: בלה',
                           hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
+                            color: AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -315,7 +315,7 @@ class _CreateSittingRequestScreenState
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -367,7 +367,7 @@ class _CreateSittingRequestScreenState
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   color: _petGender == null
-                                      ? const Color(0xFF64748B)
+                                      ? AppColors.textSecondary
                                       : Colors.transparent,
                                 ),
                                 child: Row(
@@ -378,7 +378,7 @@ class _CreateSittingRequestScreenState
                                         size: 18,
                                         color: _petGender == null
                                             ? Colors.white
-                                            : const Color(0xFF64748B)),
+                                            : AppColors.textSecondary),
                                     const SizedBox(width: 6),
                                     Text(
                                       'לא ידוע',
@@ -387,7 +387,7 @@ class _CreateSittingRequestScreenState
                                         fontSize: 13,
                                         color: _petGender == null
                                             ? Colors.white
-                                            : const Color(0xFF64748B),
+                                            : AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -495,7 +495,7 @@ class _CreateSittingRequestScreenState
                                 Icons.add_photo_alternate_outlined,
                                 size: 36,
                                 color:
-                                    const Color(0xFF64748B).withOpacity(0.5),
+                                    AppColors.textSecondary.withOpacity(0.5),
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -503,7 +503,7 @@ class _CreateSittingRequestScreenState
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF64748B)
+                                  color: AppColors.textSecondary
                                       .withOpacity(0.7),
                                 ),
                               ),
@@ -546,8 +546,8 @@ class _CreateSittingRequestScreenState
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                             color: _startDate != null
-                                                ? const Color(0xFF0F172A)
-                                                : const Color(0xFF64748B)
+                                                ? AppColors.textPrimary
+                                                : AppColors.textSecondary
                                                     .withOpacity(0.6),
                                           ),
                                         ),
@@ -589,8 +589,8 @@ class _CreateSittingRequestScreenState
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                             color: _endDate != null
-                                                ? const Color(0xFF0F172A)
-                                                : const Color(0xFF64748B)
+                                                ? AppColors.textPrimary
+                                                : AppColors.textSecondary
                                                     .withOpacity(0.6),
                                           ),
                                         ),
@@ -632,31 +632,11 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Area
-                    _FieldLabel('אזור / שכונה'),
+                    _FieldLabel('מיקום'),
                     const SizedBox(height: 6),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _areaController,
-                        textDirection: TextDirection.rtl,
-                        decoration: InputDecoration(
-                          hintText: 'לדוגמה: רמת אביב, תל אביב',
-                          hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                          prefixIcon: const Icon(Icons.location_on_rounded,
-                              color: Color(0xFF7C3AED)),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
+                    LocationPickerField(
+                      initialValue: _area,
+                      onChanged: (val) => setState(() => _area = val),
                     ),
 
                     const SizedBox(height: 16),
@@ -675,7 +655,7 @@ class _CreateSittingRequestScreenState
                           hintText:
                               'לדוגמה: החתולה אוכלת רק מזון יבש, צריך לנקות ארגז חול פעם ביום...',
                           hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
+                            color: AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -684,7 +664,7 @@ class _CreateSittingRequestScreenState
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           height: 1.5,
                         ),
                       ),
@@ -705,7 +685,7 @@ class _CreateSittingRequestScreenState
                         decoration: InputDecoration(
                           hintText: 'לדוגמה: ₪80-₪120 ללילה',
                           hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
+                            color: AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -717,7 +697,7 @@ class _CreateSittingRequestScreenState
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -786,14 +766,14 @@ class _CreateSittingRequestScreenState
             children: [
               Icon(icon,
                   size: 18,
-                  color: selected ? Colors.white : const Color(0xFF64748B)),
+                  color: selected ? Colors.white : AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
-                  color: selected ? Colors.white : const Color(0xFF64748B),
+                  color: selected ? Colors.white : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -824,14 +804,14 @@ class _CreateSittingRequestScreenState
             children: [
               Icon(icon,
                   size: 18,
-                  color: selected ? Colors.white : const Color(0xFF64748B)),
+                  color: selected ? Colors.white : AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
-                  color: selected ? Colors.white : const Color(0xFF64748B),
+                  color: selected ? Colors.white : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -859,7 +839,7 @@ class _CreateSittingRequestScreenState
             children: [
               Icon(icon,
                   size: 18,
-                  color: selected ? Colors.white : const Color(0xFF64748B)),
+                  color: selected ? Colors.white : AppColors.textSecondary),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
@@ -868,7 +848,7 @@ class _CreateSittingRequestScreenState
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 12,
-                    color: selected ? Colors.white : const Color(0xFF64748B),
+                    color: selected ? Colors.white : AppColors.textSecondary,
                   ),
                 ),
               ),

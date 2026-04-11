@@ -33,7 +33,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFB91C1C) : const Color(0xFF0F766E),
+            isError ? const Color(0xFFB91C1C) : AppColors.primary,
       ),
     );
   }
@@ -105,7 +105,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -123,10 +123,10 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
-                              color: const Color(0xFF0F766E).withOpacity(0.12),
+                              color: AppColors.primary.withOpacity(0.12),
                             ),
                             child: const Icon(Icons.privacy_tip_rounded,
-                                color: Color(0xFF0F766E)),
+                                color: AppColors.primary),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -161,7 +161,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           Divider(
                             height: 1,
                             thickness: 1,
-                            color: const Color(0xFFE2E8F0).withOpacity(0.7),
+                            color: AppColors.border.withOpacity(0.7),
                           ),
                           _PrivacyToggle(
                             icon: Icons.email_rounded,
@@ -174,7 +174,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           Divider(
                             height: 1,
                             thickness: 1,
-                            color: const Color(0xFFE2E8F0).withOpacity(0.7),
+                            color: AppColors.border.withOpacity(0.7),
                           ),
                           _PrivacyToggle(
                             icon: Icons.location_on_rounded,
@@ -201,7 +201,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                            colors: [AppColors.primary, AppColors.statusOpen],
                           ),
                         ),
                         child: Row(
@@ -263,9 +263,9 @@ class _PrivacyToggle extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              color: const Color(0xFFF1F5F9),
+              color: AppColors.borderFaint,
             ),
-            child: Icon(icon, color: const Color(0xFF0F766E)),
+            child: Icon(icon, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -276,7 +276,7 @@ class _PrivacyToggle extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -294,7 +294,7 @@ class _PrivacyToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF0F766E),
+            activeColor: AppColors.primary,
           ),
         ],
       ),

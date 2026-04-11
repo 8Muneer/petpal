@@ -104,7 +104,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : const Color(0xFF0F766E),
+            isError ? const Color(0xFFFB7185) : AppColors.primary,
       ),
     );
   }
@@ -125,7 +125,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     IconButton(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      color: const Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                     const Expanded(
                       child: Text(
@@ -133,7 +133,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -194,7 +194,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               : 'מה חדש? שתף/י עם הקהילה...',
                           hintStyle: TextStyle(
                             color:
-                                const Color(0xFF64748B).withOpacity(0.6),
+                                AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -203,7 +203,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           height: 1.5,
                         ),
                       ),
@@ -258,7 +258,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 Icon(
                                   Icons.add_photo_alternate_outlined,
                                   size: 36,
-                                  color: const Color(0xFF64748B)
+                                  color: AppColors.textSecondary
                                       .withOpacity(0.5),
                                 ),
                                 const SizedBox(height: 8),
@@ -267,7 +267,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF64748B)
+                                    color: AppColors.textSecondary
                                         .withOpacity(0.7),
                                   ),
                                 ),
@@ -290,7 +290,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                            colors: [AppColors.primary, AppColors.statusOpen],
                           ),
                         ),
                         child: Center(
@@ -348,7 +348,7 @@ class _TypeChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: selected
-              ? const Color(0xFF0F766E)
+              ? AppColors.primary
               : Colors.transparent,
         ),
         child: Row(
@@ -357,14 +357,14 @@ class _TypeChip extends StatelessWidget {
             Icon(
               icon,
               size: 18,
-              color: selected ? Colors.white : const Color(0xFF64748B),
+              color: selected ? Colors.white : AppColors.textSecondary,
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w900,
-                color: selected ? Colors.white : const Color(0xFF64748B),
+                color: selected ? Colors.white : AppColors.textSecondary,
               ),
             ),
           ],

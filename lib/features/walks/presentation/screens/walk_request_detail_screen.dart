@@ -4,14 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
-import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
-import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
@@ -112,6 +108,16 @@ class _WalkRequestDetailScreenState
     });
   }
 
+  Future<void> _openMaps() async {
+    final area = _request.area;
+    if (area.isEmpty) return;
+    final encoded = Uri.encodeComponent(area);
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encoded');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -153,301 +159,344 @@ class _WalkRequestDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final hasPetPhoto =
+        _request.petImageUrl != null && _request.petImageUrl!.isNotEmpty;
+    final safeTop = MediaQuery.of(context).padding.top;
+    final gender = _request.petGender == PetGender.male
+        ? 'זכר'
+        : _request.petGender == PetGender.female
+            ? 'נקבה'
+            : null;
     final fullDateStr = _request.preferredDate != null
-        ? '${_request.preferredDate!.day.toString().padLeft(2, '0')}/${_request.preferredDate!.month.toString().padLeft(2, '0')}/${_request.preferredDate!.year}'
+        ? '${_request.preferredDate!.day.toString().padLeft(2, '0')}/${_request.preferredDate!.month.toString().padLeft(2, '0')}'
         : '';
 
-    final chips = <Widget>[
-      // Pet identity
-      _DetailChip(
-          icon: Icons.pets_rounded,
-          label: 'שם החיה',
-          value: _request.petName,
-          color: const Color(0xFF0EA5E9)),
-      _DetailChip(
-          icon: _petIcon,
-          label: 'סוג',
-          value: _petTypeLabel,
-          color: const Color(0xFF0F766E)),
-      if (_request.petGender != null)
-        _DetailChip(
-          icon: _request.petGender == PetGender.male
-              ? Icons.male_rounded
-              : Icons.female_rounded,
-          label: 'מין',
-          value: _request.petGender == PetGender.male ? 'זכר' : 'נקבה',
-          color: _request.petGender == PetGender.male
-              ? const Color(0xFF0EA5E9)
-              : const Color(0xFFEC4899),
-        ),
-      // Date + time (always adjacent)
-      if (fullDateStr.isNotEmpty)
-        _DetailChip(
-            icon: Icons.calendar_today_rounded,
-            label: 'תאריך',
-            value: fullDateStr,
-            color: const Color(0xFFF59E0B)),
-      _DetailChip(
-          icon: Icons.access_time_rounded,
-          label: 'שעת פגישה',
-          value: _request.preferredTime,
-          color: const Color(0xFFEA580C)),
-      _DetailChip(
-          icon: Icons.timer_outlined,
-          label: 'משך טיול',
-          value: _request.duration,
-          color: const Color(0xFF0D9488)),
-      // Location + payment
-      _DetailChip(
-          icon: Icons.location_on_outlined,
-          label: 'אזור',
-          value: _request.area,
-          color: const Color(0xFF64748B)),
-      if (_request.budget != null && _request.budget!.isNotEmpty)
-        _DetailChip(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'תשלום',
-            value: _request.budget!,
-            color: const Color(0xFF8B5CF6)),
-    ];
-
-    return AppScaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xFFEEEEF5),
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            CustomScrollView(
-          slivers: [
-            // ── Top bar ─────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => context.pop(),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black.withOpacity(0.07),
-                                  blurRadius: 10)
-                            ],
-                          ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded,
-                              size: 18, color: Color(0xFF0F172A)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'פרטי בקשת טיול',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A)),
-                        ),
-                      ),
-                      // Status badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _isOpen
-                              ? const Color(0xFF22C55E).withOpacity(0.12)
-                              : const Color(0xFF94A3B8).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: _isOpen
-                                  ? const Color(0xFF22C55E).withOpacity(0.4)
-                                  : const Color(0xFF94A3B8).withOpacity(0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                                _isOpen
-                                    ? Icons.circle
-                                    : Icons.check_circle_outline_rounded,
-                                size: 8,
-                                color: _isOpen
-                                    ? const Color(0xFF22C55E)
-                                    : const Color(0xFF94A3B8)),
-                            const SizedBox(width: 5),
-                            Text(_isOpen ? 'פתוח' : 'הושלם',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    color: _isOpen
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF64748B))),
-                          ],
-                        ),
-                      ),
-                      // ⋮ owner actions menu
-                      if (_isOwner) ...[
-                        const SizedBox(width: 4),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert_rounded,
-                              size: 22, color: Color(0xFF64748B)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              context.push('/walks/edit', extra: _request);
-                            } else if (value == 'delete') {
-                              _delete();
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Row(children: [
-                                Icon(Icons.edit_outlined,
-                                    size: 18, color: Color(0xFF0F766E)),
-                                SizedBox(width: 10),
-                                Text('ערוך בקשה',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14)),
-                              ]),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(children: [
-                                const Icon(Icons.delete_outline_rounded,
-                                    size: 18, color: Color(0xFFFB7185)),
-                                const SizedBox(width: 10),
-                                Text('מחק בקשה',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                        color: Color(0xFFFB7185))),
-                              ]),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+            // ── Hero photo ────────────────────────────────────────────────────────
+            Positioned.fill(
+              bottom: MediaQuery.of(context).size.height * 0.42,
+              child: hasPetPhoto
+                  ? CachedNetworkImage(
+                      imageUrl: _request.petImageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          _WalkHeroBg(petType: _request.petType),
+                      errorWidget: (_, __, ___) =>
+                          _WalkHeroBg(petType: _request.petType),
+                    )
+                  : _WalkHeroBg(petType: _request.petType),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-            // ── Owner info card ──────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: AppCard(
-                  
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
+            // ── White info sheet ──────────────────────────────────────────────────
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: 0.56,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(32)),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      LiveUserAvatar(
-                        uid: _request.ownerUid,
-                        fallbackName: _request.ownerName,
-                        fallbackPhotoUrl: _request.ownerPhotoUrl,
-                        size: 46,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
+                      // Pet thumbnail (top-left corner, overlapping hero)
+                      if (hasPetPhoto)
+                        Positioned(
+                          top: -36,
+                          left: 20,
+                          child: Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 12)
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: CachedNetworkImage(
+                                imageUrl: _request.petImageUrl!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Content
+                      SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(
+                            20,
+                            hasPetPhoto ? 48 : 24,
+                            20,
+                            _showProviderCta ? 110 : 40),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_request.ownerName,
-                                style: const TextStyle(
+                            // Name + breed row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  _request.petName,
+                                  style: const TextStyle(
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w900,
-                                    color: Color(0xFF0F172A),
-                                    fontSize: 15)),
-                            Text('פורסם $_timeAgo',
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF94A3B8))),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-            // ── Pet photo (large) ────────────────────────────────────────
-            if (_request.petImageUrl != null &&
-                _request.petImageUrl!.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: CachedNetworkImage(
-                      imageUrl: _request.petImageUrl!,
-                      width: double.infinity,
-                      height: 220,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                          height: 220,
-                          color: const Color(0xFFF1F5F9),
-                          child: const Center(
-                              child: CircularProgressIndicator(
-                                  color: Color(0xFF0F766E), strokeWidth: 2))),
-                      errorWidget: (_, __, ___) => Container(
-                          height: 220,
-                          color: const Color(0xFFF1F5F9),
-                          child: const Icon(Icons.broken_image_rounded,
-                              color: Color(0xFF94A3B8), size: 40)),
-                    ),
-                  ),
-                ),
-              ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-            // ── Details chip grid ────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: AppCard(
-                  
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('פרטי הבקשה',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A))),
-                      const SizedBox(height: 12),
-                      Column(
-                        children: [
-                          for (int i = 0; i < chips.length; i += 2)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  bottom: i + 2 < chips.length ? 8 : 0),
-                              child: Row(
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '($_petTypeLabel)',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // ── Organized info grid ──────────────────────
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                    color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
                                 children: [
-                                  Expanded(child: chips[i]),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                      child: i + 1 < chips.length
-                                          ? chips[i + 1]
-                                          : const SizedBox()),
+                                  if (gender != null) ...[
+                                    _InfoRow(
+                                      icon: Icons.transgender_rounded,
+                                      label: 'מין',
+                                      value: gender,
+                                      valueColor:
+                                          _request.petGender ==
+                                                  PetGender.female
+                                              ? const Color(0xFFEC4899)
+                                              : const Color(0xFF0EA5E9),
+                                    ),
+                                    const _InfoDivider(),
+                                  ],
+                                  _InfoRow(
+                                    icon: Icons.timer_rounded,
+                                    label: 'משך הטיול',
+                                    value: _request.duration,
+                                    valueColor: AppColors.primary,
+                                  ),
+                                  const _InfoDivider(),
+                                  _InfoRow(
+                                    icon: Icons.location_on_rounded,
+                                    label: 'אזור',
+                                    value: _request.area,
+                                    valueColor: const Color(0xFFEF4444),
+                                  ),
+                                  if (fullDateStr.isNotEmpty) ...[
+                                    const _InfoDivider(),
+                                    _InfoRow(
+                                      icon: Icons.calendar_today_rounded,
+                                      label: 'תאריך',
+                                      value: fullDateStr,
+                                      valueColor: const Color(0xFF0891B2),
+                                    ),
+                                  ],
+                                  if (_request.preferredTime.isNotEmpty) ...[
+                                    const _InfoDivider(),
+                                    _InfoRow(
+                                      icon: Icons.access_time_rounded,
+                                      label: 'שעה',
+                                      value: _request.preferredTime,
+                                      valueColor: const Color(0xFF059669),
+                                    ),
+                                  ],
+                                  if (_request.budget != null &&
+                                      _request.budget!.isNotEmpty) ...[
+                                    const _InfoDivider(),
+                                    _InfoRow(
+                                      icon: Icons
+                                          .account_balance_wallet_outlined,
+                                      label: 'תקציב',
+                                      value: withShekel(_request.budget!),
+                                      valueColor:
+                                          const Color(0xFF8B5CF6),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
-                        ],
+                            if (!_isOwner) ...[
+                              const SizedBox(height: 22),
+                              // Owner label
+                              const Text(
+                                'בעל החיה',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              // Owner row
+                              Row(
+                                children: [
+                                  LiveUserAvatar(
+                                    uid: _request.ownerUid,
+                                    fallbackName: _request.ownerName,
+                                    fallbackPhotoUrl:
+                                        _request.ownerPhotoUrl,
+                                    size: 42,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _request.ownerName,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  _CircleAction(
+                                    icon: Icons.map_rounded,
+                                    color: const Color(0xFFEF4444),
+                                    onTap: _openMaps,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _CircleAction(
+                                    icon: Icons
+                                        .chat_bubble_outline_rounded,
+                                    color: AppColors.primary,
+                                    onTap: () {},
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Notes / special instructions
+                            if (_request.specialInstructions != null &&
+                                _request
+                                    .specialInstructions!.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius:
+                                      BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color: const Color(0xFFFED7AA)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(
+                                            Icons
+                                                .sticky_note_2_outlined,
+                                            size: 15,
+                                            color: Color(0xFFF97316)),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'הערות',
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight:
+                                                  FontWeight.w800,
+                                              color:
+                                                  Color(0xFFF97316)),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _request.specialInstructions!,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.textSecondary,
+                                        height: 1.6,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            // Owner controls
+                            if (_isOwner) ...[
+                              const SizedBox(height: 22),
+                              GestureDetector(
+                                onTap: _toggleStatus,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: _isOpen
+                                        ? AppColors.textMuted
+                                            .withOpacity(0.10)
+                                        : AppColors.statusOpen
+                                            .withOpacity(0.10),
+                                    borderRadius:
+                                        BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: _isOpen
+                                          ? AppColors.textMuted
+                                              .withOpacity(0.3)
+                                          : AppColors.statusOpen
+                                              .withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _isOpen
+                                            ? Icons
+                                                .check_circle_outline_rounded
+                                            : Icons.lock_open_outlined,
+                                        size: 20,
+                                        color: _isOpen
+                                            ? AppColors.textSecondary
+                                            : const Color(0xFF16A34A),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _isOpen
+                                            ? 'סמן כהושלם'
+                                            : 'פתח מחדש',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                          color: _isOpen
+                                              ? AppColors.textSecondary
+                                              : const Color(0xFF16A34A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -455,158 +504,124 @@ class _WalkRequestDetailScreenState
               ),
             ),
 
-            // ── Special instructions ─────────────────────────────────────
-            if (_request.specialInstructions != null &&
-                _request.specialInstructions!.isNotEmpty) ...[
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.info_outline_rounded,
-                                size: 16, color: Color(0xFFD97706)),
-                            SizedBox(width: 6),
-                            Text('הוראות מיוחדות',
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF92400E))),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(_request.specialInstructions!,
-                            style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF92400E),
-                                height: 1.4)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            // ── Owner action buttons ─────────────────────────────────────
-            if (_isOwner) ...[
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      // Status toggle
-                      GestureDetector(
-                        onTap: _toggleStatus,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            color: _isOpen
-                                ? const Color(0xFF94A3B8).withOpacity(0.10)
-                                : const Color(0xFF22C55E).withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _isOpen
-                                  ? const Color(0xFF94A3B8).withOpacity(0.3)
-                                  : const Color(0xFF22C55E).withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _isOpen
-                                    ? Icons.check_circle_outline_rounded
-                                    : Icons.lock_open_outlined,
-                                size: 20,
-                                color: _isOpen
-                                    ? const Color(0xFF64748B)
-                                    : const Color(0xFF16A34A),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _isOpen ? 'סמן כהושלם' : 'פתח מחדש',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: _isOpen
-                                      ? const Color(0xFF64748B)
-                                      : const Color(0xFF16A34A),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
+            // ── Floating back button ───────────────────────────────────────────
+            Positioned(
+              top: safeTop + 12,
+              left: 16,
+              child: GestureDetector(
+                onTap: () => context.pop(),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.92),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 8)
                     ],
                   ),
+                  child: const Icon(Icons.arrow_back_rounded,
+                      size: 18, color: AppColors.textPrimary),
                 ),
               ),
-            ],
+            ),
 
-            SliverToBoxAdapter(
-                child: SizedBox(height: _showProviderCta ? 100 : 40)),
-          ],
-        ),
-            // ── Provider CTA bar ─────────────────────────────────────────
+            // ── Owner menu ───────────────────────────────────────────────────────
+            if (_isOwner)
+              Positioned(
+                top: safeTop + 8,
+                right: 12,
+                child: PopupMenuButton<String>(
+                  icon: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.92),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 8)
+                      ],
+                    ),
+                    child: const Icon(Icons.more_vert_rounded,
+                        size: 20, color: AppColors.textSecondary),
+                  ),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  onSelected: (v) {
+                    if (v == 'edit')
+                      context.push('/walks/edit', extra: _request);
+                    else if (v == 'delete') _delete();
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(children: [
+                        Icon(Icons.edit_outlined,
+                            size: 18, color: AppColors.primary),
+                        SizedBox(width: 10),
+                        Text('ערוך בקשה',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14)),
+                      ]),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(children: [
+                        Icon(Icons.delete_outline_rounded,
+                            size: 18, color: Color(0xFFFB7185)),
+                        SizedBox(width: 10),
+                        Text('מחק בקשה',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: Color(0xFFFB7185))),
+                      ]),
+                    ),
+                  ],
+                ),
+              ),
+
+            // ── Provider CTA ───────────────────────────────────────────────────────
             if (_showProviderCta)
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, -4),
-                      ),
-                    ],
-                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  color: Colors.white,
                   child: GestureDetector(
                     onTap: _showOfferSheet,
                     child: Container(
-                      height: 52,
+                      height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         gradient: const LinearGradient(
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                          colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                          colors: [AppColors.primary, AppColors.statusOpen],
                         ),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.handshake_outlined,
-                              color: Colors.white, size: 20),
-                          SizedBox(width: 10),
-                          Text(
-                            'הצע שירות',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
                           ),
                         ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'הגש מועמדות',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -619,56 +634,106 @@ class _WalkRequestDetailScreenState
   }
 }
 
-// ── Two-line colored chip ─────────────────────────────────────────────────────
-class _DetailChip extends StatelessWidget {
+// ── Hero bg ────────────────────────────────────────────────────────────────
+class _WalkHeroBg extends StatelessWidget {
+  final PetType petType;
+  const _WalkHeroBg({required this.petType});
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
+          ),
+        ),
+        child: Center(
+          child: Icon(
+            petType == PetType.dog
+                ? Icons.directions_walk_rounded
+                : Icons.pets_rounded,
+            size: 100,
+            color: Colors.white.withOpacity(0.30),
+          ),
+        ),
+      );
+}
+
+// ── Info row ───────────────────────────────────────────────────────────────
+class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color color;
-
-  const _DetailChip({
+  final Color valueColor;
+  const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
-    required this.color,
+    this.valueColor = AppColors.textPrimary,
   });
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 11, color: color),
-              const SizedBox(width: 4),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w700, color: color)),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(value,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A))),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: valueColor.withOpacity(0.6)),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: valueColor.withOpacity(0.65),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: valueColor,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
-// ── Provider offer bottom sheet ───────────────────────────────────────────────
+// ── Info divider ───────────────────────────────────────────────────────────
+class _InfoDivider extends StatelessWidget {
+  const _InfoDivider();
+  @override
+  Widget build(BuildContext context) => const Divider(
+        height: 1,
+        thickness: 1,
+        color: Color(0xFFE2E8F0),
+      );
+}
+
+// ── Circle action button ──────────────────────────────────────────────────
+class _CircleAction extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _CircleAction(
+      {required this.icon, required this.color, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+      );
+}
+
+// ── Hero bg ────────────────────────────────────────────────────────────────
 class _OfferBottomSheet extends ConsumerStatefulWidget {
   final WalkRequest request;
   const _OfferBottomSheet({required this.request});
@@ -737,7 +802,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
       senderId: me.uid,
       senderName: me.displayName ?? me.email ?? 'מטפל',
       senderPhotoUrl: myPhotoUrl,
-      text: '${_priceController.text.trim().isNotEmpty ? "₪${_priceController.text.trim()} — " : ""}$text',
+      text: '${_priceController.text.trim().isNotEmpty ? "${withShekel(_priceController.text.trim())} — " : ""}$text',
     );
 
     if (mounted) {
@@ -775,7 +840,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
+                      color: AppColors.border,
                       borderRadius: BorderRadius.circular(4)),
                 ),
               ),
@@ -787,7 +852,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A))),
+                            color: AppColors.textPrimary)),
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
@@ -796,10 +861,10 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                       height: 32,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        color: const Color(0xFFF1F5F9),
+                        color: AppColors.borderFaint,
                       ),
                       child: const Icon(Icons.close_rounded,
-                          size: 18, color: Color(0xFF64748B)),
+                          size: 18, color: AppColors.textSecondary),
                     ),
                   ),
                 ],
@@ -811,9 +876,9 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: const Color(0xFF0F766E).withOpacity(0.06),
+                  color: AppColors.primary.withOpacity(0.06),
                   border: Border.all(
-                      color: const Color(0xFF0F766E).withOpacity(0.15)),
+                      color: AppColors.primary.withOpacity(0.15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -823,7 +888,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                       style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A)),
+                          color: AppColors.textPrimary),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
@@ -840,7 +905,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                         if (req.budget != null && req.budget!.isNotEmpty)
                           _SummaryItem(
                               icon: Icons.account_balance_wallet_outlined,
-                              text: 'תקציב: ${req.budget!}'),
+                              text: 'תקציב: ${withShekel(req.budget!)}'),
                       ],
                     ),
                   ],
@@ -880,7 +945,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                      colors: [AppColors.primary, AppColors.statusOpen],
                     ),
                   ),
                   child: Row(
@@ -926,7 +991,7 @@ class _SummaryItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: const Color(0xFF0F766E)),
+        Icon(icon, size: 12, color: AppColors.primary),
         const SizedBox(width: 4),
         Text(text,
             style: const TextStyle(
@@ -968,7 +1033,7 @@ class _OfferTextField extends StatelessWidget {
         hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
         prefixText: prefix,
         prefixStyle: const TextStyle(
-            color: Color(0xFF0F766E),
+            color: AppColors.primary,
             fontWeight: FontWeight.w800,
             fontSize: 14),
         filled: true,
@@ -977,16 +1042,16 @@ class _OfferTextField extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide:
-              const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+              const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );
