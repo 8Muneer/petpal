@@ -1,14 +1,13 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
-enum AppCardVariant { glass, solid, outline }
+enum AppCardVariant { solid, outline, tinted }
 
-/// Unified card widget replacing [GlassCard].
+/// Unified card widget.
 ///
-/// - [glass]   — frosted glass look (default), good over gradient backgrounds
-/// - [solid]   — white card with shadow, good over plain backgrounds
+/// - [solid]   — white card with soft shadow (default)
 /// - [outline] — white card with border, no shadow (for dense lists)
+/// - [tinted]  — lightly tinted card, no border, no shadow (for info blocks)
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
@@ -21,21 +20,11 @@ class AppCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding,
-    this.variant = AppCardVariant.glass,
+    this.variant = AppCardVariant.solid,
     this.borderRadius,
     this.onTap,
     this.color,
   });
-
-  /// Convenience — solid white card
-  const AppCard.solid({
-    super.key,
-    required this.child,
-    this.padding,
-    this.borderRadius,
-    this.onTap,
-    this.color,
-  }) : variant = AppCardVariant.solid;
 
   /// Convenience — outline card
   const AppCard.outline({
@@ -46,6 +35,16 @@ class AppCard extends StatelessWidget {
     this.onTap,
     this.color,
   }) : variant = AppCardVariant.outline;
+
+  /// Convenience — tinted card
+  const AppCard.tinted({
+    super.key,
+    required this.child,
+    this.padding,
+    this.borderRadius,
+    this.onTap,
+    this.color,
+  }) : variant = AppCardVariant.tinted;
 
   @override
   Widget build(BuildContext context) {
@@ -72,26 +71,6 @@ class AppCard extends StatelessWidget {
 
   Widget _buildCard(BorderRadius radius, EdgeInsets padding) {
     switch (variant) {
-      case AppCardVariant.glass:
-        return ClipRRect(
-          borderRadius: radius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              padding: padding,
-              decoration: BoxDecoration(
-                color: color ?? const Color(0xB8FFFFFF),
-                borderRadius: radius,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.55),
-                ),
-                boxShadow: AppShadows.card,
-              ),
-              child: child,
-            ),
-          ),
-        );
-
       case AppCardVariant.solid:
         return Container(
           padding: padding,
@@ -110,6 +89,16 @@ class AppCard extends StatelessWidget {
             color: color ?? AppColors.surfaceCard,
             borderRadius: radius,
             border: Border.all(color: AppColors.border),
+          ),
+          child: child,
+        );
+
+      case AppCardVariant.tinted:
+        return Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: color ?? AppColors.surfaceBase,
+            borderRadius: radius,
           ),
           child: child,
         );

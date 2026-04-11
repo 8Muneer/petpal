@@ -101,7 +101,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 context.push('/login');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F766E),
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -180,7 +180,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 child: postsAsync.when(
                   loading: () => const Center(
                     child: CircularProgressIndicator(
-                        color: Color(0xFF0F766E)),
+                        color: AppColors.primary),
                   ),
                   error: (e, _) => Center(child: Text('שגיאה: $e')),
                   data: (posts) {
@@ -205,7 +205,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               IconButton(
                                 onPressed: () => context.pop(),
                                 icon: const Icon(Icons.arrow_forward_rounded),
-                                color: const Color(0xFF0F172A),
+                                color: AppColors.textPrimary,
                               ),
                               const Expanded(
                                 child: Text(
@@ -213,7 +213,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w900,
-                                    color: Color(0xFF0F172A),
+                                    color: AppColors.textPrimary,
                                   ),
                                 ),
                               ),
@@ -254,7 +254,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF0F172A),
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -263,7 +263,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                   padding: EdgeInsets.all(20),
                                   child: Center(
                                     child: CircularProgressIndicator(
-                                      color: Color(0xFF0F766E),
+                                      color: AppColors.primary,
                                       strokeWidth: 2,
                                     ),
                                   ),
@@ -281,7 +281,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF64748B)
+                                            color: AppColors.textSecondary
                                                 .withOpacity(0.7),
                                           ),
                                         ),
@@ -320,21 +320,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       color: Colors.white.withOpacity(0.9),
                       border: Border(
                         top: BorderSide(
-                          color: const Color(0xFFE2E8F0).withOpacity(0.6),
+                          color: AppColors.border.withOpacity(0.6),
                         ),
                       ),
                     ),
                     child: Row(
                       children: [
                         const Icon(Icons.lock_outline_rounded,
-                            size: 18, color: Color(0xFF94A3B8)),
+                            size: 18, color: AppColors.textMuted),
                         const SizedBox(width: 10),
                         Text(
                           'התחבר/י כדי להגיב...',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF64748B).withOpacity(0.7),
+                            color: AppColors.textSecondary.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -348,7 +348,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     color: Colors.white.withOpacity(0.9),
                     border: Border(
                       top: BorderSide(
-                        color: const Color(0xFFE2E8F0).withOpacity(0.6),
+                        color: AppColors.border.withOpacity(0.6),
                       ),
                     ),
                   ),
@@ -362,7 +362,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             hintText: 'כתוב/י תגובה...',
                             hintStyle: TextStyle(
                               color:
-                                  const Color(0xFF64748B).withOpacity(0.6),
+                                  AppColors.textSecondary.withOpacity(0.6),
                               fontWeight: FontWeight.w600,
                             ),
                             border: OutlineInputBorder(
@@ -370,14 +370,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFF1F5F9),
+                            fillColor: AppColors.borderFaint,
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 10),
                           ),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -393,7 +393,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             gradient: const LinearGradient(
                               begin: Alignment.topRight,
                               end: Alignment.bottomLeft,
-                              colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                              colors: [AppColors.primary, AppColors.statusOpen],
                             ),
                           ),
                           child: _isSending
@@ -470,7 +470,7 @@ class _FullPostCard extends StatelessWidget {
                       post.authorName,
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     Text(
@@ -478,7 +478,7 @@ class _FullPostCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF64748B).withOpacity(0.8),
+                        color: AppColors.textSecondary.withOpacity(0.8),
                       ),
                     ),
                   ],
@@ -489,21 +489,21 @@ class _FullPostCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withOpacity(0.12),
+                    color: AppColors.warning.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.lightbulb_outline_rounded,
-                          size: 14, color: Color(0xFFF59E0B)),
+                          size: 14, color: AppColors.warning),
                       SizedBox(width: 4),
                       Text(
                         'טיפ',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFFF59E0B),
+                          color: AppColors.warning,
                         ),
                       ),
                     ],
@@ -517,7 +517,7 @@ class _FullPostCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF0F172A),
+              color: AppColors.textPrimary,
               height: 1.6,
             ),
           ),
@@ -531,19 +531,19 @@ class _FullPostCard extends StatelessWidget {
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
                   height: 220,
-                  color: const Color(0xFFF1F5F9),
+                  color: AppColors.borderFaint,
                   child: const Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFF0F766E),
+                      color: AppColors.primary,
                       strokeWidth: 2,
                     ),
                   ),
                 ),
                 errorWidget: (_, __, ___) => Container(
                   height: 220,
-                  color: const Color(0xFFF1F5F9),
+                  color: AppColors.borderFaint,
                   child: const Icon(Icons.broken_image_rounded,
-                      color: Color(0xFF94A3B8)),
+                      color: AppColors.textMuted),
                 ),
               ),
             ),
@@ -561,7 +561,7 @@ class _FullPostCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     color: isLiked
                         ? const Color(0xFFFB7185).withOpacity(0.12)
-                        : const Color(0xFFF1F5F9),
+                        : AppColors.borderFaint,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -573,7 +573,7 @@ class _FullPostCard extends StatelessWidget {
                         size: 20,
                         color: isLiked
                             ? const Color(0xFFFB7185)
-                            : const Color(0xFF64748B),
+                            : AppColors.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -583,7 +583,7 @@ class _FullPostCard extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                           color: isLiked
                               ? const Color(0xFFFB7185)
-                              : const Color(0xFF64748B),
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -638,7 +638,7 @@ class _CommentCard extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 13,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -647,7 +647,7 @@ class _CommentCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF64748B).withOpacity(0.7),
+                        color: AppColors.textSecondary.withOpacity(0.7),
                       ),
                     ),
                   ],

@@ -6,9 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/validators.dart';
 import 'package:petpal/core/widgets/app_button.dart';
-import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_input.dart';
-import 'package:petpal/core/widgets/app_scaffold.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -27,7 +25,6 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _acceptTerms = false;
   bool _isPetOwner = true;
 
-  // Field errors
   String? _nameError;
   String? _emailError;
   String? _passwordError;
@@ -45,7 +42,6 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // ── Validators ───────────────────────────────────────────────────────────────
   void _validateName(String v) => setState(() {
         _nameError = v.trim().isEmpty ? 'אנא הזן/י שם מלא' : null;
       });
@@ -68,7 +64,6 @@ class _SignupScreenState extends State<SignupScreen> {
         } else {
           _passwordError = null;
         }
-        // Re-validate confirm too
         if (_confirmCtrl.text.isNotEmpty) _validateConfirm(_confirmCtrl.text);
       });
 
@@ -87,7 +82,6 @@ class _SignupScreenState extends State<SignupScreen> {
       _passwordCtrl.text.isNotEmpty &&
       _confirmCtrl.text.isNotEmpty;
 
-  // ── Firebase errors ──────────────────────────────────────────────────────────
   String _authError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
@@ -112,9 +106,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
   Future<void> _handleSignup() async {
-    // Run all validators
     _validateName(_nameCtrl.text);
     _validateEmail(_emailCtrl.text);
     _validatePassword(_passwordCtrl.text);
@@ -135,12 +127,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
       final uid = cred.user?.uid;
 
-      // Update display name (non-fatal)
       try {
         await cred.user?.updateDisplayName(_nameCtrl.text.trim());
       } catch (_) {}
 
-      // Save to Firestore (non-fatal)
       if (uid != null) {
         try {
           await _usersRef.doc(uid).set(
@@ -159,7 +149,6 @@ class _SignupScreenState extends State<SignupScreen> {
       }
 
       if (!mounted) return;
-      // Auto-login: navigate directly to home (role-based routing handles it)
       _showSnack('החשבון נוצר בהצלחה! ברוך/ה הבא/ה 🎉');
       context.go('/');
     } on FirebaseAuthException catch (e) {
@@ -173,28 +162,33 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // ── UI ───────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: AppScaffold(
+      child: Scaffold(
+        backgroundColor: AppColors.surfaceCard,
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: AppSpacing.pagePadding,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
-                Row(
-                  children: [
-                    _BackButton(onTap: () => context.pop()),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text('יצירת חשבון', style: AppTextStyles.h2),
-                  ],
+                const SizedBox(height: 16),
+
+                // Back button
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _BackButton(onTap: () => context.pop()),
                 ),
 
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: 20),
+
+                Text('יצירת חשבון', style: AppTextStyles.h1),
+                const SizedBox(height: 4),
+                Text('הצטרף/י לקהילת PetPal', style: AppTextStyles.caption),
+
+                const SizedBox(height: 28),
 
                 // Role selector
                 _RoleSelector(
@@ -202,107 +196,99 @@ class _SignupScreenState extends State<SignupScreen> {
                   onChanged: (v) => setState(() => _isPetOwner = v),
                 ),
 
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: 20),
 
-                // Form card
-                AppCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
+                // Form fields
+                AppInput(
+                  controller: _nameCtrl,
+                  label: 'שם מלא',
+                  hint: 'הזן/י שם',
+                  icon: Icons.badge_outlined,
+                  textInputAction: TextInputAction.next,
+                  errorText: _nameError,
+                  onChanged: _validateName,
+                ),
+                const SizedBox(height: 14),
+                AppInput(
+                  controller: _emailCtrl,
+                  label: 'אימייל',
+                  hint: 'name@example.com',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  textDirection: TextDirection.ltr,
+                  errorText: _emailError,
+                  onChanged: _validateEmail,
+                ),
+                const SizedBox(height: 14),
+                AppInput(
+                  controller: _passwordCtrl,
+                  label: 'סיסמה',
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                  textInputAction: TextInputAction.next,
+                  textDirection: TextDirection.ltr,
+                  errorText: _passwordError,
+                  onChanged: _validatePassword,
+                ),
+                const SizedBox(height: 14),
+                AppInput(
+                  controller: _confirmCtrl,
+                  label: 'אימות סיסמה',
+                  icon: Icons.lock_reset_outlined,
+                  isPassword: true,
+                  textInputAction: TextInputAction.done,
+                  textDirection: TextDirection.ltr,
+                  errorText: _confirmError,
+                  onChanged: _validateConfirm,
+                  onEditingComplete: _isLoading ? null : _handleSignup,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Terms checkbox
+                GestureDetector(
+                  onTap: () =>
+                      setState(() => _acceptTerms = !_acceptTerms),
+                  child: Row(
                     children: [
-                      AppInput(
-                        controller: _nameCtrl,
-                        label: 'שם מלא',
-                        hint: 'הזן/י שם',
-                        icon: Icons.badge_outlined,
-                        textInputAction: TextInputAction.next,
-                        errorText: _nameError,
-                        onChanged: _validateName,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppInput(
-                        controller: _emailCtrl,
-                        label: 'אימייל',
-                        hint: 'name@example.com',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        textDirection: TextDirection.ltr,
-                        errorText: _emailError,
-                        onChanged: _validateEmail,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppInput(
-                        controller: _passwordCtrl,
-                        label: 'סיסמה',
-                        icon: Icons.lock_outline_rounded,
-                        isPassword: true,
-                        textInputAction: TextInputAction.next,
-                        textDirection: TextDirection.ltr,
-                        errorText: _passwordError,
-                        onChanged: _validatePassword,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppInput(
-                        controller: _confirmCtrl,
-                        label: 'אימות סיסמה',
-                        icon: Icons.lock_reset_outlined,
-                        isPassword: true,
-                        textInputAction: TextInputAction.done,
-                        textDirection: TextDirection.ltr,
-                        errorText: _confirmError,
-                        onChanged: _validateConfirm,
-                        onEditingComplete:
-                            _isLoading ? null : _handleSignup,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      // Terms checkbox
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _acceptTerms = !_acceptTerms),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Checkbox(
-                                value: _acceptTerms,
-                                onChanged: (v) => setState(
-                                    () => _acceptTerms = v ?? false),
-                                activeColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppRadius.smRadius,
-                                ),
-                                side: const BorderSide(
-                                    color: AppColors.border, width: 1.5),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                'אני מאשר/ת את תנאי השימוש והמדיניות',
-                                style: AppTextStyles.caption,
-                              ),
-                            ),
-                          ],
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _acceptTerms,
+                          onChanged: (v) =>
+                              setState(() => _acceptTerms = v ?? false),
+                          activeColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.smRadius,
+                          ),
+                          side: const BorderSide(
+                              color: AppColors.border, width: 1.5),
                         ),
                       ),
-
-                      const SizedBox(height: AppSpacing.md),
-
-                      AppButton(
-                        label: 'צור חשבון',
-                        onTap: _isLoading ? null : _handleSignup,
-                        isLoading: _isLoading,
-                        leadingIcon: Icons.check_rounded,
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'אני מאשר/ת את תנאי השימוש והמדיניות',
+                          style: AppTextStyles.caption,
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: 24),
 
-                // Login link
+                AppButton(
+                  label: 'צור חשבון',
+                  onTap: _isLoading ? null : _handleSignup,
+                  isLoading: _isLoading,
+                  leadingIcon: Icons.check_rounded,
+                ),
+
+                const SizedBox(height: 20),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -325,6 +311,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -333,8 +321,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 }
-
-// ── Sub-widgets ────────────────────────────────────────────────────────────────
 
 class _BackButton extends StatelessWidget {
   final VoidCallback onTap;
@@ -348,9 +334,8 @@ class _BackButton extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceBase,
           borderRadius: AppRadius.mdRadius,
-          boxShadow: AppShadows.card,
         ),
         child: const Icon(
           Icons.arrow_forward_rounded,
@@ -373,51 +358,48 @@ class _RoleSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('בחר/י סוג משתמש', style: AppTextStyles.h3),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _RoleTile(
-                  label: 'בעל חיית מחמד',
-                  subtitle: 'מחפש/ת מטפל/ת',
-                  icon: Icons.pets_rounded,
-                  color: AppColors.walks,
-                  isSelected: isPetOwner,
-                  onTap: () => onChanged(true),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('בחר/י סוג משתמש', style: AppTextStyles.h3),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _RoleTile(
+                label: 'בעל חיית מחמד',
+                subtitle: 'מחפש/ת מטפל/ת',
+                icon: Icons.pets_rounded,
+                color: AppColors.walks,
+                isSelected: isPetOwner,
+                onTap: () => onChanged(true),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _RoleTile(
-                  label: 'מטפל/ת',
-                  subtitle: 'מציע/ה שירותים',
-                  icon: Icons.favorite_rounded,
-                  color: AppColors.sitting,
-                  isSelected: !isPetOwner,
-                  onTap: () => onChanged(false),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(
-              key: ValueKey(isPetOwner),
-              isPetOwner
-                  ? 'לבעלי חיות מחמד שמחפשים דוג-ווקר/סיטר'
-                  : 'למטפלים/דוג-ווקרים שמציעים שירותים',
-              style: AppTextStyles.caption,
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _RoleTile(
+                label: 'מטפל/ת',
+                subtitle: 'מציע/ה שירותים',
+                icon: Icons.favorite_rounded,
+                color: AppColors.sitting,
+                isSelected: !isPetOwner,
+                onTap: () => onChanged(false),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            key: ValueKey(isPetOwner),
+            isPetOwner
+                ? 'לבעלי חיות מחמד שמחפשים דוג-ווקר/סיטר'
+                : 'למטפלים/דוג-ווקרים שמציעים שירותים',
+            style: AppTextStyles.caption,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -448,12 +430,12 @@ class _RoleTile extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withValues(alpha: 0.10)
+              ? color.withValues(alpha: 0.08)
               : AppColors.surfaceBase,
           borderRadius: AppRadius.lgRadius,
           border: Border.all(
             color: isSelected
-                ? color.withValues(alpha: 0.45)
+                ? color.withValues(alpha: 0.50)
                 : AppColors.border,
             width: isSelected ? 1.8 : 1.0,
           ),
@@ -461,7 +443,7 @@ class _RoleTile extends StatelessWidget {
         child: Column(
           children: [
             Icon(icon,
-                color: isSelected ? color : AppColors.textMuted, size: 26),
+                color: isSelected ? color : AppColors.textMuted, size: 28),
             const SizedBox(height: 6),
             Text(
               label,
