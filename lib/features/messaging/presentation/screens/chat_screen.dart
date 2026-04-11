@@ -135,7 +135,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -158,7 +158,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               _OptionTile(
                 icon: Icons.delete_outline_rounded,
                 label: 'מחק הודעה',
-                color: const Color(0xFFEF4444),
+                color: AppColors.danger,
                 onTap: () {
                   Navigator.pop(ctx);
                   _deleteMessage(messageId);
@@ -217,7 +217,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                               Text(
@@ -259,7 +259,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
             // ── Messages ────────────────────────────────────────────────────
             Expanded(
-              child: messagesAsync.when(
+              child: ColoredBox(
+                color: const Color(0xFFF0F2F5),
+                child: messagesAsync.when(
                 loading: () => const Center(
                     child: CircularProgressIndicator(
                         color: AppColors.primary)),
@@ -360,6 +362,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     },
                   );
                 },
+              ),
               ),
             ),
 
@@ -520,63 +523,78 @@ class _MessageRow extends StatelessWidget {
       );
     }
 
-    // Their message — avatar on the LEFT (last in RTL row)
+    // Their message — pinned to physical LEFT, avatar left, bubble right
     return Padding(
       padding: EdgeInsets.only(top: topPad, bottom: 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Bubble (rightmost in RTL)
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.78),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (showName)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 3, right: 4),
-                    child: Text(
-                      senderName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary.withValues(alpha: 0.85),
+                // Avatar (physical left)
+                SizedBox(
+                  width: 32,
+                  child: showAvatar
+                      ? (senderId != null
+                          ? LiveUserAvatar(
+                              uid: senderId!,
+                              fallbackName: senderName,
+                              fallbackPhotoUrl: senderPhotoUrl.isNotEmpty
+                                  ? senderPhotoUrl
+                                  : null,
+                              size: 32,
+                            )
+                          : _ChatAvatar(
+                              name: senderName,
+                              radius: 16,
+                              color: const Color(0xFF0EA5E9),
+                              photoUrl: senderPhotoUrl.isNotEmpty
+                                  ? senderPhotoUrl
+                                  : null,
+                            ))
+                      : null,
+                ),
+                const SizedBox(width: 6),
+                // Bubble (physical right of avatar)
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (showName)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3, left: 4),
+                          child: Text(
+                            senderName,
+                            textDirection: TextDirection.rtl,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ),
+                      GestureDetector(
+                        onLongPress: onLongPress,
+                        child: _Bubble(
+                          text: text,
+                          time: time,
+                          isMe: false,
+                          isFirstInGroup: isFirstInGroup,
+                          isLastInGroup: isLastInGroup,
+                        ),
                       ),
-                    ),
-                  ),
-                GestureDetector(
-                  onLongPress: onLongPress,
-                  child: _Bubble(
-                    text: text,
-                    time: time,
-                    isMe: false,
-                    isFirstInGroup: isFirstInGroup,
-                    isLastInGroup: isLastInGroup,
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 6),
-          // Avatar (leftmost in RTL = physically LEFT)
-          SizedBox(
-            width: 32,
-            child: showAvatar
-                ? (senderId != null
-                    ? LiveUserAvatar(
-                        uid: senderId!,
-                        fallbackName: senderName,
-                        fallbackPhotoUrl: senderPhotoUrl.isNotEmpty ? senderPhotoUrl : null,
-                        size: 32,
-                      )
-                    : _ChatAvatar(
-                        name: senderName,
-                        radius: 16,
-                        color: const Color(0xFF0EA5E9),
-                        photoUrl: senderPhotoUrl.isNotEmpty ? senderPhotoUrl : null,
-                      ))
-                : null,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -661,7 +679,7 @@ class _Bubble extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: isMe
                   ? Colors.white.withValues(alpha: 0.65)
-                  : const Color(0xFF94A3B8),
+                  : AppColors.textMuted,
             ),
           ),
         ],
@@ -691,7 +709,7 @@ class _DateSeparator extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: AppColors.borderFaint,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -699,7 +717,7 @@ class _DateSeparator extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -773,7 +791,7 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF0F172A);
+    final c = color ?? AppColors.textPrimary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -841,7 +859,7 @@ class _ContextCardState extends State<_ContextCard> {
   Widget build(BuildContext context) {
     final m = widget.metadata;
     final isWalk = m['requestType'] == 'walk';
-    final accent = isWalk ? const Color(0xFF0F766E) : const Color(0xFF7C3AED);
+    final accent = isWalk ? AppColors.primary : const Color(0xFF7C3AED);
     final bgColor =
         isWalk ? const Color(0xFFECFDF5) : const Color(0xFFF5F3FF);
     final label = isWalk ? 'בקשת טיול' : 'בקשת שמירה';
@@ -962,7 +980,7 @@ class _ContextCardState extends State<_ContextCard> {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
+                              color: AppColors.textPrimary,
                             ),
                           ),
 
@@ -974,7 +992,7 @@ class _ContextCardState extends State<_ContextCard> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF64748B),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],

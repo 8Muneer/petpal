@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
@@ -25,7 +26,7 @@ class CreateSittingServiceScreen extends ConsumerStatefulWidget {
 
 class _CreateSittingServiceScreenState
     extends ConsumerState<CreateSittingServiceScreen> {
-  final _areaController = TextEditingController();
+  String _area = '';
   final _priceController = TextEditingController();
   final _bioController = TextEditingController();
 
@@ -50,7 +51,7 @@ class _CreateSittingServiceScreenState
     super.initState();
     final s = widget.service;
     if (s != null) {
-      _areaController.text = s.area;
+      _area = s.area;
       _priceController.text = s.priceType == 'לפי הסכמה'
           ? ''
           : s.priceText.replaceAll('₪', '').trim();
@@ -68,14 +69,13 @@ class _CreateSittingServiceScreenState
 
   @override
   void dispose() {
-    _areaController.dispose();
     _priceController.dispose();
     _bioController.dispose();
     super.dispose();
   }
 
   Future<void> _publish() async {
-    final area = _areaController.text.trim();
+    final area = _area.trim();
     final rawPrice = _priceController.text.trim();
     final priceText = _priceType == 'לפי הסכמה'
         ? 'לפי הסכמה'
@@ -171,7 +171,7 @@ class _CreateSittingServiceScreenState
                     IconButton(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      color: const Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                     Expanded(
                       child: Text(
@@ -179,7 +179,7 @@ class _CreateSittingServiceScreenState
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -195,29 +195,9 @@ class _CreateSittingServiceScreenState
                     const _SectionHeader(
                         icon: Icons.location_on_rounded, title: 'מיקום'),
                     const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _areaController,
-                        textDirection: TextDirection.rtl,
-                        decoration: InputDecoration(
-                          hintText: 'לדוגמה: תל אביב, רמת גן',
-                          hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                          prefixIcon: const Icon(Icons.location_on_rounded,
-                              color: _purple),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
+                    LocationPickerField(
+                      initialValue: _area,
+                      onChanged: (val) => setState(() => _area = val),
                     ),
 
                     const SizedBox(height: 22),
@@ -268,7 +248,7 @@ class _CreateSittingServiceScreenState
                                         border: Border.all(
                                           color: selected
                                               ? _purple
-                                              : const Color(0xFF64748B)
+                                              : AppColors.textSecondary
                                                   .withOpacity(0.25),
                                         ),
                                       ),
@@ -279,7 +259,7 @@ class _CreateSittingServiceScreenState
                                               size: 16,
                                               color: selected
                                                   ? Colors.white
-                                                  : const Color(0xFF64748B)),
+                                                  : AppColors.textSecondary),
                                           const SizedBox(height: 4),
                                           Text(
                                             type,
@@ -288,7 +268,7 @@ class _CreateSittingServiceScreenState
                                               fontWeight: FontWeight.w800,
                                               color: selected
                                                   ? Colors.white
-                                                  : const Color(0xFF64748B),
+                                                  : AppColors.textSecondary,
                                             ),
                                           ),
                                         ],
@@ -315,7 +295,7 @@ class _CreateSittingServiceScreenState
                                       ? '₪80 ללילה'
                                       : '₪60 ליום',
                                   hintStyle: TextStyle(
-                                    color: const Color(0xFF64748B)
+                                    color: AppColors.textSecondary
                                         .withOpacity(0.6),
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -340,7 +320,7 @@ class _CreateSittingServiceScreenState
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             )
@@ -351,12 +331,12 @@ class _CreateSittingServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color:
-                                    const Color(0xFF64748B).withOpacity(0.06),
+                                    AppColors.textSecondary.withOpacity(0.06),
                               ),
                               child: Row(
                                 children: [
                                   Icon(Icons.handshake_outlined,
-                                      color: const Color(0xFF64748B)
+                                      color: AppColors.textSecondary
                                           .withOpacity(0.7),
                                       size: 18),
                                   const SizedBox(width: 8),
@@ -365,7 +345,7 @@ class _CreateSittingServiceScreenState
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF64748B)
+                                      color: AppColors.textSecondary
                                           .withOpacity(0.8),
                                     ),
                                   ),
@@ -419,7 +399,7 @@ class _CreateSittingServiceScreenState
                                     border: Border.all(
                                       color: selected
                                           ? _purple
-                                          : const Color(0xFF64748B)
+                                          : AppColors.textSecondary
                                               .withOpacity(0.25),
                                     ),
                                   ),
@@ -430,7 +410,7 @@ class _CreateSittingServiceScreenState
                                           size: 20,
                                           color: selected
                                               ? Colors.white
-                                              : const Color(0xFF64748B)),
+                                              : AppColors.textSecondary),
                                       const SizedBox(height: 5),
                                       Text(
                                         option,
@@ -440,7 +420,7 @@ class _CreateSittingServiceScreenState
                                           fontSize: 11,
                                           color: selected
                                               ? Colors.white
-                                              : const Color(0xFF64748B),
+                                              : AppColors.textSecondary,
                                         ),
                                       ),
                                     ],
@@ -502,7 +482,7 @@ class _CreateSittingServiceScreenState
                                     border: Border.all(
                                       color: selected
                                           ? _purple
-                                          : const Color(0xFF64748B)
+                                          : AppColors.textSecondary
                                               .withOpacity(0.25),
                                     ),
                                   ),
@@ -513,7 +493,7 @@ class _CreateSittingServiceScreenState
                                           size: 20,
                                           color: selected
                                               ? Colors.white
-                                              : const Color(0xFF64748B)),
+                                              : AppColors.textSecondary),
                                       const SizedBox(height: 5),
                                       Text(
                                         type,
@@ -522,7 +502,7 @@ class _CreateSittingServiceScreenState
                                           fontSize: 12,
                                           color: selected
                                               ? Colors.white
-                                              : const Color(0xFF64748B),
+                                              : AppColors.textSecondary,
                                         ),
                                       ),
                                     ],
@@ -625,7 +605,7 @@ class _CreateSittingServiceScreenState
                                         border: Border.all(
                                           color: selected
                                               ? _purple
-                                              : const Color(0xFF64748B)
+                                              : AppColors.textSecondary
                                                   .withOpacity(0.25),
                                         ),
                                       ),
@@ -637,7 +617,7 @@ class _CreateSittingServiceScreenState
                                             fontSize: 13,
                                             color: selected
                                                 ? Colors.white
-                                                : const Color(0xFF64748B),
+                                                : AppColors.textSecondary,
                                           ),
                                         ),
                                       ),
@@ -678,8 +658,8 @@ class _CreateSittingServiceScreenState
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: currentLength > (maxLength! * 0.85)
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFF94A3B8),
+                                  ? AppColors.warning
+                                  : AppColors.textMuted,
                             ),
                           ),
                         ),
@@ -687,7 +667,7 @@ class _CreateSittingServiceScreenState
                           hintText:
                               'תאר/י את הניסיון שלך, הזמינות, ומה מייחד אותך כשומר/ת חיות מחמד...',
                           hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
+                            color: AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                             height: 1.5,
                           ),
@@ -697,7 +677,7 @@ class _CreateSittingServiceScreenState
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           height: 1.6,
                         ),
                       ),
@@ -719,8 +699,8 @@ class _CreateSittingServiceScreenState
                             end: Alignment.bottomLeft,
                             colors: _isPublishing
                                 ? [
-                                    const Color(0xFF64748B),
-                                    const Color(0xFF94A3B8),
+                                    AppColors.textSecondary,
+                                    AppColors.textMuted,
                                   ]
                                 : [
                                     _purple,
@@ -809,7 +789,7 @@ class _SectionHeader extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w900,
-            color: Color(0xFF0F172A),
+            color: AppColors.textPrimary,
           ),
         ),
       ],

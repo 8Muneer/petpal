@@ -14,7 +14,7 @@ import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
-    show SittingRequest, SittingStatus, SittingType;
+    show SittingRequest, SittingStatus;
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
@@ -80,7 +80,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
         margin: const EdgeInsets.all(14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor: const Color(0xFF0F766E),
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -117,7 +117,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
                 await _logout();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F766E),
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
@@ -240,37 +240,43 @@ class _ModernTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            // Avatar — RIGHT in RTL
-            AppAvatar(
-              name: displayName,
-              photoUrl: photoUrl,
-              size: 46,
-              onTap: onProfilePressed,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        children: [
+          // Avatar
+          AppAvatar(
+            name: displayName,
+            photoUrl: photoUrl,
+            size: 44,
+            onTap: onProfilePressed,
+          ),
+          const SizedBox(width: 12),
+          // Greeting
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'שלום, $displayName 👋',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h3,
+                ),
+                Text(
+                  'מה תרצה/י לעשות היום?',
+                  style: AppTextStyles.caption,
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            // Greeting
-            Expanded(
-              child: Text(
-                'שלום, $displayName 👋',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.h3,
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Logout button
-            _PillIconButton(
-              icon: Icons.logout_rounded,
-              tooltip: 'התנתקות',
-              onTap: onLogoutPressed,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          // Logout button
+          _PillIconButton(
+            icon: Icons.logout_rounded,
+            tooltip: 'התנתקות',
+            onTap: onLogoutPressed,
+          ),
+        ],
       ),
     );
   }
@@ -304,7 +310,7 @@ class _HomeTab extends ConsumerWidget {
         // Feed posts
         Expanded(
           child: RefreshIndicator(
-            color: const Color(0xFF0F766E),
+            color: AppColors.primary,
             onRefresh: () async {
               ref.invalidate(feedPostsProvider);
               // Wait a moment for the stream to re-establish
@@ -312,7 +318,7 @@ class _HomeTab extends ConsumerWidget {
             },
             child: postsAsync.when(
               loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+                child: CircularProgressIndicator(color: AppColors.primary),
               ),
               error: (e, _) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -335,7 +341,7 @@ class _HomeTab extends ConsumerWidget {
                           children: [
                             Icon(Icons.feed_outlined,
                                 size: 64,
-                                color: const Color(0xFF64748B)
+                                color: AppColors.textSecondary
                                     .withOpacity(0.5)),
                             const SizedBox(height: 16),
                             const Text(
@@ -343,7 +349,7 @@ class _HomeTab extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF64748B),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -352,7 +358,7 @@ class _HomeTab extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF94A3B8),
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -447,7 +453,7 @@ class _FeedPostCard extends StatelessWidget {
                         post.authorName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           fontSize: 14,
                         ),
                       ),
@@ -456,7 +462,7 @@ class _FeedPostCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF64748B).withOpacity(0.8),
+                          color: AppColors.textSecondary.withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -498,7 +504,7 @@ class _FeedPostCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
+                color: AppColors.textPrimary,
                 height: 1.5,
               ),
             ),
@@ -515,19 +521,19 @@ class _FeedPostCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
                     height: 200,
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.borderFaint,
                     child: const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF0F766E),
+                        color: AppColors.primary,
                         strokeWidth: 2,
                       ),
                     ),
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 200,
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.borderFaint,
                     child: const Icon(Icons.broken_image_rounded,
-                        color: Color(0xFF94A3B8)),
+                        color: AppColors.textMuted),
                   ),
                 ),
               ),
@@ -554,7 +560,7 @@ class _FeedPostCard extends StatelessWidget {
                           size: 20,
                           color: isLiked
                               ? const Color(0xFFFB7185)
-                              : const Color(0xFF64748B),
+                              : AppColors.textSecondary,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -564,7 +570,7 @@ class _FeedPostCard extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                             color: isLiked
                                 ? const Color(0xFFFB7185)
-                                : const Color(0xFF64748B),
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -581,7 +587,7 @@ class _FeedPostCard extends StatelessWidget {
                       const Icon(
                         Icons.chat_bubble_outline_rounded,
                         size: 20,
-                        color: Color(0xFF64748B),
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -589,7 +595,7 @@ class _FeedPostCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -678,27 +684,28 @@ class _ToggleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.lgRadius,
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         height: 44,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: selected ? const Color(0xFF0F766E) : Colors.transparent,
+          borderRadius: AppRadius.lgRadius,
+          color: selected ? AppColors.primary : Colors.transparent,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon,
                 size: 18,
-                color: selected ? Colors.white : const Color(0xFF64748B)),
+                color: selected ? Colors.white : AppColors.textSecondary),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: selected ? Colors.white : const Color(0xFF64748B),
+                color: selected ? Colors.white : AppColors.textSecondary,
               ),
             ),
           ],
@@ -730,7 +737,7 @@ class _WalkRequestsView extends ConsumerWidget {
         Expanded(
           child: requestsAsync.when(
             loading: () => const Center(
-              child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+              child: CircularProgressIndicator(color: AppColors.primary),
             ),
             error: (e, _) => Center(
               child: Text('שגיאה בטעינת הבקשות: $e'),
@@ -743,14 +750,14 @@ class _WalkRequestsView extends ConsumerWidget {
                     children: [
                       Icon(Icons.directions_walk_rounded,
                           size: 64,
-                          color: const Color(0xFF64748B).withOpacity(0.5)),
+                          color: AppColors.textSecondary.withOpacity(0.5)),
                       const SizedBox(height: 16),
                       const Text(
                         'אין בקשות טיול עדיין',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -759,7 +766,7 @@ class _WalkRequestsView extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF94A3B8),
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ],
@@ -767,38 +774,46 @@ class _WalkRequestsView extends ConsumerWidget {
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                itemCount: requests.length + 1, // +1 for the header
-                itemBuilder: (context, index) {
-                  // Header row: "הבקשות שלי (X)"
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.list_alt_rounded,
-                              size: 16, color: Color(0xFF0F766E)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'הבקשות שלי (${requests.length})',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F766E),
-                            ),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.list_alt_rounded,
+                            size: 16, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'הבקשות שלי (${requests.length})',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.primary,
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: GridView.builder(
+                      padding:
+                          const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.47,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
                       ),
-                    );
-                  }
-
-                  final req = requests[index - 1];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _WalkRequestCard(request: req),
-                  );
-                },
+                      itemCount: requests.length,
+                      itemBuilder: (ctx, i) => _WalkRequestCard(
+                        request: requests[i],
+                        colorIndex: i,
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -811,200 +826,177 @@ class _WalkRequestsView extends ConsumerWidget {
 // ── Walk request card (compact — taps through to detail screen) ──────────────
 class _WalkRequestCard extends StatelessWidget {
   final WalkRequest request;
-  const _WalkRequestCard({required this.request});
+  final int colorIndex;
+  const _WalkRequestCard({required this.request, required this.colorIndex});
 
-  IconData get _petIcon {
-    switch (request.petType) {
-      case PetType.dog:
-        return Icons.directions_walk_rounded;
-      case PetType.cat:
-        return Icons.pets_rounded;
-      case PetType.other:
-        return Icons.cruelty_free_rounded;
-    }
-  }
-
-  String get _petTypeLabel {
-    switch (request.petType) {
-      case PetType.dog:
-        return 'כלב';
-      case PetType.cat:
-        return 'חתול';
-      case PetType.other:
-        return 'אחר';
-    }
-  }
-
-  String get _timeAgo {
-    if (request.createdAt == null) return '';
-    final diff = DateTime.now().difference(request.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${request.createdAt!.day}/${request.createdAt!.month}/${request.createdAt!.year}';
-  }
+  static const _bgColors = [
+    Color(0xFFFFB347), Color(0xFF80DEEA), Color(0xFFCE93D8),
+    Color(0xFFF48FB1), Color(0xFF90CAF9), Color(0xFFA5D6A7),
+    Color(0xFFFFCC80), Color(0xFFEF9A9A),
+  ];
 
   bool get _isOpen => request.status == WalkStatus.open;
 
-  String get _genderSuffix {
-    if (request.petGender == PetGender.male) return ' · זכר';
-    if (request.petGender == PetGender.female) return ' · נקבה';
+  String get _petTypeLabel {
+    switch (request.petType) {
+      case PetType.dog: return 'כלב';
+      case PetType.cat: return 'חתול';
+      case PetType.other: return 'אחר';
+    }
+  }
+
+  String get _genderLabel {
+    if (request.petGender == PetGender.male) return 'זכר';
+    if (request.petGender == PetGender.female) return 'נקבה';
     return '';
+  }
+
+  IconData get _fallbackIcon {
+    switch (request.petType) {
+      case PetType.dog: return Icons.directions_walk_rounded;
+      case PetType.cat: return Icons.pets_rounded;
+      case PetType.other: return Icons.cruelty_free_rounded;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = request.preferredDate != null
-        ? '${request.preferredDate!.day.toString().padLeft(2, '0')}/${request.preferredDate!.month.toString().padLeft(2, '0')}'
-        : '';
+    final bg = _bgColors[colorIndex % _bgColors.length];
+    final hasPetPhoto =
+        request.petImageUrl != null && request.petImageUrl!.isNotEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: GlassCard(
-        useBlur: true,
-        padding: const EdgeInsets.all(14),
+    return GestureDetector(
+      onTap: () => context.push('/walks/detail', extra: request),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Header ──────────────────────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                LiveUserAvatar(
-                  uid: request.ownerUid,
-                  fallbackName: request.ownerName,
-                  fallbackPhotoUrl: request.ownerPhotoUrl,
-                  size: 38,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(request.ownerName,
-                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0F172A), fontSize: 13)),
-                      Text(_timeAgo,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
-                    ],
-                  ),
-                ),
-                // Status badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isOpen
-                        ? const Color(0xFF22C55E).withOpacity(0.12)
-                        : const Color(0xFF94A3B8).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: _isOpen
-                            ? const Color(0xFF22C55E).withOpacity(0.4)
-                            : const Color(0xFF94A3B8).withOpacity(0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                          _isOpen ? Icons.circle : Icons.check_circle_outline_rounded,
-                          size: 8,
-                          color: _isOpen ? const Color(0xFF22C55E) : const Color(0xFF94A3B8)),
-                      const SizedBox(width: 4),
-                      Text(_isOpen ? 'פתוח' : 'הושלם',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: _isOpen ? const Color(0xFF16A34A) : const Color(0xFF64748B))),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // ── Pet photo ────────────────────────────────────────────────
-            if (request.petImageUrl != null && request.petImageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: CachedNetworkImage(
-                  imageUrl: request.petImageUrl!,
-                  width: double.infinity,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                      height: 100,
-                      color: const Color(0xFFF1F5F9),
-                      child: const Center(
-                          child: CircularProgressIndicator(color: Color(0xFF0F766E), strokeWidth: 2))),
-                  errorWidget: (_, __, ___) => Container(
-                      height: 100,
-                      color: const Color(0xFFF1F5F9),
-                      child: const Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8))),
+            // Photo area
+            Expanded(
+              flex: 56,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: bg),
+                    if (hasPetPhoto)
+                      CachedNetworkImage(
+                        imageUrl: request.petImageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Center(
+                            child: Icon(_fallbackIcon,
+                                size: 52,
+                                color: Colors.white.withOpacity(0.6))),
+                        errorWidget: (_, __, ___) => Center(
+                            child: Icon(_fallbackIcon,
+                                size: 52,
+                                color: Colors.white.withOpacity(0.6))),
+                      )
+                    else
+                      Center(
+                          child: Icon(_fallbackIcon,
+                              size: 60,
+                              color: Colors.white.withOpacity(0.7))),
+                    // Status pill
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _isOpen
+                              ? AppColors.statusOpen
+                              : AppColors.textMuted,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _isOpen ? 'פתוח' : 'הושלם',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-
-            const SizedBox(height: 10),
-
-            // ── Pet name + type/gender ───────────────────────────────────
-            Row(
-              children: [
-                Icon(_petIcon, size: 15, color: const Color(0xFF0F766E)),
-                const SizedBox(width: 6),
-                Expanded(
-                    child: Text(request.petName,
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)))),
-                Text('$_petTypeLabel$_genderSuffix',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-              ],
             ),
-
-            const SizedBox(height: 8),
-
-            // ── Compact info row ─────────────────────────────────────────
-            Wrap(
-              spacing: 14,
-              runSpacing: 4,
-              children: [
-                if (dateStr.isNotEmpty) _MiniInfo(icon: Icons.calendar_today_rounded, text: dateStr),
-                _MiniInfo(icon: Icons.access_time_rounded, text: request.preferredTime),
-                _MiniInfo(icon: Icons.location_on_outlined, text: request.area),
-                if (request.budget != null && request.budget!.isNotEmpty)
-                  _MiniInfo(icon: Icons.account_balance_wallet_outlined, text: request.budget!),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── View details button ──────────────────────────────────────
-            GestureDetector(
-              onTap: () => context.push('/walks/detail', extra: request),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            // Info area
+            Expanded(
+              flex: 44,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('הצג פרטים',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
-                    SizedBox(width: 6),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.white),
+                    Text(
+                      request.petName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(_petTypeLabel,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 3,
+                      children: [
+                        if (_genderLabel.isNotEmpty)
+                          _OwnerChip(
+                            icon: Icons.transgender_rounded,
+                            label: _genderLabel,
+                            color: request.petGender == PetGender.female
+                                ? const Color(0xFFEC4899)
+                                : const Color(0xFF0EA5E9),
+                          ),
+                        _OwnerChip(
+                          icon: Icons.location_on_rounded,
+                          label: request.area,
+                          color: const Color(0xFFEF4444),
+                        ),
+                        if (request.preferredTime.isNotEmpty)
+                          _OwnerChip(
+                            icon: Icons.access_time_rounded,
+                            label: request.preferredTime,
+                            color: AppColors.primary,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 30,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: AppColors.walksGradient,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Text('הצג פרטים',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11)),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1017,123 +1009,141 @@ class _WalkRequestCard extends StatelessWidget {
 }
 
 
-// ── Small icon + text label used in the compact card ─────────────────────────
-class _MiniInfo extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _MiniInfo({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: const Color(0xFF94A3B8)),
-        const SizedBox(width: 3),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF64748B),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LabeledChip extends StatelessWidget {
+// ── Icon chip used in owner request cards ────────────────────────────────────
+class _OwnerChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String value;
   final Color color;
-
-  const _LabeledChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _OwnerChip(
+      {required this.icon, required this.label, required this.color});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 120),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 11, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: color,
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 10, fontWeight: FontWeight.w700, color: color),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF0F172A),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
 }
 
-class _WalkServicesView extends ConsumerWidget {
+class _WalkServicesView extends ConsumerStatefulWidget {
   const _WalkServicesView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WalkServicesView> createState() => _WalkServicesViewState();
+}
+
+class _WalkServicesViewState extends ConsumerState<_WalkServicesView> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+  String _filter = 'הכל';
+
+  static const _filters = ['הכל', 'כלב', 'חתול', 'אחר'];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final servicesAsync = ref.watch(walkServicesProvider);
-    return servicesAsync.when(
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF0F766E))),
-      error: (e, _) => const Center(
-        child: Text('שגיאה בטעינת השירותים',
-            style: TextStyle(
-                color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
-      ),
-      data: (services) {
-        if (services.isEmpty) {
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            children: const [
-              EmptyStateCard(
-                title: 'אין שירותי טיולים כרגע',
-                subtitle: 'בקרוב יופיעו כאן ספקי שירות באזורך',
-                icon: Icons.directions_walk_rounded,
-              ),
-            ],
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          itemCount: services.length,
-          itemBuilder: (context, index) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _WalkServiceCard(service: services[index]),
+
+    return Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          child: _SearchBar(
+            controller: _searchCtrl,
+            hint: 'חפש/י ספק טיולים...',
+            onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
           ),
-        );
-      },
+        ),
+
+        // Filter chips
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: _filters.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => _FilterChip(
+              label: _filters[i],
+              selected: _filter == _filters[i],
+              onTap: () => setState(() => _filter = _filters[i]),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Expanded(
+          child: servicesAsync.when(
+            loading: () =>
+                const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            error: (e, _) => const Center(
+              child: Text('שגיאה בטעינת השירותים',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            data: (all) {
+              final services = all.where((s) {
+                final matchFilter =
+                    _filter == 'הכל' || s.petTypes.contains(_filter);
+                final matchQuery = _query.isEmpty ||
+                    s.providerName.toLowerCase().contains(_query) ||
+                    s.area.toLowerCase().contains(_query);
+                return matchFilter && matchQuery;
+              }).toList();
+
+              if (services.isEmpty) {
+                return const Center(
+                  child: EmptyStateWidget(
+                    title: 'אין שירותי טיולים',
+                    subtitle: 'נסה/י לשנות את הסינון',
+                    icon: Icons.directions_walk_rounded,
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.58,
+                ),
+                itemCount: services.length,
+                itemBuilder: (_, i) =>
+                    _WalkServiceCard(service: services[i]),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1239,14 +1249,14 @@ class _SittingRequestsView extends ConsumerWidget {
                     children: [
                       Icon(Icons.home_work_rounded,
                           size: 64,
-                          color: const Color(0xFF64748B).withOpacity(0.5)),
+                          color: AppColors.textSecondary.withOpacity(0.5)),
                       const SizedBox(height: 16),
                       const Text(
                         'אין בקשות שמירה עדיין',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1255,7 +1265,7 @@ class _SittingRequestsView extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF94A3B8),
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ],
@@ -1263,37 +1273,46 @@ class _SittingRequestsView extends ConsumerWidget {
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                itemCount: requests.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.list_alt_rounded,
-                              size: 16, color: Color(0xFF7C3AED)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'הבקשות שלי (${requests.length})',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF7C3AED),
-                            ),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.list_alt_rounded,
+                            size: 16, color: Color(0xFF7C3AED)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'הבקשות שלי (${requests.length})',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF7C3AED),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: GridView.builder(
+                      padding:
+                          const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.47,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
                       ),
-                    );
-                  }
-
-                  final req = requests[index - 1];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _SittingRequestCard(request: req),
-                  );
-                },
+                      itemCount: requests.length,
+                      itemBuilder: (ctx, i) => _SittingRequestCard(
+                        request: requests[i],
+                        colorIndex: i,
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -1305,46 +1324,38 @@ class _SittingRequestsView extends ConsumerWidget {
 
 class _SittingRequestCard extends StatelessWidget {
   final SittingRequest request;
-  const _SittingRequestCard({required this.request});
+  final int colorIndex;
+  const _SittingRequestCard(
+      {required this.request, required this.colorIndex});
 
-  IconData get _petIcon {
-    switch (request.petType) {
-      case PetType.dog:
-        return Icons.directions_walk_rounded;
-      case PetType.cat:
-        return Icons.pets_rounded;
-      case PetType.other:
-        return Icons.cruelty_free_rounded;
-    }
-  }
-
-  String get _petTypeLabel {
-    switch (request.petType) {
-      case PetType.dog:
-        return 'כלב';
-      case PetType.cat:
-        return 'חתול';
-      case PetType.other:
-        return 'אחר';
-    }
-  }
-
-  String get _timeAgo {
-    if (request.createdAt == null) return '';
-    final diff = DateTime.now().difference(request.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${request.createdAt!.day}/${request.createdAt!.month}/${request.createdAt!.year}';
-  }
+  static const _bgColors = [
+    Color(0xFFCE93D8), Color(0xFF80DEEA), Color(0xFFFFB347),
+    Color(0xFFF48FB1), Color(0xFF90CAF9), Color(0xFFA5D6A7),
+    Color(0xFFFFCC80), Color(0xFFEF9A9A),
+  ];
 
   bool get _isOpen => request.status == SittingStatus.open;
 
-  String get _genderSuffix {
-    if (request.petGender == PetGender.male) return ' · זכר';
-    if (request.petGender == PetGender.female) return ' · נקבה';
+  String get _petTypeLabel {
+    switch (request.petType) {
+      case PetType.dog: return 'כלב';
+      case PetType.cat: return 'חתול';
+      case PetType.other: return 'אחר';
+    }
+  }
+
+  String get _genderLabel {
+    if (request.petGender == PetGender.male) return 'זכר';
+    if (request.petGender == PetGender.female) return 'נקבה';
     return '';
+  }
+
+  IconData get _fallbackIcon {
+    switch (request.petType) {
+      case PetType.dog: return Icons.directions_walk_rounded;
+      case PetType.cat: return Icons.pets_rounded;
+      case PetType.other: return Icons.cruelty_free_rounded;
+    }
   }
 
   String _formatDate(DateTime d) =>
@@ -1352,201 +1363,145 @@ class _SittingRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bg = _bgColors[colorIndex % _bgColors.length];
+    final hasPetPhoto =
+        request.petImageUrl != null && request.petImageUrl!.isNotEmpty;
     final startStr =
         request.startDate != null ? _formatDate(request.startDate!) : '';
-    final endStr =
-        request.endDate != null ? _formatDate(request.endDate!) : '';
-    final nights = request.numberOfNights;
-    final sittingTypeLabel = request.sittingType == SittingType.atOwnerHome
-        ? 'בבית הבעלים'
-        : 'בבית השומר/ת';
+    const purple = Color(0xFF7C3AED);
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: GlassCard(
-        useBlur: true,
-        padding: const EdgeInsets.all(14),
+    return GestureDetector(
+      onTap: () => context.push('/sitting/detail', extra: request),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Header ──────────────────────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                LiveUserAvatar(
-                  uid: request.ownerUid,
-                  fallbackName: request.ownerName,
-                  fallbackPhotoUrl: request.ownerPhotoUrl,
-                  size: 38,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(request.ownerName,
+            // Photo area
+            Expanded(
+              flex: 56,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: bg),
+                    if (hasPetPhoto)
+                      CachedNetworkImage(
+                        imageUrl: request.petImageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Center(
+                            child: Icon(_fallbackIcon,
+                                size: 52,
+                                color: Colors.white.withOpacity(0.6))),
+                        errorWidget: (_, __, ___) => Center(
+                            child: Icon(_fallbackIcon,
+                                size: 52,
+                                color: Colors.white.withOpacity(0.6))),
+                      )
+                    else
+                      Center(
+                          child: Icon(_fallbackIcon,
+                              size: 60,
+                              color: Colors.white.withOpacity(0.7))),
+                    // Status pill
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _isOpen ? purple : AppColors.textMuted,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _isOpen ? 'פתוח' : 'הושלם',
                           style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
-                              fontSize: 13)),
-                      Text(_timeAgo,
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF94A3B8))),
-                    ],
-                  ),
-                ),
-                // Status badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isOpen
-                        ? const Color(0xFF7C3AED).withOpacity(0.12)
-                        : const Color(0xFF94A3B8).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: _isOpen
-                            ? const Color(0xFF7C3AED).withOpacity(0.4)
-                            : const Color(0xFF94A3B8).withOpacity(0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                          _isOpen
-                              ? Icons.circle
-                              : Icons.check_circle_outline_rounded,
-                          size: 8,
-                          color: _isOpen
-                              ? const Color(0xFF7C3AED)
-                              : const Color(0xFF94A3B8)),
-                      const SizedBox(width: 4),
-                      Text(_isOpen ? 'פתוח' : 'הושלם',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: _isOpen
-                                  ? const Color(0xFF7C3AED)
-                                  : const Color(0xFF64748B))),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // ── Pet photo ────────────────────────────────────────────────
-            if (request.petImageUrl != null &&
-                request.petImageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: CachedNetworkImage(
-                  imageUrl: request.petImageUrl!,
-                  width: double.infinity,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                      height: 100,
-                      color: const Color(0xFFF1F5F9),
-                      child: const Center(
-                          child: CircularProgressIndicator(
-                              color: Color(0xFF7C3AED), strokeWidth: 2))),
-                  errorWidget: (_, __, ___) => Container(
-                      height: 100,
-                      color: const Color(0xFFF1F5F9),
-                      child: const Icon(Icons.broken_image_rounded,
-                          color: Color(0xFF94A3B8))),
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-
-            const SizedBox(height: 10),
-
-            // ── Pet name + type/gender ───────────────────────────────────
-            Row(
-              children: [
-                Icon(_petIcon, size: 15, color: const Color(0xFF7C3AED)),
-                const SizedBox(width: 6),
-                Expanded(
-                    child: Text(request.petName,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A)))),
-                Text('$_petTypeLabel$_genderSuffix',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B))),
-              ],
             ),
-
-            const SizedBox(height: 8),
-
-            // ── Compact info row ─────────────────────────────────────────
-            Wrap(
-              spacing: 14,
-              runSpacing: 4,
-              children: [
-                if (startStr.isNotEmpty && endStr.isNotEmpty)
-                  _MiniInfo(
-                      icon: Icons.date_range_rounded,
-                      text: '$startStr – $endStr'),
-                if (nights > 0)
-                  _MiniInfo(
-                      icon: Icons.nights_stay_rounded,
-                      text: '$nights לילות'),
-                _MiniInfo(
-                    icon: request.sittingType == SittingType.atOwnerHome
-                        ? Icons.home_rounded
-                        : Icons.house_rounded,
-                    text: sittingTypeLabel),
-                _MiniInfo(
-                    icon: Icons.location_on_outlined, text: request.area),
-                if (request.budget != null && request.budget!.isNotEmpty)
-                  _MiniInfo(
-                      icon: Icons.account_balance_wallet_outlined,
-                      text: request.budget!),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── View details button ──────────────────────────────────────
-            GestureDetector(
-              onTap: () =>
-                  context.push('/sitting/detail', extra: request),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            // Info area
+            Expanded(
+              flex: 44,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('הצג פרטים',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white)),
-                    SizedBox(width: 6),
-                    Icon(Icons.arrow_forward_ios_rounded,
-                        size: 12, color: Colors.white),
+                    Text(
+                      request.petName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(_petTypeLabel,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 3,
+                      children: [
+                        if (_genderLabel.isNotEmpty)
+                          _OwnerChip(
+                            icon: Icons.transgender_rounded,
+                            label: _genderLabel,
+                            color: request.petGender == PetGender.female
+                                ? const Color(0xFFEC4899)
+                                : const Color(0xFF0EA5E9),
+                          ),
+                        _OwnerChip(
+                          icon: Icons.location_on_rounded,
+                          label: request.area,
+                          color: const Color(0xFFEF4444),
+                        ),
+                        if (startStr.isNotEmpty)
+                          _OwnerChip(
+                            icon: Icons.calendar_today_rounded,
+                            label: startStr,
+                            color: purple,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 30,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [purple, Color(0xFFA78BFA)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Text('הצג פרטים',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11)),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1557,56 +1512,102 @@ class _SittingRequestCard extends StatelessWidget {
     );
   }
 }
-
-class _SittingServicesView extends ConsumerWidget {
+class _SittingServicesView extends ConsumerStatefulWidget {
   const _SittingServicesView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SittingServicesView> createState() =>
+      _SittingServicesViewState();
+}
+
+class _SittingServicesViewState extends ConsumerState<_SittingServicesView> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+  String _filter = 'הכל';
+
+  static const _filters = ['הכל', 'כלב', 'חתול', 'אחר'];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final servicesAsync = ref.watch(sittingServicesProvider);
-    return servicesAsync.when(
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF7C3AED))),
-      error: (e, _) => Center(child: Text('שגיאה: $e')),
-      data: (services) {
-        if (services.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.home_work_rounded,
-                    size: 64,
-                    color: const Color(0xFF64748B).withOpacity(0.5)),
-                const SizedBox(height: 16),
-                const Text('אין שירותי שמירה זמינים כרגע',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF64748B))),
-              ],
+
+    return Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          child: _SearchBar(
+            controller: _searchCtrl,
+            hint: 'חפש/י ספק שמירה...',
+            onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+          ),
+        ),
+
+        // Filter chips
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: _filters.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => _FilterChip(
+              label: _filters[i],
+              selected: _filter == _filters[i],
+              onTap: () => setState(() => _filter = _filters[i]),
             ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          itemCount: services.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return const Padding(
-                padding: EdgeInsets.only(bottom: 10),
-                child: SectionHeader(
-                  title: 'שירותי שמירה',
-                  subtitle: 'מצא/י שומר/ת חיות קרוב/ה ובזמינות מהירה',
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Expanded(
+          child: servicesAsync.when(
+            loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.sitting)),
+            error: (e, _) => Center(child: Text('שגיאה: $e')),
+            data: (all) {
+              final services = all.where((s) {
+                final matchFilter =
+                    _filter == 'הכל' || s.petTypes.contains(_filter);
+                final matchQuery = _query.isEmpty ||
+                    s.providerName.toLowerCase().contains(_query) ||
+                    s.area.toLowerCase().contains(_query);
+                return matchFilter && matchQuery;
+              }).toList();
+
+              if (services.isEmpty) {
+                return const Center(
+                  child: EmptyStateWidget(
+                    title: 'אין שירותי שמירה',
+                    subtitle: 'נסה/י לשנות את הסינון',
+                    icon: Icons.home_work_rounded,
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.58,
                 ),
+                itemCount: services.length,
+                itemBuilder: (_, i) =>
+                    _SittingServiceCard(service: services[i]),
               );
-            }
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _SittingServiceCard(service: services[index - 1]),
-            );
-          },
-        );
-      },
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1615,18 +1616,13 @@ class _SittingServiceCard extends ConsumerWidget {
   final SittingService service;
   const _SittingServiceCard({required this.service});
 
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) return 'לפני פחות משעה';
-    if (diff.inHours < 24) {
-      final h = diff.inHours;
-      return 'לפני ${h == 1 ? 'שעה' : '$h שעות'}';
-    }
-    final d = diff.inDays;
-    if (d == 1) return 'לפני יום';
-    if (d < 30) return 'לפני $d ימים';
-    final m = (d / 30).floor();
-    return m == 1 ? 'לפני חודש' : 'לפני $m חודשים';
+  void _showDetail(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SittingServiceDetailSheet(service: service, ref: ref),
+    );
   }
 
   Future<void> _startChat(BuildContext context, WidgetRef ref) async {
@@ -1645,188 +1641,211 @@ class _SittingServiceCard extends ConsumerWidget {
       otherPhotoUrl: providerPhotoUrl,
     );
     if (context.mounted) {
-      context.push('/chat/$convoId', extra: {'otherName': service.providerName, 'otherPhotoUrl': providerPhotoUrl, 'otherUid': service.providerUid});
+      context.push('/chat/$convoId', extra: {
+        'otherName': service.providerName,
+        'otherPhotoUrl': providerPhotoUrl,
+        'otherUid': service.providerUid,
+      });
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const purple = Color(0xFF7C3AED);
-    const blue = Color(0xFF0EA5E9);
-    const amber = Color(0xFFD97706);
+    const accent = Color(0xFF7C3AED);
     final displayPrice = formatPrice(service.priceText, service.priceType);
 
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Header ────────────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LiveUserAvatar(
-                uid: service.providerUid,
-                fallbackName: service.providerName,
-                fallbackPhotoUrl: service.providerPhotoUrl,
-                size: 54,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showDetail(context, ref),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Photo / avatar area ──────────────────────────────────────
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+              child: SizedBox(
+                height: 120,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Text(service.providerName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                            color: Color(0xFF0F172A))),
-                    const SizedBox(height: 3),
-                    if (service.rating != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              size: 14, color: Colors.amber),
-                          const SizedBox(width: 3),
-                          Text(service.rating!.toStringAsFixed(1),
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A))),
-                          if (service.reviewCount != null)
-                            Text(' (${service.reviewCount})',
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF94A3B8))),
-                        ],
+                    // Full-cover photo, gradient fallback
+                    if (service.providerPhotoUrl != null &&
+                        service.providerPhotoUrl!.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: service.providerPhotoUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFEDE9FE), Color(0xFFDDD6FE)],
+                            ),
+                          ),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFEDE9FE), Color(0xFFDDD6FE)],
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.home_work_rounded,
+                                size: 48, color: Color(0xFFDDD6FE)),
+                          ),
+                        ),
                       )
-                    else if (service.createdAt != null)
-                      Text(_timeAgo(service.createdAt!),
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF94A3B8))),
-                    const SizedBox(height: 4),
-                    Text(displayPrice,
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: purple)),
+                    else
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFEDE9FE), Color(0xFFDDD6FE)],
+                          ),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.home_work_rounded,
+                              size: 48, color: Color(0xFFDDD6FE)),
+                        ),
+                      ),
+                    if (service.isActive)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.statusOpen,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'זמין',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-              if (service.isActive)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: const Color(0xFF22C55E).withOpacity(0.1),
-                    border: Border.all(
-                        color: const Color(0xFF22C55E).withOpacity(0.3)),
+            ),
+            // ── Info area ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    service.providerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 2),
+                  if (service.rating != null)
+                    _RatingRow(
+                        rating: service.rating!,
+                        reviewCount: service.reviewCount)
+                  else if (service.createdAt != null)
+                    Text(
+                      _timeAgo(service.createdAt!),
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted),
+                    ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'שמירה',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    displayPrice,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
                     children: [
-                      Icon(Icons.circle, size: 6, color: Color(0xFF16A34A)),
-                      SizedBox(width: 4),
-                      Text('זמין',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF16A34A))),
+                      Expanded(
+                        child: _MiniChip(
+                          icon: Icons.location_on_rounded,
+                          label: service.area,
+                          color: accent,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: _MiniChip(
+                          icon: Icons.home_work_rounded,
+                          label: service.sittingLocation,
+                          color: const Color(0xFF0EA5E9),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // ── Info chips ────────────────────────────────────────────────
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _ServiceChip(
-                  icon: Icons.location_on_rounded,
-                  label: service.area,
-                  color: purple),
-              _ServiceChip(
-                  icon: Icons.home_work_rounded,
-                  label: service.sittingLocation,
-                  color: blue),
-              ...service.petTypes.map((type) {
-                IconData icon;
-                switch (type) {
-                  case 'כלב':
-                    icon = Icons.directions_walk_rounded;
-                    break;
-                  case 'חתול':
-                    icon = Icons.pets_rounded;
-                    break;
-                  default:
-                    icon = Icons.cruelty_free_rounded;
-                }
-                return _ServiceChip(
-                    icon: icon, label: type, color: purple);
-              }),
-              if (service.availableDays.isNotEmpty)
-                _ServiceChip(
-                  icon: Icons.calendar_today_rounded,
-                  label: service.availableDays.length == 7
-                      ? 'כל הימים'
-                      : service.availableDays.join(' '),
-                  color: amber,
-                ),
-            ],
-          ),
-
-          if (service.bio != null && service.bio!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(service.bio!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF475569),
-                    height: 1.5)),
-          ],
-
-          // ── Contact button ────────────────────────────────────────────
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: () => _startChat(context, ref),
-            child: Container(
-              width: double.infinity,
-              height: 42,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.chat_bubble_outline_rounded,
-                      size: 16, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('צור קשר',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white)),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _startChat(context, ref),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 32,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chat_bubble_outline_rounded,
+                                  color: Colors.white, size: 13),
+                              SizedBox(width: 5),
+                              Text('צור קשר',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1920,7 +1939,7 @@ class _LostPetModernCard extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1939,7 +1958,7 @@ class _LostPetModernCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: AppColors.borderFaint,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
@@ -1952,40 +1971,6 @@ class _LostPetModernCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MiniPrimaryButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onTap;
-
-  const _MiniPrimaryButton({required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-          ),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 12,
-          ),
-        ),
       ),
     );
   }
@@ -2013,7 +1998,7 @@ class _PillIconButton extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
+            color: AppColors.borderFaint,
             borderRadius: BorderRadius.circular(18),
           ),
           child: const Center(
@@ -2050,6 +2035,15 @@ class _WalkServiceCard extends ConsumerWidget {
   final WalkService service;
   const _WalkServiceCard({required this.service});
 
+  void _showDetail(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _WalkServiceDetailSheet(service: service, ref: ref),
+    );
+  }
+
   Future<void> _startChat(BuildContext context, WidgetRef ref) async {
     final me = FirebaseAuth.instance.currentUser;
     if (me == null) return;
@@ -2066,213 +2060,209 @@ class _WalkServiceCard extends ConsumerWidget {
       otherPhotoUrl: providerPhotoUrl,
     );
     if (context.mounted) {
-      context.push('/chat/$convoId', extra: {'otherName': service.providerName, 'otherPhotoUrl': providerPhotoUrl, 'otherUid': service.providerUid});
+      context.push('/chat/$convoId', extra: {
+        'otherName': service.providerName,
+        'otherPhotoUrl': providerPhotoUrl,
+        'otherUid': service.providerUid,
+      });
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const teal = Color(0xFF0F766E);
-    const blue = Color(0xFF0EA5E9);
-    const purple = Color(0xFF7C3AED);
     final displayPrice = formatPrice(service.priceText, service.priceType);
-    final isExperienced = (service.reviewCount ?? 0) > 0;
 
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Header: avatar + name + rating + availability ────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar
-              LiveUserAvatar(
-                uid: service.providerUid,
-                fallbackName: service.providerName,
-                fallbackPhotoUrl: service.providerPhotoUrl,
-                size: 54,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showDetail(context, ref),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Photo / avatar area ──────────────────────────────────────
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+              child: SizedBox(
+                height: 120,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Text(
-                      service.providerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    // Rating row (shown only when available)
-                    if (service.rating != null)
-                      _RatingRow(
-                        rating: service.rating!,
-                        reviewCount: service.reviewCount,
+                    if (service.providerPhotoUrl != null &&
+                        service.providerPhotoUrl!.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: service.providerPhotoUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFCCFBF1), Color(0xFF99F6E4)],
+                            ),
+                          ),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFCCFBF1), Color(0xFF99F6E4)],
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.directions_walk_rounded,
+                                size: 48, color: Color(0xFF99F6E4)),
+                          ),
+                        ),
                       )
-                    else if (service.createdAt != null)
-                      Text(
-                        _timeAgo(service.createdAt!),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF94A3B8),
+                    else
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFCCFBF1), Color(0xFF99F6E4)],
+                          ),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.directions_walk_rounded,
+                              size: 48, color: Color(0xFF99F6E4)),
                         ),
                       ),
-                    const SizedBox(height: 4),
-                    // Price — large and prominent
-                    Text(
-                      displayPrice,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: teal,
+                    if (service.isActive)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.statusOpen,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'זמין',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-              // Availability badge
-              if (service.isActive)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: const Color(0xFF22C55E).withOpacity(0.1),
-                    border: Border.all(
-                        color: const Color(0xFF22C55E).withOpacity(0.3)),
+            ),
+            // ── Info area ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    service.providerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 2),
+                  if (service.rating != null)
+                    _RatingRow(
+                        rating: service.rating!,
+                        reviewCount: service.reviewCount)
+                  else if (service.createdAt != null)
+                    Text(
+                      _timeAgo(service.createdAt!),
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted),
+                    ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'טיול',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    displayPrice,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
                     children: [
-                      Icon(Icons.circle, size: 6, color: Color(0xFF16A34A)),
-                      SizedBox(width: 4),
-                      Text('זמין',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF16A34A),
-                          )),
+                      Expanded(
+                        child: _MiniChip(
+                          icon: Icons.location_on_rounded,
+                          label: service.area,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: _MiniChip(
+                          icon: Icons.timer_rounded,
+                          label: service.duration,
+                          color: const Color(0xFF0EA5E9),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // ── Info chips ───────────────────────────────────────────────
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _ServiceChip(
-                  icon: Icons.location_on_rounded,
-                  label: service.area,
-                  color: teal),
-              _ServiceChip(
-                  icon: Icons.timer_rounded,
-                  label: service.duration,
-                  color: blue),
-              ...service.petTypes.map((type) {
-                IconData icon;
-                switch (type) {
-                  case 'כלב':
-                    icon = Icons.directions_walk_rounded;
-                    break;
-                  case 'חתול':
-                    icon = Icons.pets_rounded;
-                    break;
-                  default:
-                    icon = Icons.cruelty_free_rounded;
-                }
-                return _ServiceChip(icon: icon, label: type, color: purple);
-              }),
-              if (service.availableDays.isNotEmpty)
-                _ServiceChip(
-                  icon: Icons.calendar_today_rounded,
-                  label: service.availableDays.length == 7
-                      ? 'כל הימים'
-                      : service.availableDays.join(' '),
-                  color: const Color(0xFFD97706),
-                ),
-            ],
-          ),
-
-          // ── Trust badges ─────────────────────────────────────────────
-          if (isExperienced) ...[
-            const SizedBox(height: 8),
-            _TrustBadge(
-              icon: Icons.verified_rounded,
-              label: 'מנוסה',
-              color: const Color(0xFF0F766E),
-            ),
-          ],
-
-          // ── Bio ──────────────────────────────────────────────────────
-          if (service.bio != null && service.bio!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              service.bio!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF334155).withOpacity(0.8),
-                height: 1.45,
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 14),
-
-          // ── CTA ──────────────────────────────────────────────────────
-          InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => _startChat(context, ref),
-            child: Container(
-              height: 46,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: teal.withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _startChat(context, ref),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 32,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primary, AppColors.statusOpen],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chat_bubble_outline_rounded,
+                                  color: Colors.white, size: 13),
+                              SizedBox(width: 5),
+                              Text('צור קשר',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: const Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.chat_bubble_outline_rounded,
-                        color: Colors.white, size: 16),
-                    SizedBox(width: 7),
-                    Text('צור קשר',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                        )),
-                  ],
-                ),
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2297,7 +2287,7 @@ class _RatingRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
+            color: AppColors.textPrimary,
           ),
         ),
         if (reviewCount != null) ...[
@@ -2307,7 +2297,7 @@ class _RatingRow extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF94A3B8),
+              color: AppColors.textMuted,
             ),
           ),
         ],
@@ -2316,12 +2306,583 @@ class _RatingRow extends StatelessWidget {
   }
 }
 
-class _ServiceChip extends StatelessWidget {
+// ── Sitting service detail sheet ─────────────────────────────────────────────
+
+class _SittingServiceDetailSheet extends ConsumerStatefulWidget {
+  final SittingService service;
+  final WidgetRef ref;
+  const _SittingServiceDetailSheet(
+      {required this.service, required this.ref});
+  @override
+  ConsumerState<_SittingServiceDetailSheet> createState() =>
+      _SittingServiceDetailSheetState();
+}
+
+class _SittingServiceDetailSheetState
+    extends ConsumerState<_SittingServiceDetailSheet> {
+  bool _loading = false;
+
+  Future<void> _startChat() async {
+    setState(() => _loading = true);
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final providerPhotoUrl = widget.service.providerPhotoUrl ?? '';
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'משתמש',
+      otherUid: widget.service.providerUid,
+      otherName: widget.service.providerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: providerPhotoUrl,
+    );
+    if (mounted) {
+      Navigator.pop(context);
+      context.push('/chat/$convoId', extra: {
+        'otherName': widget.service.providerName,
+        'otherPhotoUrl': providerPhotoUrl,
+        'otherUid': widget.service.providerUid,
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF7C3AED);
+    final s = widget.service;
+    final displayPrice = formatPrice(s.priceText, s.priceType);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                // Avatar + name + active badge
+                Row(
+                  children: [
+                    LiveUserAvatar(
+                      uid: s.providerUid,
+                      fallbackName: s.providerName,
+                      fallbackPhotoUrl: s.providerPhotoUrl,
+                      size: 56,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.providerName,
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textPrimary)),
+                          const SizedBox(height: 2),
+                          Text('שירות שמירה',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    if (s.isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.statusOpen,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('זמין',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Price
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 18,
+                          color: accent),
+                      const SizedBox(width: 8),
+                      const Text('מחיר:  ',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: accent)),
+                      Text(displayPrice,
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: accent)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Info rows
+                _DetailInfoRow(
+                    icon: Icons.location_on_rounded,
+                    label: 'אזור',
+                    value: s.area,
+                    color: const Color(0xFFEF4444)),
+                _DetailInfoRow(
+                    icon: Icons.home_work_rounded,
+                    label: 'מיקום השמירה',
+                    value: s.sittingLocation,
+                    color: const Color(0xFF0EA5E9)),
+                if (s.petTypes.isNotEmpty)
+                  _DetailInfoRow(
+                      icon: Icons.pets_rounded,
+                      label: 'סוגי חיות',
+                      value: s.petTypes.join(', '),
+                      color: const Color(0xFF16A34A)),
+                if (s.availableDays.isNotEmpty)
+                  _DetailInfoRow(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'ימים זמינים',
+                      value: s.availableDays.join(', '),
+                      color: const Color(0xFF0891B2)),
+                if (s.rating != null)
+                  _DetailInfoRow(
+                      icon: Icons.star_rounded,
+                      label: 'דירוג',
+                      value:
+                          '${s.rating!.toStringAsFixed(1)}  (${s.reviewCount ?? 0} ביקורות)',
+                      color: const Color(0xFFFBBF24)),
+                // Bio
+                if (s.bio != null && s.bio!.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFFFED7AA)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 14, color: Color(0xFFF97316)),
+                          SizedBox(width: 6),
+                          Text('אודות',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFF97316))),
+                        ]),
+                        const SizedBox(height: 8),
+                        Text(s.bio!,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                                height: 1.6)),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                // Chat button
+                GestureDetector(
+                  onTap: _loading ? null : _startChat,
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
+                      boxShadow: [
+                        BoxShadow(
+                            color: accent.withOpacity(0.35),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5))
+                      ],
+                    ),
+                    child: Center(
+                      child: _loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white))
+                          : const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    color: Colors.white,
+                                    size: 18),
+                                SizedBox(width: 8),
+                                Text('צור קשר',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900)),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Walk service detail sheet ─────────────────────────────────────────────────
+
+class _WalkServiceDetailSheet extends ConsumerStatefulWidget {
+  final WalkService service;
+  final WidgetRef ref;
+  const _WalkServiceDetailSheet(
+      {required this.service, required this.ref});
+  @override
+  ConsumerState<_WalkServiceDetailSheet> createState() =>
+      _WalkServiceDetailSheetState();
+}
+
+class _WalkServiceDetailSheetState
+    extends ConsumerState<_WalkServiceDetailSheet> {
+  bool _loading = false;
+
+  Future<void> _startChat() async {
+    setState(() => _loading = true);
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+    final providerPhotoUrl = widget.service.providerPhotoUrl ?? '';
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'משתמש',
+      otherUid: widget.service.providerUid,
+      otherName: widget.service.providerName,
+      myPhotoUrl: myPhotoUrl,
+      otherPhotoUrl: providerPhotoUrl,
+    );
+    if (mounted) {
+      Navigator.pop(context);
+      context.push('/chat/$convoId', extra: {
+        'otherName': widget.service.providerName,
+        'otherPhotoUrl': providerPhotoUrl,
+        'otherUid': widget.service.providerUid,
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.service;
+    final displayPrice = formatPrice(s.priceText, s.priceType);
+    const accent = AppColors.primary;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    LiveUserAvatar(
+                      uid: s.providerUid,
+                      fallbackName: s.providerName,
+                      fallbackPhotoUrl: s.providerPhotoUrl,
+                      size: 56,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.providerName,
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textPrimary)),
+                          const SizedBox(height: 2),
+                          const Text('שירות טיולים',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    if (s.isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.statusOpen,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('זמין',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 18,
+                          color: accent),
+                      const SizedBox(width: 8),
+                      const Text('מחיר:  ',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: accent)),
+                      Text(displayPrice,
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: accent)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _DetailInfoRow(
+                    icon: Icons.location_on_rounded,
+                    label: 'אזור',
+                    value: s.area,
+                    color: const Color(0xFFEF4444)),
+                _DetailInfoRow(
+                    icon: Icons.timer_rounded,
+                    label: 'משך הטיול',
+                    value: s.duration,
+                    color: accent),
+                if (s.petTypes.isNotEmpty)
+                  _DetailInfoRow(
+                      icon: Icons.pets_rounded,
+                      label: 'סוגי חיות',
+                      value: s.petTypes.join(', '),
+                      color: const Color(0xFF16A34A)),
+                if (s.availableDays.isNotEmpty)
+                  _DetailInfoRow(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'ימים זמינים',
+                      value: s.availableDays.join(', '),
+                      color: const Color(0xFF0891B2)),
+                if (s.rating != null)
+                  _DetailInfoRow(
+                      icon: Icons.star_rounded,
+                      label: 'דירוג',
+                      value:
+                          '${s.rating!.toStringAsFixed(1)}  (${s.reviewCount ?? 0} ביקורות)',
+                      color: const Color(0xFFFBBF24)),
+                if (s.bio != null && s.bio!.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFFFED7AA)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 14, color: Color(0xFFF97316)),
+                          SizedBox(width: 6),
+                          Text('אודות',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFF97316))),
+                        ]),
+                        const SizedBox(height: 8),
+                        Text(s.bio!,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                                height: 1.6)),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: _loading ? null : _startChat,
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            AppColors.statusOpen
+                          ]),
+                      boxShadow: [
+                        BoxShadow(
+                            color: accent.withOpacity(0.35),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5))
+                      ],
+                    ),
+                    child: Center(
+                      child: _loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white))
+                          : const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    color: Colors.white,
+                                    size: 18),
+                                SizedBox(width: 8),
+                                Text('צור קשר',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900)),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Detail info row (used in service detail sheets) ───────────────────────────
+
+class _DetailInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  const _DetailInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 10),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color.withOpacity(0.65))),
+            const Spacer(),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+          ],
+        ),
+      );
+}
+
+// ── Mini chip (compact, for grid cards) ──────────────────────────────────────
+
+class _MiniChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
 
-  const _ServiceChip({
+  const _MiniChip({
     required this.icon,
     required this.label,
     required this.color,
@@ -2330,23 +2891,26 @@ class _ServiceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      constraints: const BoxConstraints(minHeight: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -2355,40 +2919,81 @@ class _ServiceChip extends StatelessWidget {
   }
 }
 
-class _TrustBadge extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
+// ── Search bar ────────────────────────────────────────────────────────────────
 
-  const _TrustBadge({
-    required this.icon,
-    required this.label,
-    required this.color,
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  const _SearchBar({
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      height: 46,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: AppColors.surfaceCard,
+        borderRadius: AppRadius.fullRadius,
+        boxShadow: AppShadows.subtle,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textAlignVertical: TextAlignVertical.center,
+        style: AppTextStyles.body,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTextStyles.caption,
+          prefixIcon: const Icon(Icons.search_rounded,
+              color: AppColors.textMuted, size: 20),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          isDense: true,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Filter chip ───────────────────────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surfaceCard,
+          borderRadius: AppRadius.fullRadius,
+          boxShadow: selected ? null : AppShadows.subtle,
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.label.copyWith(
+            color: selected ? Colors.white : AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
           ),
-        ],
+        ),
       ),
     );
   }

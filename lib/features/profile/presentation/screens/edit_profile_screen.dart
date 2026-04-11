@@ -52,7 +52,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFB91C1C) : const Color(0xFF0F766E),
+            isError ? const Color(0xFFB91C1C) : AppColors.primary,
       ),
     );
   }
@@ -77,7 +77,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: AppColors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -87,14 +87,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 18),
                 _ImagePickerOption(
                   icon: Icons.camera_alt_rounded,
                   label: 'צלם/י תמונה',
-                  color: const Color(0xFF0F766E),
+                  color: AppColors.primary,
                   onTap: () {
                     Navigator.pop(ctx);
                     _pickAndUpload(profile, ImageSource.camera);
@@ -294,7 +294,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -326,13 +326,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                             begin: Alignment.topRight,
                                             end: Alignment.bottomLeft,
                                             colors: [
-                                              Color(0xFF0F766E),
-                                              Color(0xFF22C55E),
+                                              AppColors.primary,
+                                              AppColors.statusOpen,
                                             ],
                                           ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF0F766E)
+                                        color: AppColors.primary
                                             .withOpacity(0.25),
                                         blurRadius: 20,
                                         offset: const Offset(0, 8),
@@ -404,7 +404,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                       child: const Icon(
                                         Icons.camera_alt_rounded,
                                         size: 16,
-                                        color: Color(0xFF0F766E),
+                                        color: AppColors.primary,
                                       ),
                                     ),
                                   ),
@@ -418,7 +418,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color:
-                                  const Color(0xFF64748B).withOpacity(0.85),
+                                  AppColors.textSecondary.withOpacity(0.85),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -437,7 +437,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0F766E)
+                              color: AppColors.primary
                                   .withOpacity(0.10),
                               borderRadius: BorderRadius.circular(999),
                             ),
@@ -446,7 +446,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF0F766E),
+                                color: AppColors.primary,
                               ),
                             ),
                           ),
@@ -489,9 +489,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               prefixIcon:
                                   const Icon(Icons.email_outlined),
                               suffixIcon: const Icon(Icons.lock_outline,
-                                  size: 18, color: Color(0xFF94A3B8)),
+                                  size: 18, color: AppColors.textMuted),
                               filled: true,
-                              fillColor: const Color(0xFFF1F5F9),
+                              fillColor: AppColors.borderFaint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide.none,
@@ -499,7 +499,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide(
-                                    color: const Color(0xFFE2E8F0)
+                                    color: AppColors.border
                                         .withOpacity(0.9)),
                               ),
                             ),
@@ -555,7 +555,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         decoration: InputDecoration(
                           hintText: 'ספר/י קצת על עצמך...',
                           hintStyle: const TextStyle(
-                            color: Color(0xFF94A3B8),
+                            color: AppColors.textMuted,
                             fontWeight: FontWeight.w600,
                           ),
                           filled: true,
@@ -568,13 +568,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                                color: const Color(0xFFE2E8F0)
+                                color: AppColors.border
                                     .withOpacity(0.9)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: const BorderSide(
-                                color: Color(0xFF0F766E), width: 1.6),
+                                color: AppColors.primary, width: 1.6),
                           ),
                           contentPadding: const EdgeInsets.all(16),
                         ),
@@ -601,21 +601,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         height: 52,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(18),
-                          color: const Color(0xFFF1F5F9),
+                          color: AppColors.borderFaint,
                           border:
-                              Border.all(color: const Color(0xFFE2E8F0)),
+                              Border.all(color: AppColors.border),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.close_rounded,
-                                color: Color(0xFF64748B), size: 20),
+                                color: AppColors.textSecondary, size: 20),
                             SizedBox(width: 8),
                             Text(
                               'ביטול',
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF64748B),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -703,9 +703,9 @@ class _SectionLabel extends StatelessWidget {
           height: 32,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            color: const Color(0xFF0F766E).withOpacity(0.10),
+            color: AppColors.primary.withOpacity(0.10),
           ),
-          child: Icon(icon, color: const Color(0xFF0F766E), size: 18),
+          child: Icon(icon, color: AppColors.primary, size: 18),
         ),
         const SizedBox(width: 10),
         Text(
@@ -713,7 +713,7 @@ class _SectionLabel extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w900,
-            color: Color(0xFF0F172A),
+            color: AppColors.textPrimary,
           ),
         ),
       ],

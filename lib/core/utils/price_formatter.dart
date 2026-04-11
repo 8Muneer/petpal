@@ -11,3 +11,12 @@ String formatPrice(String priceText, String priceType) {
   if (priceType == 'לשעה') return '$base₪ / שעה';
   return '$base₪ כולל';
 }
+
+/// Ensures [value] always displays with the ₪ symbol.
+/// Strips any existing ₪ then prepends it, so "100", "₪100", "100₪" → "₪100".
+/// Returns empty string unchanged.
+String withShekel(String value) {
+  final trimmed = value.replaceAll('₪', '').trim();
+  if (trimmed.isEmpty) return value;
+  return '$trimmed₪';
+}

@@ -37,7 +37,7 @@ class FeedScreen extends ConsumerWidget {
                     IconButton(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      color: const Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                     const Expanded(
                       child: Text(
@@ -45,7 +45,7 @@ class FeedScreen extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -66,7 +66,7 @@ class FeedScreen extends ConsumerWidget {
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                            colors: [AppColors.primary, AppColors.statusOpen],
                           ),
                         ),
                         child: const Row(
@@ -96,7 +96,7 @@ class FeedScreen extends ConsumerWidget {
                 child: postsAsync.when(
                   loading: () => const Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFF0F766E),
+                      color: AppColors.primary,
                     ),
                   ),
                   error: (e, _) => Center(
@@ -110,7 +110,7 @@ class FeedScreen extends ConsumerWidget {
                           children: [
                             Icon(Icons.feed_outlined,
                                 size: 64,
-                                color: const Color(0xFF64748B)
+                                color: AppColors.textSecondary
                                     .withOpacity(0.5)),
                             const SizedBox(height: 16),
                             const Text(
@@ -118,7 +118,7 @@ class FeedScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF64748B),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -127,7 +127,7 @@ class FeedScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF94A3B8),
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -197,7 +197,7 @@ void _showLoginDialog(BuildContext context) {
               context.push('/login');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F766E),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -268,7 +268,7 @@ class _PostCard extends StatelessWidget {
                         post.authorName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           fontSize: 14,
                         ),
                       ),
@@ -277,7 +277,7 @@ class _PostCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF64748B).withOpacity(0.8),
+                          color: AppColors.textSecondary.withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -288,21 +288,21 @@ class _PostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.12),
+                      color: AppColors.warning.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.lightbulb_outline_rounded,
-                            size: 14, color: Color(0xFFF59E0B)),
+                            size: 14, color: AppColors.warning),
                         SizedBox(width: 4),
                         Text(
                           'טיפ',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFFF59E0B),
+                            color: AppColors.warning,
                           ),
                         ),
                       ],
@@ -319,7 +319,7 @@ class _PostCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
+                color: AppColors.textPrimary,
                 height: 1.5,
               ),
             ),
@@ -336,19 +336,19 @@ class _PostCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
                     height: 200,
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.borderFaint,
                     child: const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF0F766E),
+                        color: AppColors.primary,
                         strokeWidth: 2,
                       ),
                     ),
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 200,
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.borderFaint,
                     child: const Icon(Icons.broken_image_rounded,
-                        color: Color(0xFF94A3B8)),
+                        color: AppColors.textMuted),
                   ),
                 ),
               ),
@@ -375,7 +375,7 @@ class _PostCard extends StatelessWidget {
                           size: 20,
                           color: isLiked
                               ? const Color(0xFFFB7185)
-                              : const Color(0xFF64748B),
+                              : AppColors.textSecondary,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -385,7 +385,7 @@ class _PostCard extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                             color: isLiked
                                 ? const Color(0xFFFB7185)
-                                : const Color(0xFF64748B),
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -402,7 +402,7 @@ class _PostCard extends StatelessWidget {
                       const Icon(
                         Icons.chat_bubble_outline_rounded,
                         size: 20,
-                        color: Color(0xFF64748B),
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -410,7 +410,7 @@ class _PostCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
