@@ -49,7 +49,7 @@ class ProfileScreen extends ConsumerWidget {
                 await _logout(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F766E),
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
@@ -74,7 +74,7 @@ class ProfileScreen extends ConsumerWidget {
         margin: const EdgeInsets.all(14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor: const Color(0xFF0F766E),
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -92,19 +92,19 @@ class ProfileScreen extends ConsumerWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           surfaceTintColor: Colors.transparent,
-          iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
           title: const Text(
             '\u05e4\u05e8\u05d5\u05e4\u05d9\u05dc',
             style: TextStyle(
               fontWeight: FontWeight.w900,
-              color: Color(0xFF0F172A),
+              color: AppColors.textPrimary,
             ),
           ),
           actions: [
             IconButton(
               tooltip: '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
               onPressed: () => _confirmLogout(context),
-              icon: const Icon(Icons.logout_rounded, color: Color(0xFF0F172A)),
+              icon: const Icon(Icons.logout_rounded, color: AppColors.textPrimary),
             ),
           ],
         ),
@@ -155,8 +155,8 @@ class ProfileScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF22C55E).withOpacity(0.12),
-                      const Color(0xFF0F766E).withOpacity(0.14),
+                      AppColors.statusOpen.withOpacity(0.12),
+                      AppColors.primary.withOpacity(0.14),
                     ],
                   ),
                 ),
@@ -312,7 +312,7 @@ class _ProfileBody extends StatelessWidget {
                 title: '\u05d4\u05d6\u05de\u05e0\u05d5\u05ea',
                 value: '${profile.totalBookings}',
                 icon: Icons.calendar_month_rounded,
-                accent: const Color(0xFF0F766E),
+                accent: AppColors.primary,
                 onTap: () => context.push('/profile/bookings'),
               ),
             ),
@@ -338,7 +338,7 @@ class _ProfileBody extends StatelessWidget {
                     ? profile.rating.toStringAsFixed(1)
                     : '-',
                 icon: Icons.star_rounded,
-                accent: const Color(0xFFF59E0B),
+                accent: AppColors.warning,
                 onTap: () => onToast('TODO: Reviews'),
               ),
             ),
@@ -404,7 +404,7 @@ class _ProfileBody extends StatelessWidget {
                     ? '\u05de\u05d0\u05d5\u05de\u05ea'
                     : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                 badgeColor: profile.isVerified
-                    ? const Color(0xFF22C55E)
+                    ? AppColors.statusOpen
                     : const Color(0xFFFB7185),
               ),
               if (profile.phone != null && profile.phone!.isNotEmpty) ...[
@@ -441,7 +441,7 @@ class _ProfileBody extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(16)),
                               content: const Text(
                                   '\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d9\u05de\u05d9\u05d9\u05dc \u05d0\u05d9\u05de\u05d5\u05ea \u2705'),
-                              backgroundColor: const Color(0xFF0F766E),
+                              backgroundColor: AppColors.primary,
                             ),
                           );
                         } catch (_) {
@@ -515,7 +515,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   : const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+                      colors: [AppColors.primary, AppColors.statusOpen],
                     ),
               boxShadow: [
                 BoxShadow(
@@ -559,7 +559,7 @@ class _ProfileHeroCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -569,7 +569,7 @@ class _ProfileHeroCard extends StatelessWidget {
                           ? '\u05de\u05d0\u05d5\u05de\u05ea \u2705'
                           : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                       color: verified
-                          ? const Color(0xFF22C55E)
+                          ? AppColors.statusOpen
                           : const Color(0xFFFB7185),
                     ),
                   ],
@@ -580,7 +580,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F766E),
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -649,9 +649,9 @@ class _SettingTile extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.borderFaint,
               ),
-              child: Icon(icon, color: const Color(0xFF0F766E)),
+              child: Icon(icon, color: AppColors.primary),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -662,7 +662,7 @@ class _SettingTile extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -677,7 +677,7 @@ class _SettingTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_left_rounded, color: Color(0xFF64748B)),
+            const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary),
           ],
         ),
       ),
@@ -728,7 +728,7 @@ class _StatCard extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -791,7 +791,7 @@ class _KeyValueRow extends StatelessWidget {
             v,
             style: const TextStyle(
               fontWeight: FontWeight.w900,
-              color: Color(0xFF0F172A),
+              color: AppColors.textPrimary,
             ),
           ),
       ],
@@ -822,11 +822,11 @@ class _PrimaryOutlineButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: enabled ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
+          color: enabled ? AppColors.borderFaint : const Color(0xFFF8FAFC),
           border: Border.all(
             color: enabled
-                ? const Color(0xFF0F766E).withOpacity(0.22)
-                : const Color(0xFFE2E8F0),
+                ? AppColors.primary.withOpacity(0.22)
+                : AppColors.border,
           ),
         ),
         child: Row(
@@ -836,15 +836,15 @@ class _PrimaryOutlineButton extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: enabled
-                    ? const Color(0xFF0F766E).withOpacity(0.12)
-                    : const Color(0xFF64748B).withOpacity(0.10),
+                    ? AppColors.primary.withOpacity(0.12)
+                    : AppColors.textSecondary.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
                 color: enabled
-                    ? const Color(0xFF0F766E)
-                    : const Color(0xFF64748B),
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: 12),
@@ -854,15 +854,15 @@ class _PrimaryOutlineButton extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   color: enabled
-                      ? const Color(0xFF0F172A)
-                      : const Color(0xFF64748B),
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_left_rounded,
               color:
-                  enabled ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                  enabled ? AppColors.primary : AppColors.textSecondary,
             ),
           ],
         ),
@@ -958,7 +958,7 @@ class _MiniPrimaryButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
-            colors: [Color(0xFF0F766E), Color(0xFF22C55E)],
+            colors: [AppColors.primary, AppColors.statusOpen],
           ),
         ),
         child: Row(
@@ -1001,18 +1001,18 @@ class _MiniSecondaryButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: const Color(0xFFF1F5F9),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          color: AppColors.borderFaint,
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: const Color(0xFF0F766E), size: 18),
+            Icon(icon, color: AppColors.primary, size: 18),
             const SizedBox(width: 8),
             Text(
               text,
               style: const TextStyle(
-                color: Color(0xFF0F172A),
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1029,7 +1029,7 @@ class _DividerLine extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 1,
-      color: const Color(0xFFE2E8F0).withOpacity(0.7),
+      color: AppColors.border.withOpacity(0.7),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
@@ -32,9 +33,9 @@ class CreateWalkRequestScreen extends ConsumerStatefulWidget {
 class _CreateWalkRequestScreenState
     extends ConsumerState<CreateWalkRequestScreen> {
   final _petNameController = TextEditingController();
-  final _areaController = TextEditingController();
   final _instructionsController = TextEditingController();
   final _budgetController = TextEditingController();
+  String _area = '';
 
   PetType _petType = PetType.dog;
   PetGender? _petGender;
@@ -53,7 +54,7 @@ class _CreateWalkRequestScreenState
     final r = widget.initialRequest;
     if (r != null) {
       _petNameController.text = r.petName;
-      _areaController.text = r.area;
+      _area = r.area;
       _instructionsController.text = r.specialInstructions ?? '';
       _budgetController.text = r.budget ?? '';
       _petType = r.petType;
@@ -76,7 +77,6 @@ class _CreateWalkRequestScreenState
   @override
   void dispose() {
     _petNameController.dispose();
-    _areaController.dispose();
     _instructionsController.dispose();
     _budgetController.dispose();
     super.dispose();
@@ -112,7 +112,7 @@ class _CreateWalkRequestScreenState
         child: Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0F766E),
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -133,7 +133,7 @@ class _CreateWalkRequestScreenState
         child: Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0F766E),
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -147,7 +147,7 @@ class _CreateWalkRequestScreenState
 
   Future<void> _save() async {
     final petName = _petNameController.text.trim();
-    final area = _areaController.text.trim();
+    final area = _area.trim();
 
     if (petName.isEmpty) {
       _showSnack('יש להזין את שם חיית המחמד', isError: true);
@@ -238,7 +238,7 @@ class _CreateWalkRequestScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : const Color(0xFF0F766E),
+            isError ? const Color(0xFFFB7185) : AppColors.primary,
       ),
     );
   }
@@ -262,7 +262,7 @@ class _CreateWalkRequestScreenState
                     IconButton(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      color: const Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                     Expanded(
                       child: Text(
@@ -270,7 +270,7 @@ class _CreateWalkRequestScreenState
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -295,18 +295,18 @@ class _CreateWalkRequestScreenState
                           hintText: 'לדוגמה: רקסי',
                           hintStyle: TextStyle(
                             color:
-                                const Color(0xFF64748B).withOpacity(0.6),
+                                AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(14),
                           prefixIcon: const Icon(Icons.pets_rounded,
-                              color: Color(0xFF0F766E)),
+                              color: AppColors.primary),
                         ),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -359,7 +359,7 @@ class _CreateWalkRequestScreenState
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   color: _petGender == null
-                                      ? const Color(0xFF64748B)
+                                      ? AppColors.textSecondary
                                       : Colors.transparent,
                                 ),
                                 child: Row(
@@ -370,7 +370,7 @@ class _CreateWalkRequestScreenState
                                         size: 18,
                                         color: _petGender == null
                                             ? Colors.white
-                                            : const Color(0xFF64748B)),
+                                            : AppColors.textSecondary),
                                     const SizedBox(width: 6),
                                     Text(
                                       'לא ידוע',
@@ -379,7 +379,7 @@ class _CreateWalkRequestScreenState
                                         fontSize: 13,
                                         color: _petGender == null
                                             ? Colors.white
-                                            : const Color(0xFF64748B),
+                                            : AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -468,7 +468,7 @@ class _CreateWalkRequestScreenState
                               Icon(
                                 Icons.add_photo_alternate_outlined,
                                 size: 36,
-                                color: const Color(0xFF64748B)
+                                color: AppColors.textSecondary
                                     .withOpacity(0.5),
                               ),
                               const SizedBox(height: 8),
@@ -477,7 +477,7 @@ class _CreateWalkRequestScreenState
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF64748B)
+                                  color: AppColors.textSecondary
                                       .withOpacity(0.7),
                                 ),
                               ),
@@ -509,7 +509,7 @@ class _CreateWalkRequestScreenState
                                       const Icon(
                                           Icons.calendar_today_rounded,
                                           size: 20,
-                                          color: Color(0xFF0F766E)),
+                                          color: AppColors.primary),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -520,8 +520,8 @@ class _CreateWalkRequestScreenState
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                             color: _selectedDate != null
-                                                ? const Color(0xFF0F172A)
-                                                : const Color(0xFF64748B)
+                                                ? AppColors.textPrimary
+                                                : AppColors.textSecondary
                                                     .withOpacity(0.6),
                                           ),
                                         ),
@@ -552,7 +552,7 @@ class _CreateWalkRequestScreenState
                                       const Icon(
                                           Icons.access_time_rounded,
                                           size: 20,
-                                          color: Color(0xFF0F766E)),
+                                          color: AppColors.primary),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -563,8 +563,8 @@ class _CreateWalkRequestScreenState
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                             color: _selectedTime != null
-                                                ? const Color(0xFF0F172A)
-                                                : const Color(0xFF64748B)
+                                                ? AppColors.textPrimary
+                                                : AppColors.textSecondary
                                                     .withOpacity(0.6),
                                           ),
                                         ),
@@ -605,33 +605,11 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Area
-                    _FieldLabel('אזור / שכונה'),
+                    _FieldLabel('מיקום'),
                     const SizedBox(height: 6),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _areaController,
-                        textDirection: TextDirection.rtl,
-                        decoration: InputDecoration(
-                          hintText: 'לדוגמה: בית הכרם, ירושלים',
-                          hintStyle: TextStyle(
-                            color:
-                                const Color(0xFF64748B).withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                          prefixIcon: const Icon(
-                              Icons.location_on_rounded,
-                              color: Color(0xFF0F766E)),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
+                    LocationPickerField(
+                      initialValue: _area,
+                      onChanged: (val) => setState(() => _area = val),
                     ),
 
                     const SizedBox(height: 16),
@@ -651,7 +629,7 @@ class _CreateWalkRequestScreenState
                               'למשל: הכלב מפחד מכלבים גדולים, צריך רצועה קצרה...',
                           hintStyle: TextStyle(
                             color:
-                                const Color(0xFF64748B).withOpacity(0.6),
+                                AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -660,7 +638,7 @@ class _CreateWalkRequestScreenState
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           height: 1.5,
                         ),
                       ),
@@ -682,19 +660,19 @@ class _CreateWalkRequestScreenState
                           hintText: 'לדוגמה: ₪50-₪80',
                           hintStyle: TextStyle(
                             color:
-                                const Color(0xFF64748B).withOpacity(0.6),
+                                AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(14),
                           prefixIcon: const Icon(
                               Icons.account_balance_wallet_rounded,
-                              color: Color(0xFF0F766E)),
+                              color: AppColors.primary),
                         ),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -713,8 +691,8 @@ class _CreateWalkRequestScreenState
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
                             colors: [
-                              Color(0xFF0F766E),
-                              Color(0xFF22C55E)
+                              AppColors.primary,
+                              AppColors.statusOpen
                             ],
                           ),
                         ),
@@ -759,7 +737,7 @@ class _CreateWalkRequestScreenState
           height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? const Color(0xFF0F766E) : Colors.transparent,
+            color: selected ? AppColors.primary : Colors.transparent,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -767,7 +745,7 @@ class _CreateWalkRequestScreenState
               Icon(icon,
                   size: 18,
                   color:
-                      selected ? Colors.white : const Color(0xFF64748B)),
+                      selected ? Colors.white : AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -775,7 +753,7 @@ class _CreateWalkRequestScreenState
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
                   color:
-                      selected ? Colors.white : const Color(0xFF64748B),
+                      selected ? Colors.white : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -806,14 +784,14 @@ class _CreateWalkRequestScreenState
             children: [
               Icon(icon,
                   size: 18,
-                  color: selected ? Colors.white : const Color(0xFF64748B)),
+                  color: selected ? Colors.white : AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
-                  color: selected ? Colors.white : const Color(0xFF64748B),
+                  color: selected ? Colors.white : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -832,7 +810,7 @@ class _CreateWalkRequestScreenState
         height: 40,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: selected ? const Color(0xFF0F766E) : Colors.transparent,
+          color: selected ? AppColors.primary : Colors.transparent,
         ),
         child: Center(
           child: Text(
@@ -840,7 +818,7 @@ class _CreateWalkRequestScreenState
             style: TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 12,
-              color: selected ? Colors.white : const Color(0xFF64748B),
+              color: selected ? Colors.white : AppColors.textSecondary,
             ),
           ),
         ),

@@ -41,6 +41,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PetPal uses your location to show your neighborhood when creating a request</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>PetPal uses your location to show your neighborhood when creating a request</string>
 	<key>NSCameraUsageDescription</key>
 	<string>PetPal needs camera access to take a profile photo</string>
 	<key>NSPhotoLibraryUsageDescription</key>

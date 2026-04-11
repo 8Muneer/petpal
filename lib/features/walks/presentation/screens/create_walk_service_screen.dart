@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
+import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
@@ -25,7 +26,7 @@ class CreateWalkServiceScreen extends ConsumerStatefulWidget {
 
 class _CreateWalkServiceScreenState
     extends ConsumerState<CreateWalkServiceScreen> {
-  final _areaController = TextEditingController();
+  String _area = '';
   final _priceController = TextEditingController();
   final _bioController = TextEditingController();
   final _customDurationController = TextEditingController();
@@ -49,7 +50,7 @@ class _CreateWalkServiceScreenState
     super.initState();
     final s = widget.service;
     if (s != null) {
-      _areaController.text = s.area;
+      _area = s.area;
       // Strip ₪ so the user edits the raw number
       _priceController.text = s.priceType == 'לפי הסכמה'
           ? ''
@@ -73,7 +74,6 @@ class _CreateWalkServiceScreenState
 
   @override
   void dispose() {
-    _areaController.dispose();
     _priceController.dispose();
     _bioController.dispose();
     _customDurationController.dispose();
@@ -81,7 +81,7 @@ class _CreateWalkServiceScreenState
   }
 
   Future<void> _publish() async {
-    final area = _areaController.text.trim();
+    final area = _area.trim();
     final rawPrice = _priceController.text.trim();
     final priceText = _priceType == 'לפי הסכמה'
         ? 'לפי הסכמה'
@@ -164,7 +164,7 @@ class _CreateWalkServiceScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : const Color(0xFF0F766E),
+            isError ? const Color(0xFFFB7185) : AppColors.primary,
       ),
     );
   }
@@ -185,7 +185,7 @@ class _CreateWalkServiceScreenState
                     IconButton(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      color: const Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                     ),
                     Expanded(
                       child: Text(
@@ -195,7 +195,7 @@ class _CreateWalkServiceScreenState
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -211,29 +211,9 @@ class _CreateWalkServiceScreenState
                     const _SectionHeader(
                         icon: Icons.location_on_rounded, title: 'מיקום'),
                     const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _areaController,
-                        textDirection: TextDirection.rtl,
-                        decoration: InputDecoration(
-                          hintText: 'לדוגמה: תל אביב, רמת גן',
-                          hintStyle: TextStyle(
-                            color: const Color(0xFF64748B).withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                          prefixIcon: const Icon(Icons.location_on_rounded,
-                              color: Color(0xFF0F766E)),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
+                    LocationPickerField(
+                      initialValue: _area,
+                      onChanged: (val) => setState(() => _area = val),
                     ),
 
                     const SizedBox(height: 22),
@@ -280,12 +260,12 @@ class _CreateWalkServiceScreenState
                                         borderRadius:
                                             BorderRadius.circular(12),
                                         color: selected
-                                            ? const Color(0xFF0F766E)
+                                            ? AppColors.primary
                                             : Colors.transparent,
                                         border: Border.all(
                                           color: selected
-                                              ? const Color(0xFF0F766E)
-                                              : const Color(0xFF64748B)
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary
                                                   .withOpacity(0.25),
                                         ),
                                       ),
@@ -296,7 +276,7 @@ class _CreateWalkServiceScreenState
                                               size: 16,
                                               color: selected
                                                   ? Colors.white
-                                                  : const Color(0xFF64748B)),
+                                                  : AppColors.textSecondary),
                                           const SizedBox(height: 4),
                                           Text(
                                             type,
@@ -305,7 +285,7 @@ class _CreateWalkServiceScreenState
                                               fontWeight: FontWeight.w800,
                                               color: selected
                                                   ? Colors.white
-                                                  : const Color(0xFF64748B),
+                                                  : AppColors.textSecondary,
                                             ),
                                           ),
                                         ],
@@ -323,7 +303,7 @@ class _CreateWalkServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color:
-                                    const Color(0xFF0F766E).withOpacity(0.06),
+                                    AppColors.primary.withOpacity(0.06),
                               ),
                               child: TextField(
                                 controller: _priceController,
@@ -334,7 +314,7 @@ class _CreateWalkServiceScreenState
                                       ? '₪80 לטיול'
                                       : '₪50 לשעה',
                                   hintStyle: TextStyle(
-                                    color: const Color(0xFF64748B)
+                                    color: AppColors.textSecondary
                                         .withOpacity(0.6),
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -351,7 +331,7 @@ class _CreateWalkServiceScreenState
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w900,
-                                            color: Color(0xFF0F766E),
+                                            color: AppColors.primary,
                                           )),
                                     ),
                                   ),
@@ -359,7 +339,7 @@ class _CreateWalkServiceScreenState
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             )
@@ -370,12 +350,12 @@ class _CreateWalkServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color:
-                                    const Color(0xFF64748B).withOpacity(0.06),
+                                    AppColors.textSecondary.withOpacity(0.06),
                               ),
                               child: Row(
                                 children: [
                                   Icon(Icons.handshake_outlined,
-                                      color: const Color(0xFF64748B)
+                                      color: AppColors.textSecondary
                                           .withOpacity(0.7),
                                       size: 18),
                                   const SizedBox(width: 8),
@@ -384,7 +364,7 @@ class _CreateWalkServiceScreenState
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF64748B)
+                                      color: AppColors.textSecondary
                                           .withOpacity(0.8),
                                     ),
                                   ),
@@ -439,12 +419,12 @@ class _CreateWalkServiceScreenState
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(14),
                                     color: selected
-                                        ? const Color(0xFF0F766E)
+                                        ? AppColors.primary
                                         : Colors.transparent,
                                     border: Border.all(
                                       color: selected
-                                          ? const Color(0xFF0F766E)
-                                          : const Color(0xFF64748B)
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary
                                               .withOpacity(0.25),
                                     ),
                                   ),
@@ -455,7 +435,7 @@ class _CreateWalkServiceScreenState
                                           size: 20,
                                           color: selected
                                               ? Colors.white
-                                              : const Color(0xFF64748B)),
+                                              : AppColors.textSecondary),
                                       const SizedBox(height: 5),
                                       Text(
                                         type,
@@ -464,7 +444,7 @@ class _CreateWalkServiceScreenState
                                           fontSize: 12,
                                           color: selected
                                               ? Colors.white
-                                              : const Color(0xFF64748B),
+                                              : AppColors.textSecondary,
                                         ),
                                       ),
                                     ],
@@ -506,7 +486,7 @@ class _CreateWalkServiceScreenState
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
-                                color: const Color(0xFF0F766E)
+                                color: AppColors.primary
                                     .withOpacity(0.06),
                               ),
                               child: TextField(
@@ -515,7 +495,7 @@ class _CreateWalkServiceScreenState
                                 decoration: InputDecoration(
                                   hintText: 'לדוגמה: 3 שעות, לילה שלם',
                                   hintStyle: TextStyle(
-                                    color: const Color(0xFF64748B)
+                                    color: AppColors.textSecondary
                                         .withOpacity(0.6),
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -523,12 +503,12 @@ class _CreateWalkServiceScreenState
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 12),
                                   prefixIcon: const Icon(Icons.edit_rounded,
-                                      color: Color(0xFF0F766E), size: 18),
+                                      color: AppColors.primary, size: 18),
                                 ),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F172A),
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ),
@@ -561,13 +541,13 @@ class _CreateWalkServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color: _allDaysSelected
-                                    ? const Color(0xFF0F766E)
-                                    : const Color(0xFF0F766E)
+                                    ? AppColors.primary
+                                    : AppColors.primary
                                         .withOpacity(0.07),
                                 border: Border.all(
                                   color: _allDaysSelected
-                                      ? const Color(0xFF0F766E)
-                                      : const Color(0xFF0F766E)
+                                      ? AppColors.primary
+                                      : AppColors.primary
                                           .withOpacity(0.3),
                                 ),
                               ),
@@ -581,7 +561,7 @@ class _CreateWalkServiceScreenState
                                     size: 16,
                                     color: _allDaysSelected
                                         ? Colors.white
-                                        : const Color(0xFF0F766E),
+                                        : AppColors.primary,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
@@ -591,7 +571,7 @@ class _CreateWalkServiceScreenState
                                       fontWeight: FontWeight.w800,
                                       color: _allDaysSelected
                                           ? Colors.white
-                                          : const Color(0xFF0F766E),
+                                          : AppColors.primary,
                                     ),
                                   ),
                                 ],
@@ -628,12 +608,12 @@ class _CreateWalkServiceScreenState
                                     borderRadius:
                                         BorderRadius.circular(10),
                                     color: selected
-                                        ? const Color(0xFF0F766E)
+                                        ? AppColors.primary
                                         : Colors.transparent,
                                     border: Border.all(
                                       color: selected
-                                          ? const Color(0xFF0F766E)
-                                          : const Color(0xFF64748B)
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary
                                               .withOpacity(0.25),
                                     ),
                                   ),
@@ -645,7 +625,7 @@ class _CreateWalkServiceScreenState
                                         fontSize: 13,
                                         color: selected
                                             ? Colors.white
-                                            : const Color(0xFF64748B),
+                                            : AppColors.textSecondary,
                                       ),
                                     ),
                                   ),
@@ -686,8 +666,8 @@ class _CreateWalkServiceScreenState
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: currentLength > (maxLength! * 0.85)
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFF94A3B8),
+                                  ? AppColors.warning
+                                  : AppColors.textMuted,
                             ),
                           ),
                         ),
@@ -696,7 +676,7 @@ class _CreateWalkServiceScreenState
                               'תאר/י את הניסיון שלך, הזמינות, ומה מייחד אותך כמטייל/ת חיות מחמד...',
                           hintStyle: TextStyle(
                             color:
-                                const Color(0xFF64748B).withOpacity(0.6),
+                                AppColors.textSecondary.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
                             height: 1.5,
                           ),
@@ -706,7 +686,7 @@ class _CreateWalkServiceScreenState
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.textPrimary,
                           height: 1.6,
                         ),
                       ),
@@ -728,19 +708,19 @@ class _CreateWalkServiceScreenState
                             end: Alignment.bottomLeft,
                             colors: _isPublishing
                                 ? [
-                                    const Color(0xFF64748B),
-                                    const Color(0xFF94A3B8)
+                                    AppColors.textSecondary,
+                                    AppColors.textMuted
                                   ]
                                 : [
-                                    const Color(0xFF0F766E),
-                                    const Color(0xFF22C55E)
+                                    AppColors.primary,
+                                    AppColors.statusOpen
                                   ],
                           ),
                           boxShadow: _isPublishing
                               ? []
                               : [
                                   BoxShadow(
-                                    color: const Color(0xFF0F766E)
+                                    color: AppColors.primary
                                         .withOpacity(0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
@@ -808,11 +788,11 @@ class _CreateWalkServiceScreenState
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color:
-              selected ? const Color(0xFF0F766E) : Colors.transparent,
+              selected ? AppColors.primary : Colors.transparent,
           border: Border.all(
             color: selected
-                ? const Color(0xFF0F766E)
-                : const Color(0xFF64748B).withOpacity(0.25),
+                ? AppColors.primary
+                : AppColors.textSecondary.withOpacity(0.25),
           ),
         ),
         child: Text(
@@ -821,7 +801,7 @@ class _CreateWalkServiceScreenState
             fontWeight: FontWeight.w800,
             fontSize: 13,
             color:
-                selected ? Colors.white : const Color(0xFF64748B),
+                selected ? Colors.white : AppColors.textSecondary,
           ),
         ),
       ),
@@ -844,9 +824,9 @@ class _SectionHeader extends StatelessWidget {
           height: 30,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(9),
-            color: const Color(0xFF0F766E).withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.1),
           ),
-          child: Icon(icon, size: 16, color: const Color(0xFF0F766E)),
+          child: Icon(icon, size: 16, color: AppColors.primary),
         ),
         const SizedBox(width: 9),
         Text(
@@ -854,7 +834,7 @@ class _SectionHeader extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w900,
-            color: Color(0xFF0F172A),
+            color: AppColors.textPrimary,
           ),
         ),
       ],
