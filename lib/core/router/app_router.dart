@@ -32,6 +32,10 @@ import 'package:petpal/features/profile/presentation/screens/availability_screen
 import 'package:petpal/features/profile/presentation/screens/service_settings_screen.dart';
 import 'package:petpal/features/messaging/presentation/screens/chat_list_screen.dart';
 import 'package:petpal/features/messaging/presentation/screens/chat_screen.dart';
+import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/create_lost_found_post_screen.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_post_detail_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -170,6 +174,20 @@ class AppRouter {
             otherUid: otherUid,
           );
         },
+      ),
+      GoRoute(
+        path: '/lost-found',
+        builder: (context, state) => const LostFoundFeedScreen(),
+      ),
+      GoRoute(
+        path: '/lost-found/create',
+        builder: (context, state) => const CreateLostFoundPostScreen(),
+      ),
+      GoRoute(
+        path: '/lost-found/detail',
+        builder: (context, state) => LostFoundPostDetailScreen(
+          post: state.extra as LostFoundPost,
+        ),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),

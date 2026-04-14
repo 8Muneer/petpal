@@ -27,6 +27,7 @@ import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -141,9 +142,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
       _HomeTab(
         onAction: (msg) => _toast(msg),
       ),
-      _LostPetsTab(
-        onAction: (msg) => _toast(msg),
-      ),
+      const LostFoundFeedScreen(),
       const _WalksTab(),
       _SittingTab(
         onAction: (msg) => _toast(msg),
@@ -1852,129 +1851,6 @@ class _SittingServiceCard extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-
-class _LostPetsTab extends StatelessWidget {
-  final void Function(String msg) onAction;
-
-  const _LostPetsTab({required this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      children: [
-        const SectionHeader(
-          title: 'חיות אבודות',
-          subtitle: 'דיווחים מהקהילה + התאמות AI בהמשך',
-        ),
-        const SizedBox(height: 10),
-
-        const _LostPetModernCard(
-          title: 'כלב אבוד - רקס',
-          subtitle: 'נראה לאחרונה בשכונת בית הכרם',
-          timeAgo: 'לפני 2 שעות',
-          accent: Color(0xFFFB7185),
-        ),
-        const SizedBox(height: 12),
-        const _LostPetModernCard(
-          title: 'חתולה נמצאה - לולה',
-          subtitle: 'נמצאה ליד גן סאקר',
-          timeAgo: 'אתמול',
-          accent: Color(0xFF60A5FA),
-        ),
-        const SizedBox(height: 18),
-
-        AppButton(
-          label: 'דווח/י על חיה אבודה',
-          leadingIcon: Icons.add_rounded,
-          onTap: () => onAction('TODO: Report lost pet'),
-        ),
-      ],
-    );
-  }
-}
-
-class _LostPetModernCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String timeAgo;
-  final Color accent;
-
-  const _LostPetModernCard({
-    required this.title,
-    required this.subtitle,
-    required this.timeAgo,
-    required this.accent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [
-                  accent.withOpacity(0.95),
-                  accent.withOpacity(0.55),
-                ],
-              ),
-            ),
-            child: const Icon(Icons.pets_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.borderFaint,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              timeAgo,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF334155),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PillIconButton extends StatelessWidget {
   final IconData icon;
