@@ -30,6 +30,7 @@ import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 enum RequestStatus { pending, accepted, declined }
@@ -218,9 +219,7 @@ class _ServiceProviderHomeScreenState extends ConsumerState<ServiceProviderHomeS
       ),
       const _ProviderWalksTab(),
       const _ProviderSittingTab(),
-      _LostPetsTab(
-        onAction: (msg) => _toast(msg),
-      ),
+      const LostFoundFeedScreen(),
       _ScheduleTab(
         isAvailable: _isAvailable,
         onToggleAvailability: (v) {
@@ -1680,93 +1679,6 @@ class _ProviderWalkRequestCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Lost & Found tab
-class _LostPetsTab extends StatelessWidget {
-  final void Function(String msg) onAction;
-
-  const _LostPetsTab({required this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      children: [
-        const SectionHeader(
-          title: 'אבודים',
-          subtitle: 'דיווחים על חיות אבודות ונמצאות (בקרוב AI התאמות)',
-        ),
-        const SizedBox(height: 10),
-
-        GlassCard(
-          useBlur: true,
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: const Color(0xFF8B5CF6).withOpacity(0.14),
-                ),
-                child: const Icon(Icons.pets_rounded, color: Color(0xFF8B5CF6)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Lost & Found Hub',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'כאן תוכל/י לראות דיווחים ולהציע התאמות לפי מיקום ותמונה.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.82),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Icon(Icons.arrow_back_rounded, color: AppColors.textSecondary),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        AppButton(
-          label: 'דיווח על חיה נמצאה',
-          leadingIcon: Icons.add_photo_alternate_rounded,
-          onTap: () => onAction('TODO: Report found pet'),
-        ),
-        const SizedBox(height: 12),
-        AppButton(
-          label: 'חיפוש חיה אבודה',
-          leadingIcon: Icons.search_rounded,
-          onTap: () => onAction('TODO: Search lost pets'),
-        ),
-
-        const SizedBox(height: 18),
-
-        const EmptyStateCard(
-          title: 'אין דיווחים עדיין',
-          subtitle: 'בקרוב: התאמות חכמות לפי תמונה ומיקום.',
-          icon: Icons.pets_outlined,
-        ),
-      ],
     );
   }
 }
