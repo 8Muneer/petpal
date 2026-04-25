@@ -9,15 +9,11 @@ import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.d
 class LostFoundRemoteDatasource {
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
-  final ImagePicker _picker;
-
   LostFoundRemoteDatasource({
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
-    ImagePicker? picker,
   })  : _firestore = firestore,
-        _storage = storage,
-        _picker = picker ?? ImagePicker();
+        _storage = storage;
 
   CollectionReference get _col => _firestore.collection('lost_found_posts');
 
@@ -30,6 +26,13 @@ class LostFoundRemoteDatasource {
         .map((snap) => snap.docs
             .map((doc) => LostFoundPostModel.fromFirestore(doc))
             .toList());
+  }
+
+  Stream<LostFoundPostModel?> watchPost(String postId) {
+    return _col.doc(postId).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return LostFoundPostModel.fromFirestore(doc);
+    });
   }
 
   Future<List<LostFoundPostModel>> getOppositeTypePosts(
@@ -48,9 +51,33 @@ class LostFoundRemoteDatasource {
         .toList();
   }
 
+  Future<List<LostFoundPostModel>> getAllOppositeTypePosts(
+      LostFoundType type) async {
+    final oppositeType = type == LostFoundType.lost ? 'found' : 'lost';
+    final cutoff = DateTime.now().subtract(const Duration(days: 30));
+    final snap = await _col
+        .where('type', isEqualTo: oppositeType)
+        .where('status', isEqualTo: 'active')
+        .where('createdAt', isGreaterThan: Timestamp.fromDate(cutoff))
+        .limit(20)
+        .get();
+    return snap.docs
+        .map((doc) => LostFoundPostModel.fromFirestore(doc))
+        .toList();
+  }
+
   Future<String> createPost(Map<String, dynamic> data) async {
     final doc = await _col.add(data);
     return doc.id;
+  }
+
+  Future<void> updateMatchingStatus(String postId, MatchingStatus status) async {
+    final value = status == MatchingStatus.searching
+        ? 'searching'
+        : status == MatchingStatus.done
+            ? 'done'
+            : 'pending';
+    await _col.doc(postId).update({'matchingStatus': value});
   }
 
   Future<void> addMatch(String postId, Map<String, dynamic> match) async {
@@ -61,15 +88,6 @@ class LostFoundRemoteDatasource {
 
   Future<void> markResolved(String postId) async {
     await _col.doc(postId).update({'status': 'resolved'});
-  }
-
-  Future<XFile?> pickImage() async {
-    return _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 85,
-    );
   }
 
   Future<String> uploadImage(String postId, XFile file) async {

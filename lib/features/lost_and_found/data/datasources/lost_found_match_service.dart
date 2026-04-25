@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:petpal/features/lost_and_found/data/datasources/gemini_matching_service.dart';
 import 'package:petpal/features/lost_and_found/data/datasources/lost_found_remote_datasource.dart';
 import 'package:petpal/features/lost_and_found/data/models/lost_found_post_model.dart';
+import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
 
 class LostFoundMatchService {
   final LostFoundRemoteDatasource _datasource;
@@ -12,44 +14,60 @@ class LostFoundMatchService {
   })  : _datasource = datasource,
         _gemini = gemini;
 
-  /// Called after a new post is created. Finds potential matches using
-  /// Phase 1 (metadata filter) then Phase 2 (Gemini visual comparison).
-  Future<void> runMatching(LostFoundPostModel newPost) async {
-    // Phase 1: metadata filter — same species, opposite type, last 30 days
-    final candidates = await _datasource.getOppositeTypePosts(
-      newPost.type,
-      newPost.species,
-    );
+  Future<void> runMatching(LostFoundPostModel post) async {
+    try {
+      debugPrint('[Match] Starting for post ${post.id} type=${post.type} species=${post.species}');
+      await _datasource.updateMatchingStatus(post.id, MatchingStatus.searching);
 
-    for (final candidate in candidates) {
-      // Phase 2: Gemini visual comparison
-      final result = await _gemini.compareImages(
-        newPost.imageUrl,
-        candidate.imageUrl,
+      final candidates = await _datasource.getOppositeTypePosts(
+        post.type,
+        post.species,
       );
+      debugPrint('[Match] Found ${candidates.length} candidates');
 
-      if (result == null) continue;
-      if (!result.isMatch || result.confidence < 60) continue;
+      for (final candidate in candidates) {
+        if (candidate.imageUrl.isEmpty) continue;
+        debugPrint('[Match] Comparing with candidate ${candidate.id}');
 
-      // Save match on the new post
-      final matchForNew = LostFoundMatchModel(
-        postId: candidate.id,
-        imageUrl: candidate.imageUrl,
-        reporterName: candidate.reporterName,
-        confidence: result.confidence,
-        reason: result.reason,
-      );
-      await _datasource.addMatch(newPost.id, matchForNew.toMap());
+        final result = await _gemini.compareImages(
+          post.imageUrl,
+          candidate.imageUrl,
+        );
 
-      // Save reverse match on the candidate post
-      final matchForCandidate = LostFoundMatchModel(
-        postId: newPost.id,
-        imageUrl: newPost.imageUrl,
-        reporterName: newPost.reporterName,
-        confidence: result.confidence,
-        reason: result.reason,
-      );
-      await _datasource.addMatch(candidate.id, matchForCandidate.toMap());
+        debugPrint('[Match] Result: ${result?.confidence}% match=${result?.isMatch}');
+        if (result == null) continue;
+        if (!result.isMatch || result.confidence < 50) continue;
+
+        final matchForNew = LostFoundMatchModel(
+          postId: candidate.id,
+          imageUrl: candidate.imageUrl,
+          reporterName: candidate.reporterName,
+          confidence: result.confidence,
+          reason: result.reason,
+        );
+        await _datasource.addMatch(post.id, matchForNew.toMap());
+
+        final matchForCandidate = LostFoundMatchModel(
+          postId: post.id,
+          imageUrl: post.imageUrl,
+          reporterName: post.reporterName,
+          confidence: result.confidence,
+          reason: result.reason,
+        );
+        await _datasource.addMatch(candidate.id, matchForCandidate.toMap());
+        debugPrint('[Match] Saved match between ${post.id} and ${candidate.id}');
+      }
+    } catch (e, st) {
+      debugPrint('[Match] ERROR: $e\n$st');
+    } finally {
+      await _datasource.updateMatchingStatus(post.id, MatchingStatus.done);
+      debugPrint('[Match] Done for post ${post.id}');
     }
+  }
+
+  /// One-off comparison between two specific posts — used for manual compare.
+  Future<GeminiMatchResult?> compareTwo(
+      LostFoundPostModel a, LostFoundPostModel b) async {
+    return _gemini.compareImages(a.imageUrl, b.imageUrl);
   }
 }
