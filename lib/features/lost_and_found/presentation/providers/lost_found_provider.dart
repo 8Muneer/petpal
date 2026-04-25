@@ -40,25 +40,27 @@ final foundPostsProvider = StreamProvider<List<LostFoundPost>>((ref) {
   return ref.watch(lostFoundDatasourceProvider).watchPosts(LostFoundType.found);
 });
 
+final singlePostProvider =
+    StreamProvider.family<LostFoundPost?, String>((ref, postId) {
+  final user = ref.watch(authStateChangesProvider).asData?.value;
+  if (user == null) return const Stream.empty();
+  return ref.watch(lostFoundDatasourceProvider).watchPost(postId);
+});
+
 final createLostFoundPostProvider =
     Provider<Future<void> Function(LostFoundPostModel, XFile)>((ref) {
   return (post, imageFile) async {
     final datasource = ref.read(lostFoundDatasourceProvider);
     final matchService = ref.read(lostFoundMatchServiceProvider);
 
-    // 1. Create a placeholder to get the document ID
     final docId = await datasource.createPost(post.toFirestore());
-
-    // 2. Upload image
     final imageUrl = await datasource.uploadImage(docId, imageFile);
 
-    // 3. Update post with imageUrl
     await FirebaseFirestore.instance
         .collection('lost_found_posts')
         .doc(docId)
         .update({'imageUrl': imageUrl});
 
-    // 4. Build final model for matching
     final finalPost = LostFoundPostModel(
       id: docId,
       reporterUid: post.reporterUid,
@@ -74,8 +76,36 @@ final createLostFoundPostProvider =
       imageUrl: imageUrl,
     );
 
-    // 5. Run AI matching in background (don't await — let it complete async)
+    // Run in background — status updates stream to detail screen automatically
     matchService.runMatching(finalPost);
+  };
+});
+
+final rerunMatchingProvider =
+    Provider<Future<void> Function(LostFoundPost)>((ref) {
+  return (post) async {
+    final datasource = ref.read(lostFoundDatasourceProvider);
+    final matchService = ref.read(lostFoundMatchServiceProvider);
+
+    // Reset status to pending so UI reflects fresh start
+    await datasource.updateMatchingStatus(post.id, MatchingStatus.pending);
+
+    final model = LostFoundPostModel(
+      id: post.id,
+      reporterUid: post.reporterUid,
+      reporterName: post.reporterName,
+      reporterPhotoUrl: post.reporterPhotoUrl,
+      type: post.type,
+      petName: post.petName,
+      species: post.species,
+      breed: post.breed,
+      color: post.color,
+      description: post.description,
+      area: post.area,
+      imageUrl: post.imageUrl,
+    );
+
+    matchService.runMatching(model);
   };
 });
 
@@ -88,5 +118,4 @@ final markResolvedProvider = Provider<Future<void> Function(String)>((ref) {
 String get currentUserUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 String get currentUserName =>
     FirebaseAuth.instance.currentUser?.displayName ?? 'משתמש';
-String? get currentUserPhoto =>
-    FirebaseAuth.instance.currentUser?.photoURL;
+String? get currentUserPhoto => FirebaseAuth.instance.currentUser?.photoURL;

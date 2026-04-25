@@ -36,6 +36,8 @@ import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.d
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/create_lost_found_post_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_post_detail_screen.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_browse_screen.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -186,8 +188,24 @@ class AppRouter {
       GoRoute(
         path: '/lost-found/detail',
         builder: (context, state) => LostFoundPostDetailScreen(
-          post: state.extra as LostFoundPost,
+          initialPost: state.extra as LostFoundPost,
         ),
+      ),
+      GoRoute(
+        path: '/lost-found/browse',
+        builder: (context, state) => LostFoundBrowseScreen(
+          anchorPost: state.extra as LostFoundPost,
+        ),
+      ),
+      GoRoute(
+        path: '/lost-found/compare',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, LostFoundPost>;
+          return AiCompareScreen(
+            post1: extra['post1']!,
+            post2: extra['post2']!,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
