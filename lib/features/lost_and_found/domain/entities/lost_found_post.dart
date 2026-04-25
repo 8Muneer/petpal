@@ -4,6 +4,8 @@ enum LostFoundType { lost, found }
 
 enum LostFoundStatus { active, resolved }
 
+enum MatchingStatus { pending, searching, done }
+
 class LostFoundMatch extends Equatable {
   final String postId;
   final String imageUrl;
@@ -37,6 +39,7 @@ class LostFoundPost extends Equatable {
   final String area;
   final String imageUrl;
   final LostFoundStatus status;
+  final MatchingStatus matchingStatus;
   final DateTime? createdAt;
   final List<LostFoundMatch> matches;
 
@@ -54,10 +57,11 @@ class LostFoundPost extends Equatable {
     required this.area,
     required this.imageUrl,
     this.status = LostFoundStatus.active,
+    this.matchingStatus = MatchingStatus.pending,
     this.createdAt,
     this.matches = const [],
   });
 
   @override
-  List<Object?> get props => [id, reporterUid, type, status, imageUrl];
+  List<Object?> get props => [id, reporterUid, type, status, matchingStatus, imageUrl];
 }

@@ -6,7 +6,9 @@
       "Bash(sed -i '/_MiniPrimaryButton\\(/,/\\),/{s/\\\\blabel: /text: /g}' lib/features/profile/presentation/screens/profile_screen.dart)",
       "Bash(sed -i '/_MiniSecondaryButton\\(/,/\\),/{s/\\\\blabel: /text: /g}' lib/features/profile/presentation/screens/profile_screen.dart)",
       "Bash(grep -n \"Report lost pet\\\\|Report found pet\\\\|Search lost pets\\\\|Edit time slots\\\\|Open chat\\\\|Availability flow\\\\|Services settings\" /c/Users/hp/OneDrive/Desktop/petpal/lib/features/home/presentation/screens/*.dart)",
-      "Bash(find /c/Users/hp/OneDrive/Desktop/petpal -name *.rules -o -name firestore*)"
+      "Bash(find /c/Users/hp/OneDrive/Desktop/petpal -name *.rules -o -name firestore*)",
+      "Bash(git checkout *)",
+      "Bash(flutter pub *)"
     ]
   }
 }

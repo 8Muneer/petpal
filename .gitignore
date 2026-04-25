@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment / secrets
+.env
+.env.*
+secrets.dart
+google-services.json
+GoogleService-Info.plist
+
+# Firebase
+firebase_options_local.dart
+
+# Claude Code
+.claude/settings.local.json
