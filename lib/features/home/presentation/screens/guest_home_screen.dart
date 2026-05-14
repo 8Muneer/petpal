@@ -3,21 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/glass_nav_bar.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
-import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
-import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 
@@ -1028,9 +1022,9 @@ class _MiniLockButton extends StatelessWidget {
             colors: [AppColors.primary, AppColors.statusOpen],
           ),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(Icons.lock_rounded, color: Colors.white, size: 16),
             SizedBox(width: 6),
             Text(

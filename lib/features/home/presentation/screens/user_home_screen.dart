@@ -11,8 +11,13 @@ import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
+import 'package:petpal/core/widgets/discovery_chip.dart';
+import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
+import 'package:petpal/features/explore/domain/entities/poi_model.dart';
+import 'package:petpal/features/sitting/presentation/providers/marketplace_provider.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
-import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
+import 'package:petpal/features/profile/presentation/screens/bookings_screen.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingRequest, SittingStatus;
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
@@ -27,7 +32,16 @@ import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
-import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
+import 'package:petpal/features/community/presentation/screens/community_feed_screen.dart';
+import 'package:petpal/core/widgets/luxury_hero.dart';
+import 'package:petpal/core/widgets/glass_search_bar.dart';
+import 'package:petpal/core/widgets/luxury_service_card.dart';
+import 'package:petpal/features/profile/presentation/screens/profile_screen.dart';
+
+import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
+import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
+import 'package:petpal/features/explore/presentation/widgets/poi_card.dart';
+import 'package:petpal/core/providers/navigation_provider.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -58,8 +72,6 @@ class UserHomeScreen extends ConsumerStatefulWidget {
 
 class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
     with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
-
   // Mock cards (later replace with Firestore)
   User? get _user => FirebaseAuth.instance.currentUser;
 
@@ -138,58 +150,40 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final currentIndex = ref.watch(homeTabIndexProvider);
+
     final tabs = <Widget>[
       _HomeTab(
         onAction: (msg) => _toast(msg),
+        onTabChange: (index) =>
+            ref.read(homeTabIndexProvider.notifier).setIndex(index),
       ),
+      const ExploreScreen(),
       const LostFoundFeedScreen(),
-      const _WalksTab(),
-      _SittingTab(
-        onAction: (msg) => _toast(msg),
-      ),
+      const BookingsScreen(), // Unified redesigned Bookings
+      const CommunityFeedScreen(),
       const _ChatTab(),
     ];
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AppScaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              if (_currentIndex == 0)
-                _ModernTopBar(
-                  displayName: _displayName,
-                  photoUrl: ref.watch(currentUserProfileProvider).asData?.value?.photoUrl ?? _user?.photoURL,
-                  onProfilePressed: () => context.push('/profile'),
-                  onLogoutPressed: _confirmLogout,
-                ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.02, 0),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
-                    ),
-                  ),
-                  child: KeyedSubtree(
-                    key: ValueKey(_currentIndex),
-                    child: tabs[_currentIndex],
-                  ),
-                ),
-              ),
-            ],
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: child,
+          ),
+          child: KeyedSubtree(
+            key: ValueKey(currentIndex),
+            child: tabs[currentIndex],
           ),
         ),
         bottomNavigationBar: AppBottomNav(
-          currentIndex: _currentIndex,
-          onChanged: (i) => setState(() => _currentIndex = i),
+          currentIndex: currentIndex,
+          onChanged: (i) => ref.read(homeTabIndexProvider.notifier).setIndex(i),
           items: const [
             AppNavItem(
               icon: Icons.home_outlined,
@@ -197,19 +191,24 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
               label: 'בית',
             ),
             AppNavItem(
+              icon: Icons.explore_outlined,
+              activeIcon: Icons.explore_rounded,
+              label: 'גלה',
+            ),
+            AppNavItem(
               icon: Icons.pets_outlined,
               activeIcon: Icons.pets_rounded,
               label: 'אבודים',
             ),
             AppNavItem(
-              icon: Icons.directions_walk_outlined,
-              activeIcon: Icons.directions_walk_rounded,
-              label: 'טיולים',
+              icon: Icons.calendar_today_outlined,
+              activeIcon: Icons.calendar_today_rounded,
+              label: 'הזמנות',
             ),
             AppNavItem(
-              icon: Icons.home_work_outlined,
-              activeIcon: Icons.home_work_rounded,
-              label: 'שמירה',
+              icon: Icons.diversity_3_outlined,
+              activeIcon: Icons.diversity_3_rounded,
+              label: 'קהילה',
             ),
             AppNavItem(
               icon: Icons.chat_bubble_outline_rounded,
@@ -223,177 +222,473 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
   }
 }
 
-class _ModernTopBar extends StatelessWidget {
-  final String displayName;
-  final String? photoUrl;
-  final VoidCallback onProfilePressed;
-  final VoidCallback onLogoutPressed;
-
-  const _ModernTopBar({
-    required this.displayName,
-    required this.onProfilePressed,
-    required this.onLogoutPressed,
-    this.photoUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
-        children: [
-          // Avatar
-          AppAvatar(
-            name: displayName,
-            photoUrl: photoUrl,
-            size: 44,
-            onTap: onProfilePressed,
-          ),
-          const SizedBox(width: 12),
-          // Greeting
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'שלום, $displayName 👋',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.h3,
-                ),
-                Text(
-                  'מה תרצה/י לעשות היום?',
-                  style: AppTextStyles.caption,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Logout button
-          _PillIconButton(
-            icon: Icons.logout_rounded,
-            tooltip: 'התנתקות',
-            onTap: onLogoutPressed,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HomeTab extends ConsumerWidget {
+class _HomeTab extends ConsumerStatefulWidget {
   final void Function(String msg) onAction;
+  final void Function(int index) onTabChange;
 
   const _HomeTab({
     required this.onAction,
+    required this.onTabChange,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(feedPostsProvider);
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  ConsumerState<_HomeTab> createState() => _HomeTabState();
+}
 
-    return Column(
+class _HomeTabState extends ConsumerState<_HomeTab> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showStickySearch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Show sticky search when scrolled past hero (approx 460px)
+    if (_scrollController.offset > 460 && !_showStickySearch) {
+      setState(() => _showStickySearch = true);
+    } else if (_scrollController.offset <= 460 && _showStickySearch) {
+      setState(() => _showStickySearch = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final requestsAsync = ref.watch(sittingRequestsProvider);
+    final sittersAsync = ref.watch(filteredSittingServicesProvider);
+    final parksAsync = ref.watch(topRatedPOIsProvider(type: POIType.park));
+    final vetsAsync = ref.watch(topRatedPOIsProvider(type: POIType.vet));
+    final storesAsync = ref.watch(topRatedPOIsProvider(type: POIType.store));
+
+    return Stack(
       children: [
-        // Create post button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: AppButton(
-            label: 'פוסט חדש',
-            leadingIcon: Icons.add_rounded,
-            onTap: () => context.push('/feed/create'),
-          ),
-        ),
-        const SizedBox(height: 10),
+        CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // 1. Parallax Hero
+            LuxuryHero(
+              imageUrl:
+                  'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=2000&auto=format&fit=crop',
+              scrollController: _scrollController,
+              searchBar: const GlassSearchBar(),
+              onProfileTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              },
+            ),
 
-        // Feed posts
-        Expanded(
-          child: RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: () async {
-              ref.invalidate(feedPostsProvider);
-              // Wait a moment for the stream to re-establish
-              await Future.delayed(const Duration(milliseconds: 500));
-            },
-            child: postsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-              error: (e, _) => SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.5,
-                  child: Center(
-                    child: Text('שגיאה בטעינת הפיד: $e'),
+            // 2. Category Chips
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 32, bottom: 24),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.marginPage),
+                  child: Row(
+                    children: [
+                      DiscoveryChip(
+                          label: 'שמירה',
+                          icon: Icons.home_work_outlined,
+                          onTap: () => context.push('/sitting/marketplace')),
+                      const SizedBox(width: 12),
+                      DiscoveryChip(
+                          label: 'גינות כלבים',
+                          icon: Icons.park_rounded,
+                          onTap: () {
+                            ref.read(exploreTabIndexProvider.notifier).state =
+                                1;
+                            widget.onTabChange(1);
+                          }),
+                      const SizedBox(width: 12),
+                      DiscoveryChip(
+                          label: 'וטרינרים',
+                          icon: Icons.medical_services_rounded,
+                          onTap: () {
+                            ref.read(exploreTabIndexProvider.notifier).state =
+                                2;
+                            widget.onTabChange(1);
+                          }),
+                      const SizedBox(width: 12),
+                      DiscoveryChip(
+                          label: 'חנויות חיות',
+                          icon: Icons.shopping_bag_rounded,
+                          onTap: () {
+                            ref.read(exploreTabIndexProvider.notifier).state =
+                                3;
+                            widget.onTabChange(1);
+                          }),
+                    ],
                   ),
                 ),
               ),
-              data: (posts) {
-                if (posts.isEmpty) {
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.5,
-                      child: Center(
+            ),
+
+            // 3. My Requests Section (Priority — first)
+            SliverToBoxAdapter(
+              child: requestsAsync.when(
+                data: (requests) => HomeTopRatedSection(
+                  title: 'הבקשות שלי',
+                  itemHeight: 240,
+                  onMoreTap: () {
+                    ref.read(exploreTabIndexProvider.notifier).state = 4;
+                    widget.onTabChange(1);
+                  },
+                  itemCount: requests.take(10).length,
+                  emptyState: const EmptyStateWidget(
+                    title: 'אין בקשות פעילות',
+                    subtitle: 'הבקשות שלך יופיעו כאן',
+                    icon: Icons.inbox_rounded,
+                  ),
+                  itemBuilder: (context, index) {
+                    final req = requests[index];
+                    return Container(
+                      width: 280, // Match Luxury width
+                      decoration: BoxDecoration(
+                        color: AppColors.pureWhite,
+                        borderRadius: AppRadius.organicRadius,
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: AppShadows.premium,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => context.push('/sitting/request/${req.id}'),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.feed_outlined,
-                                size: 64,
-                                color: AppColors.textSecondary
-                                    .withOpacity(0.5)),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'אין פוסטים עדיין',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textSecondary,
+                            // Header Icon Area
+                            SizedBox(
+                              height: 100, // Slightly taller for picture
+                              width: double.infinity,
+                              child: CachedNetworkImage(
+                                imageUrl:
+                                    'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&q=80&w=800',
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.1),
+                                  child: const Center(
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2)),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.1),
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.pets_rounded,
+                                          color: AppColors.primary, size: 24),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'משוך/י למטה לרענון',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textMuted,
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          req.petName,
+                                          style: AppTextStyles.headlineSm,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusColor(req.status)
+                                              .withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          _getStatusLabel(req.status),
+                                          style: AppTextStyles.labelSm.copyWith(
+                                            color: _getStatusColor(req.status),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    req.area ?? 'לא צוין מיקום',
+                                    style: AppTextStyles.labelMd
+                                        .copyWith(color: AppColors.textMuted),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today_outlined,
+                                          size: 14, color: AppColors.textMuted),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'בקשה פתוחה',
+                                        style: AppTextStyles.labelSm,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  },
+                ),
+                loading: () => const SizedBox(
+                  height: 140,
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
 
-                return ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: posts.length,
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 4. Sitters Section (Live Firestore data)
+            SliverToBoxAdapter(
+              child: sittersAsync.when(
+                data: (sitters) {
+                  final top10 = (sitters.toList()
+                        ..sort(
+                            (a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0)))
+                      .take(10)
+                      .toList();
+                  return HomeTopRatedSection(
+                    title: 'שומרים',
+                    itemHeight: 360,
+                    onMoreTap: () {
+                      ref.read(exploreTabIndexProvider.notifier).state = 0;
+                      widget.onTabChange(1);
+                    },
+                    itemCount: top10.length,
+                    emptyState: const EmptyStateWidget(
+                      title: 'אין שומרים זמינים',
+                      subtitle: 'שומרים חדשים יתווספו בקרוב',
+                      icon: Icons.person_search_rounded,
+                    ),
+                    itemBuilder: (context, index) {
+                      final sitter = top10[index];
+                      return LuxuryServiceCard(
+                        title: sitter.providerName,
+                        serviceType: sitter.petTypes.join(' • '),
+                        price: '₪${sitter.priceText}',
+                        rating: (sitter.rating ?? 0).toStringAsFixed(1),
+                        location: sitter.area ?? '',
+                        imageUrl: sitter.providerPhotoUrl ?? '',
+                        onTap: () =>
+                            context.push('/sitting/detail/${sitter.id}'),
+                      );
+                    },
+                  );
+                },
+                loading: () => const SizedBox(
+                  height: 360,
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 5. Dog Parks Section
+            SliverToBoxAdapter(
+              child: parksAsync.when(
+                data: (parks) => HomeTopRatedSection(
+                  title: 'גינות כלבים',
+                  itemHeight: 300,
+                  onMoreTap: () {
+                    ref.read(exploreTabIndexProvider.notifier).state = 1;
+                    ref.read(homeTabIndexProvider.notifier).setIndex(1);
+                  },
+                  itemCount: parks.length,
+                  emptyState: const EmptyStateWidget(
+                    title: 'אין גינות כלבים באזור',
+                    subtitle: 'נסה לחפש באזור אחר',
+                    icon: Icons.park_rounded,
+                  ),
                   itemBuilder: (context, index) {
-                    final post = posts[index];
+                    final poi = parks[index];
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _FeedPostCard(
-                        post: post,
-                        currentUid: uid,
-                        onTap: () => context.push('/feed/${post.id}'),
-                        onLike: () {
-                          ref
-                              .read(feedRepositoryProvider)
-                              .toggleLike(post.id, uid);
-                        },
+                      padding: const EdgeInsets.only(left: 16),
+                      child: POICard(
+                        poi: poi,
+                        isCompact: true,
+                        onTap: () => context.push('/explore/poi/${poi.id}'),
                       ),
                     );
                   },
-                );
-              },
+                ),
+                loading: () => const SizedBox(
+                  height: 240,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 6. Vets Section
+            SliverToBoxAdapter(
+              child: vetsAsync.when(
+                data: (vets) => HomeTopRatedSection(
+                  title: 'וטרינרים',
+                  itemHeight: 300,
+                  onMoreTap: () {
+                    ref.read(exploreTabIndexProvider.notifier).state = 2;
+                    ref.read(homeTabIndexProvider.notifier).setIndex(1);
+                  },
+                  itemCount: vets.length,
+                  emptyState: const EmptyStateWidget(
+                    title: 'אין וטרינרים באזור',
+                    subtitle: 'נסה לחפש באזור אחר',
+                    icon: Icons.medical_services_rounded,
+                  ),
+                  itemBuilder: (context, index) {
+                    final poi = vets[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: POICard(
+                        poi: poi,
+                        isCompact: true,
+                        onTap: () => context.push('/explore/poi/${poi.id}'),
+                      ),
+                    );
+                  },
+                ),
+                loading: () => const SizedBox(
+                  height: 240,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 7. Stores Section
+            SliverToBoxAdapter(
+              child: storesAsync.when(
+                data: (stores) => HomeTopRatedSection(
+                  title: 'חנויות',
+                  itemHeight: 300,
+                  onMoreTap: () {
+                    ref.read(exploreTabIndexProvider.notifier).state = 3;
+                    ref.read(homeTabIndexProvider.notifier).setIndex(1);
+                  },
+                  itemCount: stores.length,
+                  emptyState: const EmptyStateWidget(
+                    title: 'אין חנויות באזור',
+                    subtitle: 'נסה לחפש באזור אחר',
+                    icon: Icons.shopping_bag_rounded,
+                  ),
+                  itemBuilder: (context, index) {
+                    final poi = stores[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: POICard(
+                        poi: poi,
+                        isCompact: true,
+                        onTap: () => context.push('/explore/poi/${poi.id}'),
+                      ),
+                    );
+                  },
+                ),
+                loading: () => const SizedBox(
+                  height: 240,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ],
+        ),
+
+        // Sticky Search Bar Overlay
+        if (_showStickySearch)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                bottom: 12,
+                left: AppSpacing.marginPage,
+                right: AppSpacing.marginPage,
+              ),
+              color: AppColors.surface.withValues(alpha: 0.95),
+              child: const GlassSearchBar(),
             ),
           ),
-        ),
       ],
     );
+  }
+
+  Color _getStatusColor(SittingStatus status) {
+    switch (status) {
+      case SittingStatus.open:
+        return const Color(0xFFFF9800);
+      case SittingStatus.taken:
+        return const Color(0xFF4CAF50);
+      case SittingStatus.declined:
+        return const Color(0xFFFF4B4B);
+      case SittingStatus.closed:
+        return AppColors.primary;
+    }
+  }
+
+  String _getStatusLabel(SittingStatus status) {
+    switch (status) {
+      case SittingStatus.open:
+        return 'ממתין';
+      case SittingStatus.taken:
+        return 'אושר';
+      case SittingStatus.declined:
+        return 'נדחה';
+      case SittingStatus.closed:
+        return 'הושלם';
+    }
   }
 }
 
@@ -426,11 +721,16 @@ class _FeedPostCard extends StatelessWidget {
     final isTip = post.type == PostType.tip;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: AppRadius.xxlRadius,
       onTap: onTap,
-      child: GlassCard(
-        useBlur: true,
-        padding: const EdgeInsets.all(14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: AppRadius.xxlRadius,
+          boxShadow: AppShadows.premium,
+          border: Border.all(color: AppColors.borderFaint),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -441,27 +741,22 @@ class _FeedPostCard extends StatelessWidget {
                   uid: post.authorUid,
                   fallbackName: post.authorName,
                   fallbackPhotoUrl: post.authorPhotoUrl,
-                  size: 40,
+                  size: 42,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         post.authorName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                        ),
+                        style: AppTextStyles.h3.copyWith(fontSize: 15),
                       ),
                       Text(
                         _timeAgo,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary.withOpacity(0.8),
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -472,21 +767,20 @@ class _FeedPostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.12),
+                      color: AppColors.feed.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.lightbulb_outline_rounded,
-                            size: 14, color: Color(0xFFF59E0B)),
-                        SizedBox(width: 4),
+                        const Icon(Icons.lightbulb_outline_rounded,
+                            size: 14, color: AppColors.feed),
+                        const SizedBox(width: 4),
                         Text(
                           'טיפ',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFF59E0B),
+                          style: AppTextStyles.label.copyWith(
+                            color: AppColors.feed,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
@@ -495,14 +789,12 @@ class _FeedPostCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             // Content
             Text(
               post.content,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              style: AppTextStyles.body.copyWith(
                 color: AppColors.textPrimary,
                 height: 1.5,
               ),
@@ -510,16 +802,16 @@ class _FeedPostCard extends StatelessWidget {
 
             // Optional image
             if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: AppRadius.xlRadius,
                 child: CachedNetworkImage(
                   imageUrl: post.imageUrl!,
                   width: double.infinity,
-                  height: 200,
+                  height: 220,
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
-                    height: 200,
+                    height: 220,
                     color: AppColors.borderFaint,
                     child: const Center(
                       child: CircularProgressIndicator(
@@ -529,7 +821,7 @@ class _FeedPostCard extends StatelessWidget {
                     ),
                   ),
                   errorWidget: (_, __, ___) => Container(
-                    height: 200,
+                    height: 220,
                     color: AppColors.borderFaint,
                     child: const Icon(Icons.broken_image_rounded,
                         color: AppColors.textMuted),
@@ -538,69 +830,212 @@ class _FeedPostCard extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             // Actions row
             Row(
               children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                _PostAction(
+                  icon: isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  label: '${post.likes.length}',
+                  color: isLiked ? AppColors.danger : AppColors.textSecondary,
                   onTap: onLike,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isLiked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          size: 20,
-                          color: isLiked
-                              ? const Color(0xFFFB7185)
-                              : AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${post.likes.length}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: isLiked
-                                ? const Color(0xFFFB7185)
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                ),
+                const SizedBox(width: 16),
+                _PostAction(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: '${post.commentCount}',
+                  color: AppColors.textSecondary,
+                  onTap: onTap,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveCareTracker extends StatelessWidget {
+  final String petName;
+  final String providerName;
+  final String status;
+  final String startTime;
+
+  const _ActiveCareTracker({
+    required this.petName,
+    required this.providerName,
+    required this.status,
+    required this.startTime,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: GlassCard(
+        blur: 20,
+        opacity: 0.9,
+        padding: const EdgeInsets.all(16),
+        borderRadius: AppRadius.xxlRadius,
+        boxShadow: AppShadows.premium,
+        color: AppColors.successLight,
+        border: Border.all(
+            color: AppColors.success.withValues(alpha: 0.1), width: 2),
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.pets_rounded,
+                        size: 28, color: AppColors.success),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+              ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
                       Text(
-                        '${post.commentCount}',
-                        style: const TextStyle(
-                          fontSize: 13,
+                        status,
+                        style: AppTextStyles.label.copyWith(
+                          color: AppColors.success,
                           fontWeight: FontWeight.w900,
-                          color: AppColors.textSecondary,
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      const _PulseDot(),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '$petName נהנה מזמן איכות עם $providerName',
+                    style: AppTextStyles.bodyBold.copyWith(height: 1.2),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: AppShadows.subtle,
+              ),
+              child: const Icon(
+                Icons.map_rounded,
+                color: AppColors.success,
+                size: 22,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PulseDot extends StatefulWidget {
+  const _PulseDot();
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: const BoxDecoration(
+          color: AppColors.success,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class _PostAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PostAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTextStyles.bodyBold.copyWith(
+                fontSize: 13,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -658,8 +1093,8 @@ class _WalksTabState extends ConsumerState<_WalksTab> {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _selectedView == 0
-                ? _WalkRequestsView(key: const ValueKey('requests'))
-                : _WalkServicesView(key: const ValueKey('services')),
+                ? const _WalkRequestsView(key: ValueKey('requests'))
+                : const _WalkServicesView(key: ValueKey('services')),
           ),
         ),
       ],
@@ -796,8 +1231,7 @@ class _WalkRequestsView extends ConsumerWidget {
                   ),
                   Expanded(
                     child: GridView.builder(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -829,18 +1263,26 @@ class _WalkRequestCard extends StatelessWidget {
   const _WalkRequestCard({required this.request, required this.colorIndex});
 
   static const _bgColors = [
-    Color(0xFFFFB347), Color(0xFF80DEEA), Color(0xFFCE93D8),
-    Color(0xFFF48FB1), Color(0xFF90CAF9), Color(0xFFA5D6A7),
-    Color(0xFFFFCC80), Color(0xFFEF9A9A),
+    Color(0xFFFFB347),
+    Color(0xFF80DEEA),
+    Color(0xFFCE93D8),
+    Color(0xFFF48FB1),
+    Color(0xFF90CAF9),
+    Color(0xFFA5D6A7),
+    Color(0xFFFFCC80),
+    Color(0xFFEF9A9A),
   ];
 
   bool get _isOpen => request.status == WalkStatus.open;
 
   String get _petTypeLabel {
     switch (request.petType) {
-      case PetType.dog: return 'כלב';
-      case PetType.cat: return 'חתול';
-      case PetType.other: return 'אחר';
+      case PetType.dog:
+        return 'כלב';
+      case PetType.cat:
+        return 'חתול';
+      case PetType.other:
+        return 'אחר';
     }
   }
 
@@ -852,9 +1294,12 @@ class _WalkRequestCard extends StatelessWidget {
 
   IconData get _fallbackIcon {
     switch (request.petType) {
-      case PetType.dog: return Icons.directions_walk_rounded;
-      case PetType.cat: return Icons.pets_rounded;
-      case PetType.other: return Icons.cruelty_free_rounded;
+      case PetType.dog:
+        return Icons.directions_walk_rounded;
+      case PetType.cat:
+        return Icons.pets_rounded;
+      case PetType.other:
+        return Icons.cruelty_free_rounded;
     }
   }
 
@@ -901,8 +1346,7 @@ class _WalkRequestCard extends StatelessWidget {
                     else
                       Center(
                           child: Icon(_fallbackIcon,
-                              size: 60,
-                              color: Colors.white.withOpacity(0.7))),
+                              size: 60, color: Colors.white.withOpacity(0.7))),
                     // Status pill
                     Positioned(
                       top: 8,
@@ -984,7 +1428,7 @@ class _WalkRequestCard extends StatelessWidget {
                       height: 30,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: AppColors.walksGradient,
+                          gradient: AppColors.primaryGradient,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Center(
@@ -1006,7 +1450,6 @@ class _WalkRequestCard extends StatelessWidget {
     );
   }
 }
-
 
 // ── Icon chip used in owner request cards ────────────────────────────────────
 class _OwnerChip extends StatelessWidget {
@@ -1101,8 +1544,8 @@ class _WalkServicesViewState extends ConsumerState<_WalkServicesView> {
 
         Expanded(
           child: servicesAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.primary)),
             error: (e, _) => const Center(
               child: Text('שגיאה בטעינת השירותים',
                   style: TextStyle(color: AppColors.textSecondary)),
@@ -1136,8 +1579,7 @@ class _WalkServicesViewState extends ConsumerState<_WalkServicesView> {
                   childAspectRatio: 0.58,
                 ),
                 itemCount: services.length,
-                itemBuilder: (_, i) =>
-                    _WalkServiceCard(service: services[i]),
+                itemBuilder: (_, i) => _WalkServiceCard(service: services[i]),
               );
             },
           ),
@@ -1202,9 +1644,9 @@ class _SittingTabState extends ConsumerState<_SittingTab> {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _selectedView == 0
-                ? _SittingRequestsView(key: const ValueKey('sitting_requests'))
-                : _SittingServicesView(
-                    key: const ValueKey('sitting_services'),
+                ? const _SittingRequestsView(key: ValueKey('sitting_requests'))
+                : const _SittingServicesView(
+                    key: ValueKey('sitting_services'),
                   ),
           ),
         ),
@@ -1295,8 +1737,7 @@ class _SittingRequestsView extends ConsumerWidget {
                   ),
                   Expanded(
                     child: GridView.builder(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -1324,22 +1765,29 @@ class _SittingRequestsView extends ConsumerWidget {
 class _SittingRequestCard extends StatelessWidget {
   final SittingRequest request;
   final int colorIndex;
-  const _SittingRequestCard(
-      {required this.request, required this.colorIndex});
+  const _SittingRequestCard({required this.request, required this.colorIndex});
 
   static const _bgColors = [
-    Color(0xFFCE93D8), Color(0xFF80DEEA), Color(0xFFFFB347),
-    Color(0xFFF48FB1), Color(0xFF90CAF9), Color(0xFFA5D6A7),
-    Color(0xFFFFCC80), Color(0xFFEF9A9A),
+    Color(0xFFCE93D8),
+    Color(0xFF80DEEA),
+    Color(0xFFFFB347),
+    Color(0xFFF48FB1),
+    Color(0xFF90CAF9),
+    Color(0xFFA5D6A7),
+    Color(0xFFFFCC80),
+    Color(0xFFEF9A9A),
   ];
 
   bool get _isOpen => request.status == SittingStatus.open;
 
   String get _petTypeLabel {
     switch (request.petType) {
-      case PetType.dog: return 'כלב';
-      case PetType.cat: return 'חתול';
-      case PetType.other: return 'אחר';
+      case PetType.dog:
+        return 'כלב';
+      case PetType.cat:
+        return 'חתול';
+      case PetType.other:
+        return 'אחר';
     }
   }
 
@@ -1351,9 +1799,12 @@ class _SittingRequestCard extends StatelessWidget {
 
   IconData get _fallbackIcon {
     switch (request.petType) {
-      case PetType.dog: return Icons.directions_walk_rounded;
-      case PetType.cat: return Icons.pets_rounded;
-      case PetType.other: return Icons.cruelty_free_rounded;
+      case PetType.dog:
+        return Icons.directions_walk_rounded;
+      case PetType.cat:
+        return Icons.pets_rounded;
+      case PetType.other:
+        return Icons.cruelty_free_rounded;
     }
   }
 
@@ -1406,8 +1857,7 @@ class _SittingRequestCard extends StatelessWidget {
                     else
                       Center(
                           child: Icon(_fallbackIcon,
-                              size: 60,
-                              color: Colors.white.withOpacity(0.7))),
+                              size: 60, color: Colors.white.withOpacity(0.7))),
                     // Status pill
                     Positioned(
                       top: 8,
@@ -1511,6 +1961,7 @@ class _SittingRequestCard extends StatelessWidget {
     );
   }
 }
+
 class _SittingServicesView extends ConsumerStatefulWidget {
   const _SittingServicesView({super.key});
 
@@ -2187,8 +2638,7 @@ class _RatingRow extends StatelessWidget {
 class _SittingServiceDetailSheet extends ConsumerStatefulWidget {
   final SittingService service;
   final WidgetRef ref;
-  const _SittingServiceDetailSheet(
-      {required this.service, required this.ref});
+  const _SittingServiceDetailSheet({required this.service, required this.ref});
   @override
   ConsumerState<_SittingServiceDetailSheet> createState() =>
       _SittingServiceDetailSheetState();
@@ -2233,13 +2683,12 @@ class _SittingServiceDetailSheetState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
@@ -2277,8 +2726,8 @@ class _SittingServiceDetailSheetState
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.textPrimary)),
                           const SizedBox(height: 2),
-                          Text('שירות שמירה',
-                              style: const TextStyle(
+                          const Text('שירות שמירה',
+                              style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textMuted,
                                   fontWeight: FontWeight.w600)),
@@ -2305,18 +2754,16 @@ class _SittingServiceDetailSheetState
                 // Price
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     color: accent.withOpacity(0.07),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                          Icons.account_balance_wallet_outlined,
-                          size: 18,
-                          color: accent),
+                      const Icon(Icons.account_balance_wallet_outlined,
+                          size: 18, color: accent),
                       const SizedBox(width: 8),
                       const Text('מחיר:  ',
                           style: TextStyle(
@@ -2371,8 +2818,7 @@ class _SittingServiceDetailSheetState
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF7ED),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFFFED7AA)),
+                      border: Border.all(color: const Color(0xFFFED7AA)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2421,15 +2867,12 @@ class _SittingServiceDetailSheetState
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white))
+                                  strokeWidth: 2, color: Colors.white))
                           : const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    color: Colors.white,
-                                    size: 18),
+                                Icon(Icons.chat_bubble_outline_rounded,
+                                    color: Colors.white, size: 18),
                                 SizedBox(width: 8),
                                 Text('צור קשר',
                                     style: TextStyle(
@@ -2455,8 +2898,7 @@ class _SittingServiceDetailSheetState
 class _WalkServiceDetailSheet extends ConsumerStatefulWidget {
   final WalkService service;
   final WidgetRef ref;
-  const _WalkServiceDetailSheet(
-      {required this.service, required this.ref});
+  const _WalkServiceDetailSheet({required this.service, required this.ref});
   @override
   ConsumerState<_WalkServiceDetailSheet> createState() =>
       _WalkServiceDetailSheetState();
@@ -2501,13 +2943,12 @@ class _WalkServiceDetailSheetState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
@@ -2570,18 +3011,16 @@ class _WalkServiceDetailSheetState
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     color: accent.withOpacity(0.07),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                          Icons.account_balance_wallet_outlined,
-                          size: 18,
-                          color: accent),
+                      const Icon(Icons.account_balance_wallet_outlined,
+                          size: 18, color: accent),
                       const SizedBox(width: 8),
                       const Text('מחיר:  ',
                           style: TextStyle(
@@ -2634,8 +3073,7 @@ class _WalkServiceDetailSheetState
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF7ED),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFFFED7AA)),
+                      border: Border.all(color: const Color(0xFFFED7AA)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2669,10 +3107,7 @@ class _WalkServiceDetailSheetState
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       gradient: const LinearGradient(
-                          colors: [
-                            AppColors.primary,
-                            AppColors.statusOpen
-                          ]),
+                          colors: [AppColors.primary, AppColors.statusOpen]),
                       boxShadow: [
                         BoxShadow(
                             color: accent.withOpacity(0.35),
@@ -2686,15 +3121,12 @@ class _WalkServiceDetailSheetState
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white))
+                                  strokeWidth: 2, color: Colors.white))
                           : const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    color: Colors.white,
-                                    size: 18),
+                                Icon(Icons.chat_bubble_outline_rounded,
+                                    color: Colors.white, size: 18),
                                 SizedBox(width: 8),
                                 Text('צור קשר',
                                     style: TextStyle(
@@ -2743,9 +3175,7 @@ class _DetailInfoRow extends StatelessWidget {
             const Spacer(),
             Text(value,
                 style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: color)),
+                    fontSize: 13, fontWeight: FontWeight.w800, color: color)),
           ],
         ),
       );
@@ -2882,8 +3312,7 @@ class _ChatTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final myUid =
-        ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
+    final myUid = ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
     final async = ref.watch(conversationsProvider);
 
     return async.when(
@@ -2922,14 +3351,19 @@ class _ChatTab extends ConsumerWidget {
                 child: AppCard(
                   onTap: () => context.push(
                     '/chat/${c['id']}',
-                    extra: {'otherName': otherName, 'otherPhotoUrl': otherPhotoUrl, 'otherUid': otherEntry.key},
+                    extra: {
+                      'otherName': otherName,
+                      'otherPhotoUrl': otherPhotoUrl,
+                      'otherUid': otherEntry.key
+                    },
                   ),
                   child: Row(
                     children: [
                       LiveUserAvatar(
                         uid: otherEntry.key,
                         fallbackName: otherName,
-                        fallbackPhotoUrl: otherPhotoUrl.isNotEmpty ? otherPhotoUrl : null,
+                        fallbackPhotoUrl:
+                            otherPhotoUrl.isNotEmpty ? otherPhotoUrl : null,
                         size: 48,
                       ),
                       const SizedBox(width: 12),
@@ -2941,8 +3375,8 @@ class _ChatTab extends ConsumerWidget {
                             const SizedBox(height: 2),
                             Text(
                               lastMsg.isEmpty ? 'התחל שיחה...' : lastMsg,
-                              style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.textSecondary),
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.textSecondary),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -2958,6 +3392,68 @@ class _ChatTab extends ConsumerWidget {
             }),
         ],
       ),
+    );
+  }
+}
+
+class _FeaturedSittersSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sittersAsync = ref.watch(sittingServicesProvider);
+
+    return sittersAsync.when(
+      data: (sitters) {
+        if (sitters.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.marginPage),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('שומרים מומלצים', style: AppTextStyles.headlineMd),
+                  TextButton(
+                    onPressed: () => context.push('/sitting/marketplace'),
+                    child: const Text('ראה הכל'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 360,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.marginPage),
+                itemCount: sitters.length,
+                itemBuilder: (context, index) {
+                  final s = sitters[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 20),
+                    child: LuxuryServiceCard(
+                      title: s.providerName,
+                      serviceType: s.sittingLocation,
+                      price: s.priceText,
+                      rating: s.rating?.toString() ?? 'חדש',
+                      location: s.area,
+                      imageUrl: s.providerPhotoUrl ??
+                          'https://images.unsplash.com/photo-1544568100-847a948585b9?q=80&w=1000',
+                      onTap: () => context.push('/sitting/detail/${s.id}'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox(
+          height: 360, child: Center(child: CircularProgressIndicator())),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
