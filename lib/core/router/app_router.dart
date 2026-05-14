@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,6 +37,15 @@ import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.d
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/create_lost_found_post_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_post_detail_screen.dart';
+import 'package:petpal/features/sitting/presentation/screens/sitter_marketplace_screen.dart';
+import 'package:petpal/features/sitting/presentation/screens/sitter_detail_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/poi_detail_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/admin_hub_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/sitter_verification_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/poi_management_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/moderation_queue_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/user_directory_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -141,8 +151,23 @@ class AppRouter {
       GoRoute(
         path: '/sitting/service/create',
         builder: (context, state) => CreateSittingServiceScreen(
-          service: state.extra as SittingService?,
+          initialService: state.extra as SittingService?,
         ),
+      ),
+      GoRoute(
+        path: '/sitting/create-service',
+        builder: (context, state) => const CreateSittingServiceScreen(),
+      ),
+      GoRoute(
+        path: '/sitting/marketplace',
+        builder: (context, state) => const SitterMarketplaceScreen(),
+      ),
+      GoRoute(
+        path: '/sitting/detail/:sitterId',
+        builder: (context, state) {
+          final sitterId = state.pathParameters['sitterId']!;
+          return SitterDetailScreen(sitterId: sitterId);
+        },
       ),
       GoRoute(
         path: '/profile/bookings',
@@ -164,8 +189,11 @@ class AppRouter {
         path: '/chat/:conversationId',
         builder: (context, state) {
           final extra = state.extra;
-          final otherName = extra is Map ? (extra['otherName'] as String? ?? '') : (extra as String? ?? '');
-          final otherPhotoUrl = extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
+          final otherName = extra is Map
+              ? (extra['otherName'] as String? ?? '')
+              : (extra as String? ?? '');
+          final otherPhotoUrl =
+              extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
           final otherUid = extra is Map ? (extra['otherUid'] as String?) : null;
           return ChatScreen(
             conversationId: state.pathParameters['conversationId']!,
@@ -189,11 +217,43 @@ class AppRouter {
           post: state.extra as LostFoundPost,
         ),
       ),
+      GoRoute(
+        path: '/explore',
+        builder: (context, state) => const ExploreScreen(),
+      ),
+      GoRoute(
+        path: '/explore/poi/:poiId',
+        builder: (context, state) {
+          final poiId = state.pathParameters['poiId']!;
+          return POIDetailScreen(poiId: poiId);
+        },
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminHubScreen(),
+      ),
+      GoRoute(
+        path: '/admin/verification',
+        builder: (context, state) => const SitterVerificationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/poi',
+        builder: (context, state) => const POIManagementScreen(),
+      ),
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (context, state) => const ModerationQueueScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const UserDirectoryScreen(),
+      ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
     redirect: (context, state) async {
       final user = FirebaseAuth.instance.currentUser;
       final location = state.matchedLocation;
+      debugPrint('🗺️ Router: location=$location, user=${user?.uid}');
 
       // Public routes that don't need auth
       const publicRoutes = [
@@ -208,13 +268,16 @@ class AppRouter {
       if (publicRoutes.contains(location)) return null;
 
       // Allow guest access to feed post details
-      if (location.startsWith('/feed/') && !location.startsWith('/feed/create')) {
+      if (location.startsWith('/feed/') &&
+          !location.startsWith('/feed/create')) {
         return null;
       }
 
       // If not logged in, redirect to onboarding
       if (user == null) return '/onboarding';
 
+      // Admin route gating - Simplified to prevent async hangs
+      // Proper role-based checking should be done within the screen build or via a Provider
       return null;
     },
   );
