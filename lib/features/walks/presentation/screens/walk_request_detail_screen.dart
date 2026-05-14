@@ -552,9 +552,9 @@ class _WalkRequestDetailScreenState
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   onSelected: (v) {
-                    if (v == 'edit')
+                    if (v == 'edit') {
                       context.push('/walks/edit', extra: _request);
-                    else if (v == 'delete') _delete();
+                    } else if (v == 'delete') _delete();
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(

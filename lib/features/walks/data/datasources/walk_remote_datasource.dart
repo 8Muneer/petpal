@@ -20,6 +20,15 @@ class WalkRemoteDatasource {
             .toList());
   }
 
+  Stream<List<WalkRequestModel>> watchAssignedRequests(String walkerUid) {
+    return _requestsRef
+        .where('sitterUid', isEqualTo: walkerUid)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => WalkRequestModel.fromFirestore(doc))
+            .toList());
+  }
+
   Stream<List<WalkRequestModel>> watchAllOpenRequests() {
     return _requestsRef
         .where('status', isEqualTo: 'open')

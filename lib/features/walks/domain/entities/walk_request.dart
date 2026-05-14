@@ -22,6 +22,8 @@ class WalkRequest extends Equatable {
   final String? specialInstructions;
   final String? budget;
   final WalkStatus status;
+  final String? sitterUid;
+  final String? sitterName;
   final DateTime? createdAt;
 
   const WalkRequest({
@@ -40,6 +42,8 @@ class WalkRequest extends Equatable {
     this.specialInstructions,
     this.budget,
     this.status = WalkStatus.open,
+    this.sitterUid,
+    this.sitterName,
     this.createdAt,
   });
 
@@ -60,6 +64,8 @@ class WalkRequest extends Equatable {
         specialInstructions,
         budget,
         status,
+        sitterUid,
+        sitterName,
         createdAt,
       ];
 }

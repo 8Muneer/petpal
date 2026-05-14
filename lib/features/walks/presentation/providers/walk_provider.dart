@@ -7,6 +7,7 @@ import 'package:petpal/features/walks/data/repositories/walk_repository_impl.dar
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/domain/repositories/walk_repository.dart';
+import 'package:rxdart/rxdart.dart';
 
 final walkDatasourceProvider = Provider<WalkRemoteDatasource>((ref) {
   return WalkRemoteDatasource(
@@ -79,4 +80,24 @@ final myWalkServicesProvider = StreamProvider<List<WalkService>>((ref) {
     });
     return sorted;
   });
+});
+
+final combinedWalkBookingsProvider = StreamProvider<List<WalkRequest>>((ref) {
+  final userAsync = ref.watch(authStateChangesProvider);
+  final uid = userAsync.asData?.value?.uid ?? '';
+  if (uid.isEmpty) return const Stream.empty();
+
+  final repository = ref.watch(walkRepositoryProvider);
+  
+  return Rx.combineLatest2(
+    repository.watchRequests(uid),
+    repository.watchAssignedRequests(uid),
+    (owned, assigned) {
+      final combined = [...owned, ...assigned];
+      // Unique by ID
+      final seen = <String>{};
+      return combined.where((req) => seen.add(req.id)).toList()
+        ..sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+    },
+  );
 });

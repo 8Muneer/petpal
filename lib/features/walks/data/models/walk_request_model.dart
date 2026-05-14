@@ -18,6 +18,8 @@ class WalkRequestModel extends WalkRequest {
     super.specialInstructions,
     super.budget,
     super.status,
+    super.sitterUid,
+    super.sitterName,
     super.createdAt,
   });
 
@@ -76,6 +78,8 @@ class WalkRequestModel extends WalkRequest {
       specialInstructions: data['specialInstructions'] as String?,
       budget: data['budget'] as String?,
       status: status,
+      sitterUid: data['sitterUid'] as String?,
+      sitterName: data['sitterName'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -97,6 +101,8 @@ class WalkRequestModel extends WalkRequest {
       'specialInstructions': specialInstructions,
       'budget': budget,
       'status': status.name,
+      'sitterUid': sitterUid,
+      'sitterName': sitterName,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }

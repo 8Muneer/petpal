@@ -12,6 +12,10 @@ class WalkRepositoryImpl implements WalkRepository {
       _datasource.watchRequests(ownerUid);
 
   @override
+  Stream<List<WalkRequest>> watchAssignedRequests(String walkerUid) =>
+      _datasource.watchAssignedRequests(walkerUid);
+
+  @override
   Future<String> createRequest(Map<String, dynamic> data) =>
       _datasource.createRequest(data);
 

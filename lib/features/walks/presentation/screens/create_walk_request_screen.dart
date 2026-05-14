@@ -6,14 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
@@ -283,7 +279,7 @@ class _CreateWalkRequestScreenState
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   children: [
                     // Pet name
-                    _FieldLabel('שם חיית המחמד'),
+                    const _FieldLabel('שם חיית המחמד'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -314,7 +310,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Pet type
-                    _FieldLabel('סוג חיית המחמד'),
+                    const _FieldLabel('סוג חיית המחמד'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -336,7 +332,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Pet gender
-                    _FieldLabel('מין חיית המחמד (אופציונלי)'),
+                    const _FieldLabel('מין חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -394,7 +390,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Pet photo
-                    _FieldLabel('תמונה של חיית המחמד (אופציונלי)'),
+                    const _FieldLabel('תמונה של חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
                     if (hasImage) ...[
                       Stack(
@@ -495,7 +491,7 @@ class _CreateWalkRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FieldLabel('תאריך'),
+                              const _FieldLabel('תאריך'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
@@ -538,7 +534,7 @@ class _CreateWalkRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FieldLabel('שעה'),
+                              const _FieldLabel('שעה'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
@@ -582,7 +578,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Duration
-                    _FieldLabel('משך הטיול'),
+                    const _FieldLabel('משך הטיול'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -605,7 +601,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Area
-                    _FieldLabel('מיקום'),
+                    const _FieldLabel('מיקום'),
                     const SizedBox(height: 6),
                     LocationPickerField(
                       initialValue: _area,
@@ -615,7 +611,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Special instructions
-                    _FieldLabel('הוראות מיוחדות (אופציונלי)'),
+                    const _FieldLabel('הוראות מיוחדות (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -647,7 +643,7 @@ class _CreateWalkRequestScreenState
                     const SizedBox(height: 16),
 
                     // Budget
-                    _FieldLabel('תקציב (אופציונלי)'),
+                    const _FieldLabel('תקציב (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       
