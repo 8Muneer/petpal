@@ -6,6 +6,7 @@ import 'package:petpal/core/constants/app_constants.dart';
 import 'package:petpal/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/admin_hub_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -49,6 +50,10 @@ class AuthGate extends StatelessWidget {
               }
 
               final role = (roleSnap.data ?? '').toLowerCase();
+
+              if (role == 'admin') {
+                return const AdminHubScreen();
+              }
 
               // Accept a few common spellings
               if (role == 'serviceprovider' ||
