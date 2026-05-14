@@ -68,5 +68,28 @@ service cloud.firestore {
         allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
       }
     }
+
+    // --- Admin Protected Collections ---
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /pois/{poiId} {
+      allow read: if true;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && isAdmin();
+    }
+
+    match /verification_requests/{requestId} {
+      allow create: if request.auth != null;
+      allow read, update: if request.auth != null && (
+        isAdmin() || resource.data.userId == request.auth.uid
+      );
+    }
   }
 }
