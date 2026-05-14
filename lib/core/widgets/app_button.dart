@@ -153,12 +153,9 @@ class _AppButtonState extends State<AppButton>
         return Container(
           height: height,
           decoration: BoxDecoration(
-            gradient: _isDisabled
-                ? null
-                : AppColors.primaryGradient,
-            color: _isDisabled ? AppColors.textMuted : null,
-            borderRadius: AppRadius.lgRadius,
-            boxShadow: _isDisabled ? null : AppShadows.button,
+            color: _isDisabled ? AppColors.textMuted.withValues(alpha: 0.5) : AppColors.primary,
+            borderRadius: AppRadius.xlRadius,
+            boxShadow: _isDisabled ? null : AppShadows.premium,
           ),
           child: content,
         );
@@ -167,8 +164,8 @@ class _AppButtonState extends State<AppButton>
         return Container(
           height: height,
           decoration: BoxDecoration(
-            color: AppColors.primaryFaint,
-            borderRadius: AppRadius.lgRadius,
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: AppRadius.xlRadius,
           ),
           child: content,
         );
@@ -178,7 +175,7 @@ class _AppButtonState extends State<AppButton>
           height: height,
           decoration: BoxDecoration(
             color: Colors.transparent,
-            borderRadius: AppRadius.lgRadius,
+            borderRadius: AppRadius.xlRadius,
           ),
           child: content,
         );
@@ -188,16 +185,8 @@ class _AppButtonState extends State<AppButton>
           height: height,
           decoration: BoxDecoration(
             color: _isDisabled ? AppColors.textMuted : AppColors.danger,
-            borderRadius: AppRadius.lgRadius,
-            boxShadow: _isDisabled
-                ? null
-                : [
-                    BoxShadow(
-                      color: AppColors.danger.withValues(alpha: 0.3),
-                      blurRadius: 14,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+            borderRadius: AppRadius.xlRadius,
+            boxShadow: _isDisabled ? null : AppShadows.subtle,
           ),
           child: content,
         );
@@ -207,10 +196,10 @@ class _AppButtonState extends State<AppButton>
           height: height,
           decoration: BoxDecoration(
             color: Colors.transparent,
-            borderRadius: AppRadius.lgRadius,
+            borderRadius: AppRadius.xlRadius,
             border: Border.all(
               color: _isDisabled ? AppColors.textMuted : AppColors.primary,
-              width: 1.6,
+              width: 1.5,
             ),
           ),
           child: content,
