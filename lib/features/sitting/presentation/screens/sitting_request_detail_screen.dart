@@ -13,6 +13,8 @@ import 'package:petpal/features/messaging/data/datasources/messaging_datasource.
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:petpal/features/sitting/presentation/widgets/review_submission_sheet.dart';
+import 'package:petpal/features/sitting/presentation/providers/review_provider.dart';
 
 class SittingRequestDetailScreen extends ConsumerStatefulWidget {
   final SittingRequest request;
@@ -92,8 +94,7 @@ class _SittingRequestDetailScreenState
   }
 
   Future<void> _toggleStatus() async {
-    final newStatus =
-        _isOpen ? SittingStatus.closed : SittingStatus.open;
+    final newStatus = _isOpen ? SittingStatus.closed : SittingStatus.open;
     await ref.read(sittingRepositoryProvider).updateRequest(
       _request.id,
       {'status': newStatus.name},
@@ -115,9 +116,33 @@ class _SittingRequestDetailScreenState
         specialInstructions: _request.specialInstructions,
         budget: _request.budget,
         status: newStatus,
+        sitterUid: _request.sitterUid,
+        sitterName: _request.sitterName,
         createdAt: _request.createdAt,
       );
     });
+
+    if (newStatus == SittingStatus.closed && _isOwner && _request.sitterUid != null) {
+      if (!mounted) return;
+      
+      // Check if it's a repeat booking for this sitter
+      final isRepeat = await ref.read(reviewControllerProvider.notifier)
+          .checkHasReviewed(_request.sitterUid!, _request.ownerUid);
+
+      if (!mounted) return;
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => ReviewSubmissionSheet(
+          bookingId: _request.id,
+          sitterId: _request.sitterUid!,
+          sitterName: _request.sitterName ?? 'המטפל/ת',
+          isRepeatBooking: isRepeat,
+        ),
+      );
+    }
   }
 
   Future<void> _openMaps() async {
@@ -584,9 +609,9 @@ class _SittingRequestDetailScreenState
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   onSelected: (v) {
-                    if (v == 'edit')
+                    if (v == 'edit') {
                       context.push('/sitting/edit', extra: _request);
-                    else if (v == 'delete') _delete();
+                    } else if (v == 'delete') _delete();
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(

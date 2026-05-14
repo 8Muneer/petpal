@@ -1,157 +1,104 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
-import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
+import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
-import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class CreateSittingServiceScreen extends ConsumerStatefulWidget {
-  final SittingService? service; // null = create, non-null = edit
-  const CreateSittingServiceScreen({super.key, this.service});
+  final SittingService? initialService;
+
+  const CreateSittingServiceScreen({super.key, this.initialService});
 
   @override
-  ConsumerState<CreateSittingServiceScreen> createState() =>
-      _CreateSittingServiceScreenState();
+  ConsumerState<CreateSittingServiceScreen> createState() => _CreateSittingServiceScreenState();
 }
 
-class _CreateSittingServiceScreenState
-    extends ConsumerState<CreateSittingServiceScreen> {
-  String _area = '';
-  final _priceController = TextEditingController();
+class _CreateSittingServiceScreenState extends ConsumerState<CreateSittingServiceScreen> {
   final _bioController = TextEditingController();
-
-  String _priceType = 'ללילה'; // 'ללילה' | 'ליום' | 'לפי הסכמה'
-  String _sittingLocation = 'בבית השומר'; // 'בבית השומר' | 'בבית הבעלים' | 'שניהם'
-  final Set<String> _petTypes = {'כלב'};
-  final Set<String> _availableDays = {};
-  bool _isPublishing = false;
-
-  static const _priceTypes = ['ללילה', 'ליום', 'לפי הסכמה'];
-  static const _locationOptions = ['בבית השומר', 'בבית הבעלים', 'שניהם'];
-  static const _allPetTypes = ['כלב', 'חתול', 'אחר'];
-  static const _days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-
-  static const _purple = Color(0xFF7C3AED);
-
-  bool get _isEditMode => widget.service != null;
-  bool get _allDaysSelected => _availableDays.length == _days.length;
+  final _priceController = TextEditingController();
+  final _areaController = TextEditingController();
+  int _experienceYears = 1;
+  String _sittingLocation = 'בבית השומר';
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    final s = widget.service;
-    if (s != null) {
-      _area = s.area;
-      _priceController.text = s.priceType == 'לפי הסכמה'
-          ? ''
-          : s.priceText.replaceAll('₪', '').trim();
-      _bioController.text = s.bio ?? '';
-      _priceType = s.priceType;
-      _sittingLocation = s.sittingLocation;
-      _petTypes
-        ..clear()
-        ..addAll(s.petTypes.isNotEmpty ? s.petTypes : ['כלב']);
-      _availableDays
-        ..clear()
-        ..addAll(s.availableDays);
+    if (widget.initialService != null) {
+      _bioController.text = widget.initialService!.bio ?? '';
+      // Remove currency symbol for editing
+      _priceController.text = widget.initialService!.priceText.replaceAll('₪', '').trim();
+      _areaController.text = widget.initialService!.area;
+      _experienceYears = widget.initialService!.experienceYears;
+      _sittingLocation = widget.initialService!.sittingLocation;
     }
   }
 
   @override
   void dispose() {
-    _priceController.dispose();
     _bioController.dispose();
+    _priceController.dispose();
+    _areaController.dispose();
     super.dispose();
   }
 
-  Future<void> _publish() async {
-    final area = _area.trim();
-    final rawPrice = _priceController.text.trim();
-    final priceText = _priceType == 'לפי הסכמה'
-        ? 'לפי הסכמה'
-        : (rawPrice.contains('₪') ? rawPrice : '$rawPrice₪');
+  Future<void> _save() async {
+    final bio = _bioController.text.trim();
+    final price = _priceController.text.trim();
+    final area = _areaController.text.trim();
 
     if (area.isEmpty) {
-      _showSnack('יש להזין אזור / עיר', isError: true);
+      _showSnack('יש להזין אזור פעילות', isError: true);
       return;
     }
-    if (_priceType != 'לפי הסכמה' && rawPrice.isEmpty) {
+    if (price.isEmpty) {
       _showSnack('יש להזין מחיר', isError: true);
       return;
     }
-    if (_petTypes.isEmpty) {
-      _showSnack('יש לבחור לפחות סוג חיה אחד', isError: true);
-      return;
-    }
 
-    setState(() => _isPublishing = true);
+    setState(() => _isSaving = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final bio = _bioController.text.trim();
+      final repo = ref.read(sittingRepositoryProvider);
       final data = {
         'providerUid': user.uid,
-        'providerName': user.displayName ?? user.email ?? '',
-        'providerPhotoUrl': ref.read(currentUserProfileProvider).asData?.value?.photoUrl ?? user.photoURL,
+        'providerName': user.displayName ?? 'שומר',
+        'providerPhotoUrl': user.photoURL,
+        'bio': bio,
+        'priceText': '₪$price',
         'area': area,
-        'priceText': priceText,
-        'priceType': _priceType,
-        'bio': bio.isNotEmpty ? bio : null,
-        'petTypes': _petTypes.toList(),
-        'availableDays': _availableDays.toList(),
+        'experienceYears': _experienceYears,
         'sittingLocation': _sittingLocation,
+        'isVerified': false,
         'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
       };
 
-      final datasource = ref.read(sittingDatasourceProvider);
-      if (_isEditMode) {
-        await datasource.updateSittingService(widget.service!.id, data);
+      if (widget.initialService != null) {
+        await repo.updateService(widget.initialService!.id, data);
       } else {
-        await datasource.createSittingService(data);
+        await repo.createService(data);
       }
 
-      if (!mounted) return;
-      context.pop();
-      _showSnack(_isEditMode ? 'השירות עודכן בהצלחה' : 'השירות פורסם בהצלחה');
+      if (mounted) {
+        context.pop();
+        _showSnack('הפרופיל עודכן בהצלחה!');
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _isPublishing = false);
-      _showSnack('שגיאה בשמירת השירות', isError: true);
+      setState(() => _isSaving = false);
+      _showSnack('שגיאה בשמירת הנתונים', isError: true);
     }
-  }
-
-  void _toggleAllDays() {
-    setState(() {
-      if (_allDaysSelected) {
-        _availableDays.clear();
-      } else {
-        _availableDays.addAll(_days);
-      }
-    });
   }
 
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Text(msg),
-        backgroundColor: isError ? const Color(0xFFFB7185) : _purple,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: isError ? Colors.red : AppColors.primary),
     );
   }
 
@@ -163,596 +110,84 @@ class _CreateSittingServiceScreenState
         body: SafeArea(
           child: Column(
             children: [
-              // ── Top bar ──────────────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    IconButton(
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      color: AppColors.textPrimary,
-                    ),
-                    Expanded(
-                      child: Text(
-                        _isEditMode ? 'עריכת שירות שמירה' : 'פרסם שירות שמירה',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
+                    IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_forward_rounded)),
+                    Text('פרופיל שומר', style: AppTextStyles.h2),
                   ],
                 ),
               ),
-
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
-                    // ── Location ─────────────────────────────────────────
-                    const _SectionHeader(
-                        icon: Icons.location_on_rounded, title: 'מיקום'),
+                    const Text('ספר לנו על עצמך', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    LocationPickerField(
-                      initialValue: _area,
-                      onChanged: (val) => setState(() => _area = val),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    // ── Pricing ───────────────────────────────────────────
-                    const _SectionHeader(
-                        icon: Icons.account_balance_wallet_rounded,
-                        title: 'תמחור'),
-                    const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: _priceTypes.map((type) {
-                              final selected = _priceType == type;
-                              IconData icon;
-                              switch (type) {
-                                case 'ללילה':
-                                  icon = Icons.nights_stay_rounded;
-                                  break;
-                                case 'ליום':
-                                  icon = Icons.wb_sunny_rounded;
-                                  break;
-                                default:
-                                  icon = Icons.handshake_outlined;
-                              }
-                              return Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 3),
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: () =>
-                                        setState(() => _priceType = type),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 160),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        color: selected
-                                            ? _purple
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: selected
-                                              ? _purple
-                                              : AppColors.textSecondary
-                                                  .withOpacity(0.25),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(icon,
-                                              size: 16,
-                                              color: selected
-                                                  ? Colors.white
-                                                  : AppColors.textSecondary),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            type,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: selected
-                                                  ? Colors.white
-                                                  : AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 10),
-                          if (_priceType != 'לפי הסכמה')
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: _purple.withOpacity(0.06),
-                              ),
-                              child: TextField(
-                                controller: _priceController,
-                                textDirection: TextDirection.rtl,
-                                keyboardType: TextInputType.text,
-                                decoration: InputDecoration(
-                                  hintText: _priceType == 'ללילה'
-                                      ? '₪80 ללילה'
-                                      : '₪60 ליום',
-                                  hintStyle: TextStyle(
-                                    color: AppColors.textSecondary
-                                        .withOpacity(0.6),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 12),
-                                  prefixIcon: const Padding(
-                                    padding: EdgeInsetsDirectional.only(
-                                        start: 14, end: 4),
-                                    child: Align(
-                                      widthFactor: 1,
-                                      heightFactor: 1,
-                                      child: Text('₪',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w900,
-                                            color: _purple,
-                                          )),
-                                    ),
-                                  ),
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color:
-                                    AppColors.textSecondary.withOpacity(0.06),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.handshake_outlined,
-                                      color: AppColors.textSecondary
-                                          .withOpacity(0.7),
-                                      size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'המחיר יסוכם ישירות עם בעל החיה',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textSecondary
-                                          .withOpacity(0.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                    TextField(
+                      controller: _bioController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'ניסיון, אהבה לחיות, מה אתה מציע...',
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                       ),
                     ),
-
-                    const SizedBox(height: 22),
-
-                    // ── Sitting location ──────────────────────────────────
-                    const _SectionHeader(
-                        icon: Icons.home_work_rounded, title: 'סוג שמירה'),
+                    const SizedBox(height: 20),
+                    const Text('מחיר (₪)', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(10),
-                      child: Row(
-                        children: _locationOptions.map((option) {
-                          final selected = _sittingLocation == option;
-                          IconData icon;
-                          switch (option) {
-                            case 'בבית השומר':
-                              icon = Icons.house_rounded;
-                              break;
-                            case 'בבית הבעלים':
-                              icon = Icons.home_rounded;
-                              break;
-                            default:
-                              icon = Icons.compare_arrows_rounded;
-                          }
-                          return Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(14),
-                                onTap: () =>
-                                    setState(() => _sittingLocation = option),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    color: selected
-                                        ? _purple
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: selected
-                                          ? _purple
-                                          : AppColors.textSecondary
-                                              .withOpacity(0.25),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(icon,
-                                          size: 20,
-                                          color: selected
-                                              ? Colors.white
-                                              : AppColors.textSecondary),
-                                      const SizedBox(height: 5),
-                                      Text(
-                                        option,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 11,
-                                          color: selected
-                                              ? Colors.white
-                                              : AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                    TextField(
+                      controller: _priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'לדוגמה: 50',
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                       ),
                     ),
-
-                    const SizedBox(height: 22),
-
-                    // ── Pet types ─────────────────────────────────────────
-                    const _SectionHeader(
-                        icon: Icons.pets_rounded,
-                        title: 'סוגי חיות מחמד'),
+                    const SizedBox(height: 20),
+                    const Text('אזור פעילות', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(10),
-                      child: Row(
-                        children: _allPetTypes.map((type) {
-                          final selected = _petTypes.contains(type);
-                          IconData icon;
-                          switch (type) {
-                            case 'כלב':
-                              icon = Icons.directions_walk_rounded;
-                              break;
-                            case 'חתול':
-                              icon = Icons.pets_rounded;
-                              break;
-                            default:
-                              icon = Icons.cruelty_free_rounded;
-                          }
-                          return Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(14),
-                                onTap: () => setState(() {
-                                  if (selected && _petTypes.length > 1) {
-                                    _petTypes.remove(type);
-                                  } else {
-                                    _petTypes.add(type);
-                                  }
-                                }),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    color: selected
-                                        ? _purple
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: selected
-                                          ? _purple
-                                          : AppColors.textSecondary
-                                              .withOpacity(0.25),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(icon,
-                                          size: 20,
-                                          color: selected
-                                              ? Colors.white
-                                              : AppColors.textSecondary),
-                                      const SizedBox(height: 5),
-                                      Text(
-                                        type,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 12,
-                                          color: selected
-                                              ? Colors.white
-                                              : AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                    TextField(
+                      controller: _areaController,
+                      decoration: InputDecoration(
+                        hintText: 'לדוגמה: תל אביב, לב העיר',
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                       ),
                     ),
-
-                    const SizedBox(height: 22),
-
-                    // ── Available days ────────────────────────────────────
-                    const _SectionHeader(
-                        icon: Icons.calendar_month_rounded,
-                        title: 'ימי זמינות (אופציונלי)'),
-                    const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: _toggleAllDays,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 160),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 9),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: _allDaysSelected
-                                    ? _purple
-                                    : _purple.withOpacity(0.07),
-                                border: Border.all(
-                                  color: _allDaysSelected
-                                      ? _purple
-                                      : _purple.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _allDaysSelected
-                                        ? Icons.check_circle_rounded
-                                        : Icons.select_all_rounded,
-                                    size: 16,
-                                    color: _allDaysSelected
-                                        ? Colors.white
-                                        : _purple,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'כל הימים',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: _allDaysSelected
-                                          ? Colors.white
-                                          : _purple,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: _days.map((day) {
-                              final selected = _availableDays.contains(day);
-                              return Opacity(
-                                opacity: _allDaysSelected ? 0.38 : 1.0,
-                                child: IgnorePointer(
-                                  ignoring: _allDaysSelected,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(10),
-                                    onTap: () => setState(() {
-                                      if (selected) {
-                                        _availableDays.remove(day);
-                                      } else {
-                                        _availableDays.add(day);
-                                      }
-                                    }),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 140),
-                                      width: 38,
-                                      height: 38,
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                        color: selected
-                                            ? _purple
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: selected
-                                              ? _purple
-                                              : AppColors.textSecondary
-                                                  .withOpacity(0.25),
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          day,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 13,
-                                            color: selected
-                                                ? Colors.white
-                                                : AppColors.textSecondary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
+                    const SizedBox(height: 20),
+                    const Text('שנות ניסיון', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Slider(
+                      value: _experienceYears.toDouble(),
+                      min: 0,
+                      max: 20,
+                      divisions: 20,
+                      label: _experienceYears.toString(),
+                      onChanged: (val) => setState(() => _experienceYears = val.toInt()),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('מיקום השמירה המועדף', style: TextStyle(fontWeight: FontWeight.bold)),
+                    DropdownButtonFormField<String>(
+                      initialValue: _sittingLocation,
+                      items: ['בבית השומר', 'בבית הבעלים', 'שניהם'].map((loc) => DropdownMenuItem(value: loc, child: Text(loc))).toList(),
+                      onChanged: (val) => setState(() => _sittingLocation = val!),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                       ),
                     ),
-
-                    const SizedBox(height: 22),
-
-                    // ── Bio ───────────────────────────────────────────────
-                    const _SectionHeader(
-                        icon: Icons.notes_rounded,
-                        title: 'תיאור (אופציונלי)'),
-                    const SizedBox(height: 8),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _bioController,
-                        textDirection: TextDirection.rtl,
-                        maxLines: 4,
-                        maxLength: 200,
-                        buildCounter: (context,
-                                {required currentLength,
-                                required isFocused,
-                                maxLength}) =>
-                            Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Text(
-                            '$currentLength / $maxLength',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: currentLength > (maxLength! * 0.85)
-                                  ? AppColors.warning
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                        ),
-                        decoration: InputDecoration(
-                          hintText:
-                              'תאר/י את הניסיון שלך, הזמינות, ומה מייחד אותך כשומר/ת חיות מחמד...',
-                          hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                            height: 1.5,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                          height: 1.6,
-                        ),
-                      ),
+                    const SizedBox(height: 40),
+                    AppButton(
+                      label: _isSaving ? 'שומר...' : 'שמור ופרסם',
+                      onTap: _isSaving ? null : _save,
                     ),
-
-                    const SizedBox(height: 28),
-
-                    // ── Submit button ─────────────────────────────────────
-                    InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: _isPublishing ? null : _publish,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        height: 54,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: _isPublishing
-                                ? [
-                                    AppColors.textSecondary,
-                                    AppColors.textMuted,
-                                  ]
-                                : [
-                                    _purple,
-                                    const Color(0xFFA78BFA),
-                                  ],
-                          ),
-                          boxShadow: _isPublishing
-                              ? []
-                              : [
-                                  BoxShadow(
-                                    color: _purple.withOpacity(0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                        ),
-                        child: Center(
-                          child: _isPublishing
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _isEditMode
-                                          ? Icons.save_rounded
-                                          : Icons.campaign_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _isEditMode
-                                          ? 'שמור שינויים'
-                                          : 'פרסם/י שירות',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -760,39 +195,6 @@ class _CreateSittingServiceScreenState
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── Shared section header widget ──────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  const _SectionHeader({required this.icon, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            color: const Color(0xFF7C3AED).withOpacity(0.1),
-          ),
-          child: Icon(icon, size: 16, color: const Color(0xFF7C3AED)),
-        ),
-        const SizedBox(width: 9),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -6,17 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
-import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 class CreateSittingRequestScreen extends ConsumerStatefulWidget {
   final SittingRequest? initialRequest;
@@ -44,6 +39,8 @@ class _CreateSittingRequestScreenState
   DateTime? _startDate;
   DateTime? _endDate;
   SittingType _sittingType = SittingType.atOwnerHome;
+  bool _isPublicJob = true;
+  List<String> _selectedRules = [];
   bool _isPublishing = false;
 
   @override
@@ -61,6 +58,8 @@ class _CreateSittingRequestScreenState
       _endDate = r.endDate;
       _sittingType = r.sittingType;
       _existingImageUrl = r.petImageUrl;
+      _isPublicJob = r.isPublicJob;
+      _selectedRules = List<String>.from(r.rules);
     }
   }
 
@@ -201,6 +200,8 @@ class _CreateSittingRequestScreenState
         'area': area,
         'specialInstructions': instructions.isNotEmpty ? instructions : null,
         'budget': budget.isNotEmpty ? budget : null,
+        'rules': _selectedRules,
+        'isPublicJob': _isPublicJob,
       };
 
       final repo = ref.read(sittingRepositoryProvider);
@@ -293,7 +294,7 @@ class _CreateSittingRequestScreenState
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   children: [
                     // Pet name
-                    _FieldLabel('שם חיית המחמד'),
+                    const _FieldLabel('שם חיית המחמד'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -323,7 +324,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Pet type
-                    _FieldLabel('סוג חיית המחמד'),
+                    const _FieldLabel('סוג חיית המחמד'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -345,7 +346,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Pet gender
-                    _FieldLabel('מין חיית המחמד (אופציונלי)'),
+                    const _FieldLabel('מין חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -402,7 +403,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Sitting type
-                    _FieldLabel('מיקום השמירה'),
+                    const _FieldLabel('מיקום השמירה'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -427,7 +428,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Pet photo
-                    _FieldLabel('תמונה של חיית המחמד (אופציונלי)'),
+                    const _FieldLabel('תמונה של חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
                     if (hasImage) ...[
                       Stack(
@@ -521,7 +522,7 @@ class _CreateSittingRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FieldLabel('תאריך התחלה'),
+                              const _FieldLabel('תאריך התחלה'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
@@ -564,7 +565,7 @@ class _CreateSittingRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FieldLabel('תאריך סיום'),
+                              const _FieldLabel('תאריך סיום'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
@@ -632,7 +633,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Area
-                    _FieldLabel('מיקום'),
+                    const _FieldLabel('מיקום'),
                     const SizedBox(height: 6),
                     LocationPickerField(
                       initialValue: _area,
@@ -642,7 +643,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Special instructions
-                    _FieldLabel('הוראות מיוחדות (אופציונלי)'),
+                    const _FieldLabel('הוראות מיוחדות (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -673,7 +674,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Budget
-                    _FieldLabel('תקציב (אופציונלי)'),
+                    const _FieldLabel('תקציב (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       
@@ -700,6 +701,49 @@ class _CreateSittingRequestScreenState
                           color: AppColors.textPrimary,
                         ),
                       ),
+                    ),
+
+                    // Public Job Toggle
+                    SwitchListTile(
+                      title: const Text('פרסם כמשרה ציבורית', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('שומרים באזור יוכלו לראות ולהציע את שירותם'),
+                      value: _isPublicJob,
+                      activeThumbColor: AppColors.primary,
+                      onChanged: (val) => setState(() => _isPublicJob = val),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Rules Selection
+                    const _FieldLabel('כללים ודרישות מיוחדות'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        'ללא חיות נוספות',
+                        'בבית הבעלים בלבד',
+                        'ניסיון עם תרופות',
+                        'כלבים גדולים בלבד',
+                        'לא מעשן',
+                      ].map((rule) {
+                        final isSelected = _selectedRules.contains(rule);
+                        return FilterChip(
+                          label: Text(rule),
+                          selected: isSelected,
+                          onSelected: (val) {
+                            setState(() {
+                              if (val) {
+                                _selectedRules.add(rule);
+                              } else {
+                                _selectedRules.remove(rule);
+                              }
+                            });
+                          },
+                          selectedColor: AppColors.primary.withOpacity(0.2),
+                          checkmarkColor: AppColors.primary,
+                        );
+                      }).toList(),
                     ),
 
                     const SizedBox(height: 24),
