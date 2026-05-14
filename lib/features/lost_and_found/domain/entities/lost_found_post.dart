@@ -36,6 +36,8 @@ class LostFoundPost extends Equatable {
   final String description;
   final String area;
   final String imageUrl;
+  final String? gender; // Stored as string in Firestore for flexibility
+  final String? age;
   final LostFoundStatus status;
   final DateTime? createdAt;
   final List<LostFoundMatch> matches;
@@ -53,11 +55,14 @@ class LostFoundPost extends Equatable {
     required this.description,
     required this.area,
     required this.imageUrl,
+    this.gender,
+    this.age,
     this.status = LostFoundStatus.active,
     this.createdAt,
     this.matches = const [],
   });
 
   @override
-  List<Object?> get props => [id, reporterUid, type, status, imageUrl];
+  List<Object?> get props =>
+      [id, reporterUid, type, status, imageUrl, gender, age];
 }

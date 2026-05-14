@@ -43,6 +43,8 @@ class LostFoundPostModel extends LostFoundPost {
     required super.description,
     required super.area,
     required super.imageUrl,
+    super.gender,
+    super.age,
     super.status,
     super.createdAt,
     super.matches,
@@ -69,6 +71,8 @@ class LostFoundPostModel extends LostFoundPost {
       description: data['description'] as String? ?? '',
       area: data['area'] as String? ?? '',
       imageUrl: data['imageUrl'] as String? ?? '',
+      gender: data['gender'] as String?,
+      age: data['age'] as String?,
       status: (data['status'] as String?) == 'resolved'
           ? LostFoundStatus.resolved
           : LostFoundStatus.active,
@@ -89,6 +93,8 @@ class LostFoundPostModel extends LostFoundPost {
         'description': description,
         'area': area,
         'imageUrl': imageUrl,
+        'gender': gender,
+        'age': age,
         'status': status == LostFoundStatus.resolved ? 'resolved' : 'active',
         'matches': [],
         'createdAt': FieldValue.serverTimestamp(),
