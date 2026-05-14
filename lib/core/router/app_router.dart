@@ -220,7 +220,6 @@ class AppRouter {
         ),
       ),
       GoRoute(
-      GoRoute(
         path: '/explore',
         builder: (context, state) => const ExploreScreen(),
       ),
