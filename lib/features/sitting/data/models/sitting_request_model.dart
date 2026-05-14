@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
-import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 class SittingRequestModel extends SittingRequest {
   const SittingRequestModel({
@@ -19,12 +18,18 @@ class SittingRequestModel extends SittingRequest {
     super.specialInstructions,
     super.budget,
     super.status,
+    super.rules,
+    super.isPublicJob,
+    super.sitterUid,
+    super.sitterName,
     super.createdAt,
+    super.refusalReason,
   });
 
   factory SittingRequestModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
 
+    // ... (petType, petGender, sittingType, status logic remains same)
     PetType petType;
     switch (data['petType'] as String? ?? 'dog') {
       case 'cat':
@@ -66,6 +71,9 @@ class SittingRequestModel extends SittingRequest {
       case 'closed':
         status = SittingStatus.closed;
         break;
+      case 'declined':
+        status = SittingStatus.declined;
+        break;
       default:
         status = SittingStatus.open;
     }
@@ -86,7 +94,12 @@ class SittingRequestModel extends SittingRequest {
       specialInstructions: data['specialInstructions'] as String?,
       budget: data['budget'] as String?,
       status: status,
+      rules: List<String>.from(data['rules'] as List? ?? []),
+      isPublicJob: data['isPublicJob'] as bool? ?? true,
+      sitterUid: data['sitterUid'] as String?,
+      sitterName: data['sitterName'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      refusalReason: data['refusalReason'] as String?,
     );
   }
 
@@ -106,7 +119,12 @@ class SittingRequestModel extends SittingRequest {
       'specialInstructions': specialInstructions,
       'budget': budget,
       'status': status.name,
+      'rules': rules,
+      'isPublicJob': isPublicJob,
+      'sitterUid': sitterUid,
+      'sitterName': sitterName,
       'createdAt': FieldValue.serverTimestamp(),
+      'refusalReason': refusalReason,
     };
   }
 }

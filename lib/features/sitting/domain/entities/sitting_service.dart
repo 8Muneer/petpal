@@ -14,11 +14,14 @@ class SittingService extends Equatable {
   final String sittingLocation; // 'בבית השומר' | 'בבית הבעלים' | 'שניהם'
   final bool isActive;
   final DateTime? createdAt;
-  // UI-ready stats (null = not yet available)
+  final int experienceYears;
+  final bool isVerified;
   final double? rating;
   final int? reviewCount;
   final int? viewCount;
   final int? requestCount;
+  final Map<String, int> tagFrequencies;
+  final List<String> reputationBadges;
 
   const SittingService({
     required this.id,
@@ -34,10 +37,14 @@ class SittingService extends Equatable {
     this.sittingLocation = 'בבית השומר',
     this.isActive = true,
     this.createdAt,
+    this.experienceYears = 0,
+    this.isVerified = false,
     this.rating,
     this.reviewCount,
     this.viewCount,
     this.requestCount,
+    this.tagFrequencies = const {},
+    this.reputationBadges = const [],
   });
 
   @override
@@ -55,9 +62,13 @@ class SittingService extends Equatable {
         sittingLocation,
         isActive,
         createdAt,
+        experienceYears,
+        isVerified,
         rating,
         reviewCount,
         viewCount,
         requestCount,
+        tagFrequencies,
+        reputationBadges,
       ];
 }

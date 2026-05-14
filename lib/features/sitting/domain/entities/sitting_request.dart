@@ -6,7 +6,7 @@ export 'package:petpal/features/walks/domain/entities/walk_request.dart'
 
 enum SittingType { atOwnerHome, atSitterHome }
 
-enum SittingStatus { open, taken, closed }
+enum SittingStatus { open, taken, closed, declined }
 
 class SittingRequest extends Equatable {
   final String id;
@@ -24,7 +24,12 @@ class SittingRequest extends Equatable {
   final String? specialInstructions;
   final String? budget;
   final SittingStatus status;
+  final List<String> rules;
+  final bool isPublicJob;
+  final String? sitterUid;
+  final String? sitterName;
   final DateTime? createdAt;
+  final String? refusalReason;
 
   const SittingRequest({
     required this.id,
@@ -42,7 +47,12 @@ class SittingRequest extends Equatable {
     this.specialInstructions,
     this.budget,
     this.status = SittingStatus.open,
+    this.rules = const [],
+    this.isPublicJob = true,
+    this.sitterUid,
+    this.sitterName,
     this.createdAt,
+    this.refusalReason,
   });
 
   int get numberOfNights {
@@ -67,6 +77,11 @@ class SittingRequest extends Equatable {
         specialInstructions,
         budget,
         status,
+        rules,
+        isPublicJob,
+        sitterUid,
+        sitterName,
         createdAt,
+        refusalReason,
       ];
 }
