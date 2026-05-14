@@ -6,12 +6,13 @@ import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/core/widgets/tiny_chip.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/profile/domain/entities/user_profile.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
+import 'package:petpal/core/services/seed_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -67,6 +68,42 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  void _confirmAction(BuildContext context, String title, String content, VoidCallback onConfirm) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                onConfirm();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('אישור', style: TextStyle(fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -102,6 +139,36 @@ class ProfileScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
+              tooltip: 'ניקוי נתוני דמו',
+              onPressed: () => _confirmAction(
+                context,
+                'ניקוי נתונים?',
+                'כל נתוני הדמו (משתמשים, חיות, הזמנות) יימחקו לצמיתות.',
+                () async {
+                  final seedService = SeedService(firestore: FirebaseFirestore.instance);
+                  await seedService.clearMockData();
+                  if (!context.mounted) return;
+                  _toast(context, 'נתוני דמו נמחקו בהצלחה');
+                },
+              ),
+              icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.statusClosed),
+            ),
+            IconButton(
+              tooltip: 'יצירת נתוני דמו',
+              onPressed: () => _confirmAction(
+                context,
+                'יצירת נתוני דמו?',
+                'מערכת תיצור נתונים ריאליסטיים להדגמה (ספקי שירות, בעלי חיות, הזמנות וביקורות).',
+                () async {
+                  final seedService = SeedService(firestore: FirebaseFirestore.instance);
+                  await seedService.seedData();
+                  if (!context.mounted) return;
+                  _toast(context, 'נתוני דמו נוצרו בהצלחה');
+                },
+              ),
+              icon: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
+            ),
+            IconButton(
               tooltip: '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
               onPressed: () => _confirmLogout(context),
               icon: const Icon(Icons.logout_rounded, color: AppColors.textPrimary),
@@ -111,15 +178,15 @@ class ProfileScreen extends ConsumerWidget {
         body: Stack(
           children: [
             // Background gradient
-            Positioned.fill(
+            const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                     colors: [
-                      const Color(0xFFECFDF5),
-                      const Color(0xFFF6F7FB),
+                      Color(0xFFECFDF5),
+                      Color(0xFFF6F7FB),
                       Colors.white,
                     ],
                   ),
@@ -167,7 +234,7 @@ class ProfileScreen extends ConsumerWidget {
               child: profileAsync.when(
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
+                error: (e, _) => const Center(
                     child: Text(
                         '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05d4\u05e4\u05e8\u05d5\u05e4\u05d9\u05dc')),
                 data: (profile) {
@@ -239,6 +306,8 @@ class _ProfileBody extends StatelessWidget {
         return '\u05d1\u05e2\u05dc \u05d7\u05d9\u05d9\u05ea \u05de\u05d7\u05de\u05d3';
       case UserRole.serviceProvider:
         return '\u05de\u05d8\u05e4\u05dc/\u05ea';
+      case UserRole.admin:
+        return 'מנהל מערכת';
     }
   }
 
@@ -299,7 +368,7 @@ class _ProfileBody extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        SectionHeader(
+        const SectionHeader(
           title: '\u05d4\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05e9\u05dc\u05d9',
           subtitle: '\u05d4\u05d6\u05de\u05e0\u05d5\u05ea, \u05de\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05e9\u05d9\u05d7\u05d5\u05ea',
         ),
@@ -896,8 +965,8 @@ class _DangerButton extends StatelessWidget {
           border:
               Border.all(color: const Color(0xFFFB7185).withOpacity(0.35)),
         ),
-        child: Row(
-          children: const [
+        child: const Row(
+          children: [
             _DangerIcon(),
             SizedBox(width: 12),
             Expanded(
