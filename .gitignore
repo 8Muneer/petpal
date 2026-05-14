@@ -57,4 +57,16 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 windows/flutter/generated_plugin_registrant.cc
 windows/flutter/generated_plugin_registrant.h
 windows/flutter/generated_plugins.cmake
-.agent/
+
+# Environment / secrets
+.env
+.env.*
+secrets.dart
+google-services.json
+GoogleService-Info.plist
+
+# Firebase
+firebase_options_local.dart
+
+# Claude Code
+.claude/settings.local.json

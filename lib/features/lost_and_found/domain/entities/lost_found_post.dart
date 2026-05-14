@@ -4,6 +4,8 @@ enum LostFoundType { lost, found }
 
 enum LostFoundStatus { active, resolved }
 
+enum MatchingStatus { pending, searching, done }
+
 class LostFoundMatch extends Equatable {
   final String postId;
   final String imageUrl;
@@ -39,6 +41,7 @@ class LostFoundPost extends Equatable {
   final String? gender; // Stored as string in Firestore for flexibility
   final String? age;
   final LostFoundStatus status;
+  final MatchingStatus matchingStatus;
   final DateTime? createdAt;
   final List<LostFoundMatch> matches;
 
@@ -58,11 +61,12 @@ class LostFoundPost extends Equatable {
     this.gender,
     this.age,
     this.status = LostFoundStatus.active,
+    this.matchingStatus = MatchingStatus.pending,
     this.createdAt,
     this.matches = const [],
   });
 
   @override
   List<Object?> get props =>
-      [id, reporterUid, type, status, imageUrl, gender, age];
+      [id, reporterUid, type, status, matchingStatus, imageUrl, gender, age];
 }

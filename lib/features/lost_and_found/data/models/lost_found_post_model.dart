@@ -46,6 +46,7 @@ class LostFoundPostModel extends LostFoundPost {
     super.gender,
     super.age,
     super.status,
+    super.matchingStatus,
     super.createdAt,
     super.matches,
   });
@@ -55,6 +56,18 @@ class LostFoundPostModel extends LostFoundPost {
     final matchesList = (data['matches'] as List<dynamic>? ?? [])
         .map((m) => LostFoundMatchModel.fromMap(m as Map<String, dynamic>))
         .toList();
+
+    MatchingStatus matchingStatus;
+    switch (data['matchingStatus'] as String?) {
+      case 'searching':
+        matchingStatus = MatchingStatus.searching;
+        break;
+      case 'done':
+        matchingStatus = MatchingStatus.done;
+        break;
+      default:
+        matchingStatus = MatchingStatus.pending;
+    }
 
     return LostFoundPostModel(
       id: doc.id,
@@ -76,6 +89,7 @@ class LostFoundPostModel extends LostFoundPost {
       status: (data['status'] as String?) == 'resolved'
           ? LostFoundStatus.resolved
           : LostFoundStatus.active,
+      matchingStatus: matchingStatus,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       matches: matchesList,
     );
@@ -96,6 +110,7 @@ class LostFoundPostModel extends LostFoundPost {
         'gender': gender,
         'age': age,
         'status': status == LostFoundStatus.resolved ? 'resolved' : 'active',
+        'matchingStatus': 'pending',
         'matches': [],
         'createdAt': FieldValue.serverTimestamp(),
       };
