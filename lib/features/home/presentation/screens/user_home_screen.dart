@@ -32,7 +32,6 @@ import 'package:petpal/features/messaging/presentation/providers/messaging_provi
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
-import 'package:petpal/features/home/presentation/screens/services_tab_screen.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -86,7 +85,8 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
       ),
       const FeedScreen(),
       const LostFoundFeedScreen(),
-      const ServicesTabScreen(),
+      const _WalksTab(),
+      _SittingTab(onAction: _toast),
       const _ChatTab(),
     ];
 
@@ -113,7 +113,8 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
             AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
             AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
             AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
-            AppNavItem(icon: Icons.handshake_outlined, activeIcon: Icons.handshake_rounded, label: 'שירותים'),
+            AppNavItem(icon: Icons.directions_walk_outlined, activeIcon: Icons.directions_walk_rounded, label: 'טיולים'),
+            AppNavItem(icon: Icons.home_work_outlined, activeIcon: Icons.home_work_rounded, label: 'שמירה'),
             AppNavItem(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
           ],
         ),
