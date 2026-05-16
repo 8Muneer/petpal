@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/glass_card.dart';
 
 class AppNavItem {
   final IconData icon;
@@ -13,7 +14,7 @@ class AppNavItem {
   });
 }
 
-/// Clean floating bottom navigation bar — solid white with shadow.
+/// Floating, glassmorphic bottom navigation bar.
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onChanged;
@@ -29,31 +30,33 @@ class AppBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      child: Container(
-        height: 68,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: AppRadius.xxlRadius,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x18000000),
-              blurRadius: 24,
-              offset: Offset(0, 4),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Row(
-          children: List.generate(items.length, (i) {
-            return Expanded(
-              child: _NavItem(
-                item: items[i],
-                isSelected: i == currentIndex,
-                onTap: () => onChanged(i),
-              ),
-            );
-          }),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        blur: 24,
+        opacity: 1.0,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        child: SizedBox(
+          height: 80,
+          child: Row(
+            children: List.generate(items.length, (i) {
+              return Expanded(
+                child: _NavItem(
+                  item: items[i],
+                  isSelected: i == currentIndex,
+                  onTap: () => onChanged(i),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -73,6 +76,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const accentColor = Color(0xFFC49A6C); // Premium Golden/Beige accent
+    
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -80,32 +85,32 @@ class _NavItem extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.10)
+                  ? accentColor.withOpacity(0.1)
                   : Colors.transparent,
-              borderRadius: AppRadius.fullRadius,
+              shape: BoxShape.circle,
             ),
             child: Icon(
               isSelected ? item.activeIcon : item.icon,
-              size: 22,
-              color: isSelected ? AppColors.primary : AppColors.textMuted,
+              size: 24,
+              color: isSelected ? accentColor : AppColors.textMuted,
             ),
           ),
-          const SizedBox(height: 2),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: AppTextStyles.navLabel.copyWith(
-              color: isSelected ? AppColors.primary : AppColors.textMuted,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          const SizedBox(height: 4),
+          Text(
+            item.label,
+            style: AppTextStyles.caption.copyWith(
+              color: isSelected ? AppColors.onSurface : AppColors.textMuted,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 10,
             ),
-            child: Text(item.label),
           ),
         ],
       ),
     );
   }
 }
+
