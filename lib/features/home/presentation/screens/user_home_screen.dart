@@ -31,6 +31,7 @@ import 'package:petpal/features/messaging/data/datasources/messaging_datasource.
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
+import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -82,6 +83,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
         onAction: _toast,
         onTabChange: (i) => setState(() => _currentIndex = i),
       ),
+      const FeedScreen(),
       const LostFoundFeedScreen(),
       const _WalksTab(),
       _SittingTab(onAction: _toast),
@@ -109,6 +111,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
           onChanged: (i) => setState(() => _currentIndex = i),
           items: const [
             AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
+            AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
             AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
             AppNavItem(icon: Icons.directions_walk_outlined, activeIcon: Icons.directions_walk_rounded, label: 'טיולים'),
             AppNavItem(icon: Icons.home_work_outlined, activeIcon: Icons.home_work_rounded, label: 'שמירה'),
@@ -209,25 +212,25 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                       DiscoveryChip(
                         label: 'שמירה',
                         icon: Icons.home_work_outlined,
-                        onTap: () => widget.onTabChange(3),
+                        onTap: () => widget.onTabChange(4),
                       ),
                       const SizedBox(width: 12),
                       DiscoveryChip(
                         label: 'טיולים',
                         icon: Icons.directions_walk_outlined,
-                        onTap: () => widget.onTabChange(2),
+                        onTap: () => widget.onTabChange(3),
                       ),
                       const SizedBox(width: 12),
                       DiscoveryChip(
                         label: 'חיות אבודות',
                         icon: Icons.pets_outlined,
-                        onTap: () => widget.onTabChange(1),
+                        onTap: () => widget.onTabChange(2),
                       ),
                       const SizedBox(width: 12),
                       DiscoveryChip(
                         label: 'פיד',
                         icon: Icons.feed_outlined,
-                        onTap: () => context.push('/feed'),
+                        onTap: () => widget.onTabChange(1),
                       ),
                     ],
                   ),
@@ -243,7 +246,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   return HomeTopRatedSection(
                     title: 'בקשות השמירה שלי',
                     itemHeight: 180,
-                    onMoreTap: () => widget.onTabChange(3),
+                    onMoreTap: () => widget.onTabChange(4),
                     itemCount: requests.take(10).length,
                     itemBuilder: (context, index) {
                       final req = requests[index];
@@ -275,7 +278,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   return HomeTopRatedSection(
                     title: 'בקשות הטיול שלי',
                     itemHeight: 180,
-                    onMoreTap: () => widget.onTabChange(2),
+                    onMoreTap: () => widget.onTabChange(3),
                     itemCount: requests.take(10).length,
                     itemBuilder: (context, index) {
                       final req = requests[index];
@@ -310,7 +313,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   return HomeTopRatedSection(
                     title: 'שומרים זמינים',
                     itemHeight: 340,
-                    onMoreTap: () => widget.onTabChange(3),
+                    onMoreTap: () => widget.onTabChange(4),
                     itemCount: top.length,
                     itemBuilder: (context, index) {
                       final s = top[index];
@@ -321,7 +324,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                         rating: (s.rating ?? 0).toStringAsFixed(1),
                         location: s.area,
                         imageUrl: s.providerPhotoUrl ?? '',
-                        onTap: () => widget.onTabChange(3),
+                        onTap: () => widget.onTabChange(4),
                       );
                     },
                   );
@@ -349,7 +352,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   return HomeTopRatedSection(
                     title: 'מטיילים זמינים',
                     itemHeight: 340,
-                    onMoreTap: () => widget.onTabChange(2),
+                    onMoreTap: () => widget.onTabChange(3),
                     itemCount: top.length,
                     itemBuilder: (context, index) {
                       final w = top[index];
@@ -360,7 +363,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                         rating: (w.rating ?? 0).toStringAsFixed(1),
                         location: w.area,
                         imageUrl: w.providerPhotoUrl ?? '',
-                        onTap: () => widget.onTabChange(2),
+                        onTap: () => widget.onTabChange(3),
                       );
                     },
                   );
@@ -373,7 +376,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            const SliverToBoxAdapter(child: SizedBox(height: 130)),
           ],
         ),
 
@@ -544,7 +547,9 @@ class _WalksTabState extends ConsumerState<_WalksTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SafeArea(
+      bottom: false,
+      child: Column(
       children: [
         // Toggle bar
         Padding(
@@ -586,6 +591,7 @@ class _WalksTabState extends ConsumerState<_WalksTab> {
           ),
         ),
       ],
+      ),
     );
   }
 }
@@ -720,7 +726,7 @@ class _WalkRequestsView extends ConsumerWidget {
                   Expanded(
                     child: GridView.builder(
                       padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          const EdgeInsets.fromLTRB(16, 0, 16, 120),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -1051,7 +1057,7 @@ class _WalkServicesViewState extends ConsumerState<_WalkServicesView> {
               }
 
               return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
@@ -1088,50 +1094,53 @@ class _SittingTabState extends ConsumerState<_SittingTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Toggle bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-          child: GlassCard(
-            useBlur: true,
-            padding: const EdgeInsets.all(6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ToggleChip(
-                    label: 'בקשות שמירה',
-                    icon: Icons.list_alt_rounded,
-                    selected: _selectedView == 0,
-                    onTap: () => setState(() => _selectedView = 0),
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          // Toggle bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: GlassCard(
+              useBlur: true,
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ToggleChip(
+                      label: 'בקשות שמירה',
+                      icon: Icons.list_alt_rounded,
+                      selected: _selectedView == 0,
+                      onTap: () => setState(() => _selectedView = 0),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ToggleChip(
-                    label: 'שירותי שמירה',
-                    icon: Icons.search_rounded,
-                    selected: _selectedView == 1,
-                    onTap: () => setState(() => _selectedView = 1),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ToggleChip(
+                      label: 'שירותי שמירה',
+                      icon: Icons.search_rounded,
+                      selected: _selectedView == 1,
+                      onTap: () => setState(() => _selectedView = 1),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Content
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _selectedView == 0
-                ? _SittingRequestsView(key: const ValueKey('sitting_requests'))
-                : _SittingServicesView(
-                    key: const ValueKey('sitting_services'),
-                  ),
+          // Content
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _selectedView == 0
+                  ? _SittingRequestsView(key: const ValueKey('sitting_requests'))
+                  : _SittingServicesView(
+                      key: const ValueKey('sitting_services'),
+                    ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1219,7 +1228,7 @@ class _SittingRequestsView extends ConsumerWidget {
                   Expanded(
                     child: GridView.builder(
                       padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          const EdgeInsets.fromLTRB(16, 0, 16, 120),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -1515,7 +1524,7 @@ class _SittingServicesViewState extends ConsumerState<_SittingServicesView> {
               }
 
               return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
@@ -2773,11 +2782,13 @@ class _ChatTab extends ConsumerWidget {
         ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
     final async = ref.watch(conversationsProvider);
 
-    return async.when(
+    return SafeArea(
+      bottom: false,
+      child: async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('שגיאה: $e')),
       data: (convos) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
         children: [
           const SectionHeader(
             title: 'צ׳אט',
@@ -2845,6 +2856,7 @@ class _ChatTab extends ConsumerWidget {
             }),
         ],
       ),
+    ),
     );
   }
 }

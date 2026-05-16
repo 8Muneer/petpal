@@ -53,14 +53,18 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen>
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.push('/lost-found/create'),
-          backgroundColor: const Color(0xFFFB7185),
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('דיווח חדש',
-              style: TextStyle(fontWeight: FontWeight.w800)),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 100),
+          child: FloatingActionButton.extended(
+            onPressed: () => context.push('/lost-found/create'),
+            backgroundColor: const Color(0xFFFB7185),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('דיווח חדש',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
