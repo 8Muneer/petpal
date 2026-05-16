@@ -71,7 +71,7 @@ class LuxuryHero extends StatelessWidget {
 
             // Branding Overlay (Mobile Style)
             Positioned(
-              top: 48,
+              top: MediaQuery.of(context).padding.top + 8,
               left: AppSpacing.marginPage,
               right: AppSpacing.marginPage,
               child: Row(

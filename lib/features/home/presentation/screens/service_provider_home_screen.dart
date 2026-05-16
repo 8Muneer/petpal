@@ -8,7 +8,6 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
@@ -19,8 +18,7 @@ import 'package:petpal/core/widgets/tiny_chip.dart';
 import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:petpal/features/feed/domain/entities/feed_post.dart';
-import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
@@ -202,6 +200,7 @@ class _ServiceProviderHomeScreenState
   Widget build(BuildContext context) {
     final tabs = <Widget>[
       _ProviderHomeTab(onAction: (msg) => _toast(msg)),
+      const FeedScreen(),
       const _ProviderWalksTab(),
       const _ProviderSittingTab(),
       const _MessagesTab(),
@@ -228,6 +227,7 @@ class _ServiceProviderHomeScreenState
           onChanged: (i) => setState(() => _currentIndex = i),
           items: const [
             AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
+            AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
             AppNavItem(icon: Icons.directions_walk_outlined, activeIcon: Icons.directions_walk_rounded, label: 'טיולים'),
             AppNavItem(icon: Icons.home_work_outlined, activeIcon: Icons.home_work_rounded, label: 'שמירה'),
             AppNavItem(icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
@@ -345,12 +345,10 @@ class _ProviderHomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(feedPostsProvider);
     final profile = ref.watch(currentUserProfileProvider).asData?.value;
     final displayName = profile?.name ??
         FirebaseAuth.instance.currentUser?.displayName ??
         'נותן שירות';
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return ListView(
       physics: const BouncingScrollPhysics(),
@@ -506,272 +504,8 @@ class _ProviderHomeTab extends ConsumerWidget {
 
         const SizedBox(height: 24),
 
-        // --- Feed Header ---
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: SectionHeader(
-            title: 'עדכונים מהקהילה',
-            trailing: TextButton(
-              onPressed: () {},
-              child: Text(
-                'ראה הכל',
-                style:
-                    AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        // Feed posts
-        SizedBox(
-          height: 600, // Explicit height for the list within ListView
-          child: RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: () async {
-              ref.invalidate(feedPostsProvider);
-              await Future.delayed(const Duration(milliseconds: 500));
-            },
-            child: postsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-              error: (e, _) => Center(child: Text('שגיאה בטעינת הפיד: $e')),
-              data: (posts) {
-                if (posts.isEmpty) {
-                  return const Center(child: Text('אין פוסטים עדיין'));
-                }
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: posts.length,
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _FeedPostCard(
-                        post: post,
-                        currentUid: uid,
-                        onTap: () => context.push('/feed/${post.id}'),
-                        onLike: () {
-                          ref
-                              .read(feedRepositoryProvider)
-                              .toggleLike(post.id, uid);
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
+        const SizedBox(height: 130),
       ],
-    );
-  }
-}
-
-class _FeedPostCard extends StatelessWidget {
-  final FeedPost post;
-  final String currentUid;
-  final VoidCallback onTap;
-  final VoidCallback onLike;
-
-  const _FeedPostCard({
-    required this.post,
-    required this.currentUid,
-    required this.onTap,
-    required this.onLike,
-  });
-
-  String get _timeAgo {
-    if (post.createdAt == null) return '';
-    final diff = DateTime.now().difference(post.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isLiked = post.isLikedBy(currentUid);
-    final isTip = post.type == PostType.tip;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: GlassCard(
-        useBlur: true,
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                LiveUserAvatar(
-                  uid: post.authorUid,
-                  fallbackName: post.authorName,
-                  fallbackPhotoUrl: post.authorPhotoUrl,
-                  size: 40,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.authorName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        _timeAgo,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary.withOpacity(0.8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isTip)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.lightbulb_outline_rounded,
-                            size: 14, color: AppColors.warning),
-                        SizedBox(width: 4),
-                        Text(
-                          'טיפ',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              post.content,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
-            ),
-            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: post.imageUrl!,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Icon(Icons.broken_image_rounded,
-                        color: AppColors.textMuted),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: onLike,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isLiked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          size: 20,
-                          color: isLiked
-                              ? AppColors.danger
-                              : AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${post.likes.length}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: isLiked
-                                ? AppColors.danger
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${post.commentCount}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -981,48 +715,51 @@ class _ProviderWalksTabState extends ConsumerState<_ProviderWalksTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // ── Toggle bar ────────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-          child: GlassCard(
-            useBlur: true,
-            padding: const EdgeInsets.all(6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ProviderToggleChip(
-                    label: 'בקשות טיול',
-                    icon: Icons.list_alt_rounded,
-                    selected: _selectedView == 0,
-                    onTap: () => setState(() => _selectedView = 0),
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          // ── Toggle bar ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: GlassCard(
+              useBlur: true,
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'בקשות טיול',
+                      icon: Icons.list_alt_rounded,
+                      selected: _selectedView == 0,
+                      onTap: () => setState(() => _selectedView = 0),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ProviderToggleChip(
-                    label: 'פרסם שירות',
-                    icon: Icons.campaign_rounded,
-                    selected: _selectedView == 1,
-                    onTap: () => setState(() => _selectedView = 1),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'פרסם שירות',
+                      icon: Icons.campaign_rounded,
+                      selected: _selectedView == 1,
+                      onTap: () => setState(() => _selectedView = 1),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        // ── Content ───────────────────────────────────────────────────────
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _selectedView == 0
-                ? const _ProviderRequestsView(key: ValueKey('requests'))
-                : const _ProviderAdvertiseView(key: ValueKey('advertise')),
+          // ── Content ───────────────────────────────────────────────────────
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _selectedView == 0
+                  ? const _ProviderRequestsView(key: ValueKey('requests'))
+                  : const _ProviderAdvertiseView(key: ValueKey('advertise')),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1074,7 +811,7 @@ class _ProviderRequestsView extends ConsumerWidget {
             ),
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 0.42,
@@ -1103,7 +840,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final myServicesAsync = ref.watch(myWalkServicesProvider);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
       children: [
         // CTA card
         GlassCard(
@@ -1726,11 +1463,13 @@ class _MessagesTab extends ConsumerWidget {
     final myUid = ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
     final async = ref.watch(conversationsProvider);
 
-    return async.when(
+    return SafeArea(
+      bottom: false,
+      child: async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('שגיאה: $e')),
       data: (convos) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
         children: [
           const SectionHeader(
             title: 'צ׳אט',
@@ -1801,6 +1540,7 @@ class _MessagesTab extends ConsumerWidget {
             }),
         ],
       ),
+    ),
     );
   }
 }
@@ -2297,47 +2037,50 @@ class _ProviderSittingTabState extends ConsumerState<_ProviderSittingTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-          child: GlassCard(
-            useBlur: true,
-            padding: const EdgeInsets.all(6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ProviderToggleChip(
-                    label: 'בקשות שמירה',
-                    icon: Icons.list_alt_rounded,
-                    selected: _selectedView == 0,
-                    onTap: () => setState(() => _selectedView = 0),
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: GlassCard(
+              useBlur: true,
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'בקשות שמירה',
+                      icon: Icons.list_alt_rounded,
+                      selected: _selectedView == 0,
+                      onTap: () => setState(() => _selectedView = 0),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ProviderToggleChip(
-                    label: 'פרסם שירות',
-                    icon: Icons.campaign_rounded,
-                    selected: _selectedView == 1,
-                    onTap: () => setState(() => _selectedView = 1),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'פרסם שירות',
+                      icon: Icons.campaign_rounded,
+                      selected: _selectedView == 1,
+                      onTap: () => setState(() => _selectedView = 1),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _selectedView == 0
-                ? const _ProviderSittingRequestsView(
-                    key: ValueKey('sitting_req'))
-                : const _ProviderSittingAdvertiseView(
-                    key: ValueKey('sitting_adv')),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _selectedView == 0
+                  ? const _ProviderSittingRequestsView(
+                      key: ValueKey('sitting_req'))
+                  : const _ProviderSittingAdvertiseView(
+                      key: ValueKey('sitting_adv')),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -2390,7 +2133,7 @@ class _ProviderSittingRequestsView extends ConsumerWidget {
             ),
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 0.42,
@@ -2422,7 +2165,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
     const purple = AppColors.sitting;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
       children: [
         GlassCard(
           useBlur: true,
