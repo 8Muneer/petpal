@@ -5,15 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/input_field.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/profile/domain/entities/user_profile.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';

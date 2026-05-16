@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/core/widgets/tiny_chip.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
@@ -67,6 +66,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -111,15 +111,15 @@ class ProfileScreen extends ConsumerWidget {
         body: Stack(
           children: [
             // Background gradient
-            Positioned.fill(
+            const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                     colors: [
-                      const Color(0xFFECFDF5),
-                      const Color(0xFFF6F7FB),
+                      Color(0xFFECFDF5),
+                      Color(0xFFF6F7FB),
                       Colors.white,
                     ],
                   ),
@@ -167,7 +167,7 @@ class ProfileScreen extends ConsumerWidget {
               child: profileAsync.when(
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
+                error: (e, _) => const Center(
                     child: Text(
                         '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05d4\u05e4\u05e8\u05d5\u05e4\u05d9\u05dc')),
                 data: (profile) {
@@ -299,7 +299,7 @@ class _ProfileBody extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        SectionHeader(
+        const SectionHeader(
           title: '\u05d4\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05e9\u05dc\u05d9',
           subtitle: '\u05d4\u05d6\u05de\u05e0\u05d5\u05ea, \u05de\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05e9\u05d9\u05d7\u05d5\u05ea',
         ),
@@ -896,8 +896,8 @@ class _DangerButton extends StatelessWidget {
           border:
               Border.all(color: const Color(0xFFFB7185).withOpacity(0.35)),
         ),
-        child: Row(
-          children: const [
+        child: const Row(
+          children: [
             _DangerIcon(),
             SizedBox(width: 12),
             Expanded(
