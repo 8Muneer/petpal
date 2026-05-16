@@ -19,6 +19,7 @@ import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
+import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
@@ -201,6 +202,7 @@ class _ServiceProviderHomeScreenState
     final tabs = <Widget>[
       _ProviderHomeTab(onAction: (msg) => _toast(msg)),
       const FeedScreen(),
+      const LostFoundFeedScreen(),
       const _ProviderWalksTab(),
       const _ProviderSittingTab(),
       const _MessagesTab(),
@@ -228,6 +230,7 @@ class _ServiceProviderHomeScreenState
           items: const [
             AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
             AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
+            AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
             AppNavItem(icon: Icons.directions_walk_outlined, activeIcon: Icons.directions_walk_rounded, label: 'טיולים'),
             AppNavItem(icon: Icons.home_work_outlined, activeIcon: Icons.home_work_rounded, label: 'שמירה'),
             AppNavItem(icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
