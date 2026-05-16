@@ -11,8 +11,11 @@ import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
-import 'package:petpal/features/feed/domain/entities/feed_post.dart';
-import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
+import 'package:petpal/core/widgets/luxury_hero.dart';
+import 'package:petpal/core/widgets/glass_search_bar.dart';
+import 'package:petpal/core/widgets/discovery_chip.dart';
+import 'package:petpal/core/widgets/luxury_service_card.dart';
+import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingRequest, SittingStatus;
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
@@ -60,20 +63,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
-  // Mock cards (later replace with Firestore)
-  User? get _user => FirebaseAuth.instance.currentUser;
-
-  String get _displayName {
-    final u = _user;
-    final dn = (u?.displayName ?? '').trim();
-    if (dn.isNotEmpty) return dn;
-
-    final email = (u?.email ?? '').trim();
-    if (email.contains('@')) return email.split('@').first;
-
-    return 'משתמש';
-  }
-
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -86,136 +75,44 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
     );
   }
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    context.go('/');
-  }
-
-  void _confirmLogout() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text(
-            'להתנתק מהחשבון?',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: const Text('תוכל/י להתחבר שוב בכל זמן.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('ביטול'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                await _logout();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text('התנתקות',
-                  style: TextStyle(fontWeight: FontWeight.w900)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final tabs = <Widget>[
       _HomeTab(
-        onAction: (msg) => _toast(msg),
+        onAction: _toast,
+        onTabChange: (i) => setState(() => _currentIndex = i),
       ),
       const LostFoundFeedScreen(),
       const _WalksTab(),
-      _SittingTab(
-        onAction: (msg) => _toast(msg),
-      ),
+      _SittingTab(onAction: _toast),
       const _ChatTab(),
     ];
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AppScaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              if (_currentIndex == 0)
-                _ModernTopBar(
-                  displayName: _displayName,
-                  photoUrl: ref.watch(currentUserProfileProvider).asData?.value?.photoUrl ?? _user?.photoURL,
-                  onProfilePressed: () => context.push('/profile'),
-                  onLogoutPressed: _confirmLogout,
-                ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.02, 0),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
-                    ),
-                  ),
-                  child: KeyedSubtree(
-                    key: ValueKey(_currentIndex),
-                    child: tabs[_currentIndex],
-                  ),
-                ),
-              ),
-            ],
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: child,
+          ),
+          child: KeyedSubtree(
+            key: ValueKey(_currentIndex),
+            child: tabs[_currentIndex],
           ),
         ),
         bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),
           items: const [
-            AppNavItem(
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              label: 'בית',
-            ),
-            AppNavItem(
-              icon: Icons.pets_outlined,
-              activeIcon: Icons.pets_rounded,
-              label: 'אבודים',
-            ),
-            AppNavItem(
-              icon: Icons.directions_walk_outlined,
-              activeIcon: Icons.directions_walk_rounded,
-              label: 'טיולים',
-            ),
-            AppNavItem(
-              icon: Icons.home_work_outlined,
-              activeIcon: Icons.home_work_rounded,
-              label: 'שמירה',
-            ),
-            AppNavItem(
-              icon: Icons.chat_bubble_outline_rounded,
-              activeIcon: Icons.chat_bubble_rounded,
-              label: 'צ׳אט',
-            ),
+            AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
+            AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
+            AppNavItem(icon: Icons.directions_walk_outlined, activeIcon: Icons.directions_walk_rounded, label: 'טיולים'),
+            AppNavItem(icon: Icons.home_work_outlined, activeIcon: Icons.home_work_rounded, label: 'שמירה'),
+            AppNavItem(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
           ],
         ),
       ),
@@ -223,385 +120,411 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
   }
 }
 
-class _ModernTopBar extends StatelessWidget {
-  final String displayName;
-  final String? photoUrl;
-  final VoidCallback onProfilePressed;
-  final VoidCallback onLogoutPressed;
-
-  const _ModernTopBar({
-    required this.displayName,
-    required this.onProfilePressed,
-    required this.onLogoutPressed,
-    this.photoUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
-        children: [
-          // Avatar
-          AppAvatar(
-            name: displayName,
-            photoUrl: photoUrl,
-            size: 44,
-            onTap: onProfilePressed,
-          ),
-          const SizedBox(width: 12),
-          // Greeting
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'שלום, $displayName 👋',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.h3,
-                ),
-                Text(
-                  'מה תרצה/י לעשות היום?',
-                  style: AppTextStyles.caption,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Logout button
-          _PillIconButton(
-            icon: Icons.logout_rounded,
-            tooltip: 'התנתקות',
-            onTap: onLogoutPressed,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HomeTab extends ConsumerWidget {
+class _HomeTab extends ConsumerStatefulWidget {
   final void Function(String msg) onAction;
+  final void Function(int index) onTabChange;
 
   const _HomeTab({
     required this.onAction,
+    required this.onTabChange,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(feedPostsProvider);
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  ConsumerState<_HomeTab> createState() => _HomeTabState();
+}
 
-    return Column(
+class _HomeTabState extends ConsumerState<_HomeTab> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showStickySearch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.offset > 460 && !_showStickySearch) {
+      setState(() => _showStickySearch = true);
+    } else if (_scrollController.offset <= 460 && _showStickySearch) {
+      setState(() => _showStickySearch = false);
+    }
+  }
+
+  Color _sittingStatusColor(SittingStatus status) {
+    switch (status) {
+      case SittingStatus.open: return const Color(0xFFFF9800);
+      case SittingStatus.taken: return const Color(0xFF4CAF50);
+      case SittingStatus.closed: return AppColors.primary;
+    }
+  }
+
+  String _sittingStatusLabel(SittingStatus status) {
+    switch (status) {
+      case SittingStatus.open: return 'ממתין';
+      case SittingStatus.taken: return 'אושר';
+      case SittingStatus.closed: return 'הושלם';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sittingReqAsync = ref.watch(sittingRequestsProvider);
+    final walkReqAsync = ref.watch(walkRequestsProvider);
+    final sittersAsync = ref.watch(sittingServicesProvider);
+    final walkersAsync = ref.watch(walkServicesProvider);
+
+    return Stack(
       children: [
-        // Create post button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: AppButton(
-            label: 'פוסט חדש',
-            leadingIcon: Icons.add_rounded,
-            onTap: () => context.push('/feed/create'),
-          ),
-        ),
-        const SizedBox(height: 10),
+        CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // 1. Parallax Hero
+            LuxuryHero(
+              imageUrl:
+                  'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=2000&auto=format&fit=crop',
+              scrollController: _scrollController,
+              searchBar: const GlassSearchBar(hintText: 'חפש שירותים...'),
+              onProfileTap: () => context.push('/profile'),
+            ),
 
-        // Feed posts
-        Expanded(
-          child: RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: () async {
-              ref.invalidate(feedPostsProvider);
-              // Wait a moment for the stream to re-establish
-              await Future.delayed(const Duration(milliseconds: 500));
-            },
-            child: postsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-              error: (e, _) => SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.5,
-                  child: Center(
-                    child: Text('שגיאה בטעינת הפיד: $e'),
+            // 2. Discovery Chips
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 32, bottom: 24),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.marginPage),
+                  child: Row(
+                    children: [
+                      DiscoveryChip(
+                        label: 'שמירה',
+                        icon: Icons.home_work_outlined,
+                        onTap: () => widget.onTabChange(3),
+                      ),
+                      const SizedBox(width: 12),
+                      DiscoveryChip(
+                        label: 'טיולים',
+                        icon: Icons.directions_walk_outlined,
+                        onTap: () => widget.onTabChange(2),
+                      ),
+                      const SizedBox(width: 12),
+                      DiscoveryChip(
+                        label: 'חיות אבודות',
+                        icon: Icons.pets_outlined,
+                        onTap: () => widget.onTabChange(1),
+                      ),
+                      const SizedBox(width: 12),
+                      DiscoveryChip(
+                        label: 'פיד',
+                        icon: Icons.feed_outlined,
+                        onTap: () => context.push('/feed'),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              data: (posts) {
-                if (posts.isEmpty) {
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.5,
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.feed_outlined,
-                                size: 64,
-                                color: AppColors.textSecondary
-                                    .withOpacity(0.5)),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'אין פוסטים עדיין',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'משוך/י למטה לרענון',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
+            ),
 
-                return ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: posts.length,
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _FeedPostCard(
-                        post: post,
-                        currentUid: uid,
-                        onTap: () => context.push('/feed/${post.id}'),
-                        onLike: () {
-                          ref
-                              .read(feedRepositoryProvider)
-                              .toggleLike(post.id, uid);
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
+            // 3. My Sitting Requests
+            SliverToBoxAdapter(
+              child: sittingReqAsync.when(
+                data: (requests) {
+                  if (requests.isEmpty) return const SizedBox.shrink();
+                  return HomeTopRatedSection(
+                    title: 'בקשות השמירה שלי',
+                    itemHeight: 180,
+                    onMoreTap: () => widget.onTabChange(3),
+                    itemCount: requests.take(10).length,
+                    itemBuilder: (context, index) {
+                      final req = requests[index];
+                      return _SittingRequestHomeCard(
+                        request: req,
+                        statusColor: _sittingStatusColor(req.status),
+                        statusLabel: _sittingStatusLabel(req.status),
+                        onTap: () =>
+                            context.push('/sitting/detail', extra: req),
+                      );
+                    },
+                  );
+                },
+                loading: () => const SizedBox(
+                    height: 180,
+                    child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2))),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 4. My Walk Requests
+            SliverToBoxAdapter(
+              child: walkReqAsync.when(
+                data: (requests) {
+                  if (requests.isEmpty) return const SizedBox.shrink();
+                  return HomeTopRatedSection(
+                    title: 'בקשות הטיול שלי',
+                    itemHeight: 180,
+                    onMoreTap: () => widget.onTabChange(2),
+                    itemCount: requests.take(10).length,
+                    itemBuilder: (context, index) {
+                      final req = requests[index];
+                      return _WalkRequestHomeCard(
+                        request: req,
+                        onTap: () =>
+                            context.push('/walks/detail', extra: req),
+                      );
+                    },
+                  );
+                },
+                loading: () => const SizedBox(
+                    height: 180,
+                    child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2))),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 5. Available Sitters
+            SliverToBoxAdapter(
+              child: sittersAsync.when(
+                data: (sitters) {
+                  final top = (sitters.toList()
+                        ..sort((a, b) =>
+                            (b.rating ?? 0).compareTo(a.rating ?? 0)))
+                      .take(10)
+                      .toList();
+                  if (top.isEmpty) return const SizedBox.shrink();
+                  return HomeTopRatedSection(
+                    title: 'שומרים זמינים',
+                    itemHeight: 340,
+                    onMoreTap: () => widget.onTabChange(3),
+                    itemCount: top.length,
+                    itemBuilder: (context, index) {
+                      final s = top[index];
+                      return LuxuryServiceCard(
+                        title: s.providerName,
+                        serviceType: s.petTypes.join(' • '),
+                        price: '₪${s.priceText}',
+                        rating: (s.rating ?? 0).toStringAsFixed(1),
+                        location: s.area,
+                        imageUrl: s.providerPhotoUrl ?? '',
+                        onTap: () => widget.onTabChange(3),
+                      );
+                    },
+                  );
+                },
+                loading: () => const SizedBox(
+                    height: 340,
+                    child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2))),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 6. Available Walkers
+            SliverToBoxAdapter(
+              child: walkersAsync.when(
+                data: (walkers) {
+                  final top = (walkers.toList()
+                        ..sort((a, b) =>
+                            (b.rating ?? 0).compareTo(a.rating ?? 0)))
+                      .take(10)
+                      .toList();
+                  if (top.isEmpty) return const SizedBox.shrink();
+                  return HomeTopRatedSection(
+                    title: 'מטיילים זמינים',
+                    itemHeight: 340,
+                    onMoreTap: () => widget.onTabChange(2),
+                    itemCount: top.length,
+                    itemBuilder: (context, index) {
+                      final w = top[index];
+                      return LuxuryServiceCard(
+                        title: w.providerName,
+                        serviceType: w.petTypes.join(' • '),
+                        price: '₪${w.priceText}',
+                        rating: (w.rating ?? 0).toStringAsFixed(1),
+                        location: w.area,
+                        imageUrl: w.providerPhotoUrl ?? '',
+                        onTap: () => widget.onTabChange(2),
+                      );
+                    },
+                  );
+                },
+                loading: () => const SizedBox(
+                    height: 340,
+                    child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2))),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ],
+        ),
+
+        // Sticky Search Bar Overlay
+        if (_showStickySearch)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                bottom: 12,
+                left: AppSpacing.marginPage,
+                right: AppSpacing.marginPage,
+              ),
+              color: AppColors.surface.withValues(alpha: 0.95),
+              child: const GlassSearchBar(hintText: 'חפש שירותים...'),
             ),
           ),
-        ),
       ],
     );
   }
 }
 
-class _FeedPostCard extends StatelessWidget {
-  final FeedPost post;
-  final String currentUid;
+class _SittingRequestHomeCard extends StatelessWidget {
+  final SittingRequest request;
+  final Color statusColor;
+  final String statusLabel;
   final VoidCallback onTap;
-  final VoidCallback onLike;
 
-  const _FeedPostCard({
-    required this.post,
-    required this.currentUid,
+  const _SittingRequestHomeCard({
+    required this.request,
+    required this.statusColor,
+    required this.statusLabel,
     required this.onTap,
-    required this.onLike,
   });
-
-  String get _timeAgo {
-    if (post.createdAt == null) return '';
-    final diff = DateTime.now().difference(post.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
-  }
 
   @override
   Widget build(BuildContext context) {
-    final isLiked = post.isLikedBy(currentUid);
-    final isTip = post.type == PostType.tip;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
+    return GestureDetector(
       onTap: onTap,
-      child: GlassCard(
-        useBlur: true,
-        padding: const EdgeInsets.all(14),
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.pureWhite,
+          borderRadius: AppRadius.organicRadius,
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.premium,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Author row
             Row(
               children: [
-                LiveUserAvatar(
-                  uid: post.authorUid,
-                  fallbackName: post.authorName,
-                  fallbackPhotoUrl: post.authorPhotoUrl,
-                  size: 40,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.home_work_outlined,
+                      size: 18, color: AppColors.primary),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.authorName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        _timeAgo,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary.withOpacity(0.8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isTip)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.lightbulb_outline_rounded,
-                            size: 14, color: Color(0xFFF59E0B)),
-                        SizedBox(width: 4),
-                        Text(
-                          'טיפ',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFF59E0B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Content
-            Text(
-              post.content,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
-            ),
-
-            // Optional image
-            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: post.imageUrl!,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Icon(Icons.broken_image_rounded,
-                        color: AppColors.textMuted),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 12),
-
-            // Actions row
-            Row(
-              children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: onLike,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isLiked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          size: 20,
-                          color: isLiked
-                              ? const Color(0xFFFB7185)
-                              : AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${post.likes.length}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: isLiked
-                                ? const Color(0xFFFB7185)
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Padding(
+                const Spacer(),
+                Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${post.commentCount}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
                   ),
+                  child: Text(statusLabel,
+                      style: AppTextStyles.labelSm.copyWith(
+                          color: statusColor, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Text(request.petName, style: AppTextStyles.headlineSm),
+            const SizedBox(height: 4),
+            Text(request.area,
+                style:
+                    AppTextStyles.labelMd.copyWith(color: AppColors.textMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WalkRequestHomeCard extends StatelessWidget {
+  final WalkRequest request;
+  final VoidCallback onTap;
+
+  const _WalkRequestHomeCard({
+    required this.request,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.pureWhite,
+          borderRadius: AppRadius.organicRadius,
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.premium,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.directions_walk_outlined,
+                      size: 18, color: AppColors.primary),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('טיול',
+                      style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(request.petName, style: AppTextStyles.headlineSm),
+            const SizedBox(height: 4),
+            Text(request.area,
+                style:
+                    AppTextStyles.labelMd.copyWith(color: AppColors.textMuted)),
           ],
         ),
       ),
@@ -984,7 +907,7 @@ class _WalkRequestCard extends StatelessWidget {
                       height: 30,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: AppColors.walksGradient,
+                          gradient: AppColors.primaryGradient,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Center(
@@ -1844,42 +1767,6 @@ class _SittingServiceCard extends ConsumerWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _PillIconButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _PillIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: AppColors.borderFaint,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const Center(
-            child: Icon(Icons.logout_rounded, color: Color(0xFF334155)),
-          ),
         ),
       ),
     );
