@@ -24,7 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Column(
             children: [
               // Top 58% — auto-scrolling masonry gallery
-              Expanded(
+              const Expanded(
                 flex: 58,
                 child: _MasonryGallery(),
               ),
@@ -33,7 +33,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Expanded(
                 flex: 42,
                 child: _BottomContent(
-                  onStartPressed: () => context.push('/login'),
+                  onStartPressed: () {
+                    debugPrint('🚀 Let\'s start pressed');
+                    context.push('/login');
+                  },
                   onGuestPressed: () => context.go('/guest'),
                 ),
               ),
@@ -56,18 +59,18 @@ class _MasonryGallery extends StatefulWidget {
 
 class _MasonryGalleryState extends State<_MasonryGallery> {
   static const List<String> _petImages = [
-    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=350&fit=crop',
-    'https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=400&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=380&fit=crop',
-    'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=400&h=520&fit=crop',
-    'https://images.unsplash.com/photo-1452857297128-d9c29adba80b?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&h=480&fit=crop',
-    'https://images.unsplash.com/photo-1606567595334-d39972c85dfd?w=400&h=360&fit=crop',
-    'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400&h=440&fit=crop',
-    'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=390&fit=crop',
-    'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=400&h=510&fit=crop',
-    'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=370&fit=crop',
+    'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400&h=500&fit=crop',
+    'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=350&fit=crop',
+    'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=400&h=450&fit=crop',
+    'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&h=380&fit=crop',
+    'https://images.unsplash.com/photo-1598133894008-61f7fdb8cc3a?w=400&h=520&fit=crop',
+    'https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=480&fit=crop',
+    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=360&fit=crop',
+    'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=440&fit=crop',
+    'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=390&fit=crop',
+    'https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=400&h=510&fit=crop',
+    'https://images.unsplash.com/photo-1507146426996-ef05306b995a?w=400&h=370&fit=crop',
   ];
 
   late List<ScrollController> _controllers;
@@ -104,8 +107,12 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
 
   @override
   void dispose() {
-    for (final t in _timers) t.cancel();
-    for (final c in _controllers) c.dispose();
+    for (final t in _timers) {
+      t.cancel();
+    }
+    for (final c in _controllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -142,7 +149,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                             errorBuilder: (_, __, ___) => Container(
                               height: h,
                               color: AppColors.borderFaint,
-                              child: Icon(
+                              child: const Icon(
                                 Icons.pets,
                                 color: AppColors.textMuted,
                                 size: 32,
@@ -199,7 +206,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.pets_rounded,
+                  const Icon(Icons.pets_rounded,
                       size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Text(
@@ -240,8 +247,8 @@ class _BottomContent extends StatelessWidget {
             textAlign: TextAlign.center,
             text: TextSpan(
               style: AppTextStyles.h1.copyWith(fontSize: 24),
-              children: [
-                const TextSpan(text: 'ברוכים הבאים ל'),
+              children: const [
+                TextSpan(text: 'ברוכים הבאים ל'),
                 TextSpan(
                   text: 'PetPal',
                   style: TextStyle(color: AppColors.primary),
@@ -261,14 +268,14 @@ class _BottomContent extends StatelessWidget {
           const Spacer(),
 
           // Feature pills row
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _FeaturePill(
                   icon: Icons.directions_walk_rounded, label: 'טיולים'),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               _FeaturePill(icon: Icons.home_work_rounded, label: 'שמירה'),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               _FeaturePill(icon: Icons.pets_rounded, label: 'אבודים'),
             ],
           ),

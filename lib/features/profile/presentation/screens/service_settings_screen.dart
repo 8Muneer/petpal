@@ -80,8 +80,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
     if (mounted) {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('השירותים עודכנו בהצלחה'),
+        const SnackBar(
+          content: Text('השירותים עודכנו בהצלחה'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),

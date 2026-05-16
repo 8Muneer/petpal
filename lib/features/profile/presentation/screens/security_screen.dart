@@ -5,14 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/core/constants/app_constants.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {

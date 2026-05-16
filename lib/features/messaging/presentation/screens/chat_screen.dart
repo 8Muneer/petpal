@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/data/models/sitting_request_model.dart';
@@ -267,7 +266,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         color: AppColors.primary)),
                 error: (e, _) => Center(
                   child: Text('שגיאה: $e',
-                      style: TextStyle(color: AppColors.textMuted)),
+                      style: const TextStyle(color: AppColors.textMuted)),
                 ),
                 data: (messages) {
                   if (messages.isEmpty) {
@@ -279,7 +278,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               size: 48,
                               color: AppColors.primary.withValues(alpha: 0.3)),
                           const SizedBox(height: 12),
-                          Text('התחל/י שיחה!',
+                          const Text('התחל/י שיחה!',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -373,7 +372,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border(
+                  border: const Border(
                       top: BorderSide(
                           color: AppColors.border, width: 1)),
                   boxShadow: [
@@ -428,23 +427,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         minLines: 1,
                         decoration: InputDecoration(
                           hintText: 'כתוב הודעה...',
-                          hintStyle: TextStyle(
+                          hintStyle: const TextStyle(
                               color: AppColors.textMuted, fontSize: 14),
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                                 color: AppColors.border, width: 1),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                                 color: AppColors.border, width: 1),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                                 color: AppColors.primary, width: 1.5),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
@@ -702,7 +701,7 @@ class _DateSeparator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Expanded(
+          const Expanded(
               child: Divider(color: AppColors.border, thickness: 1)),
           const SizedBox(width: 10),
           Container(
@@ -722,7 +721,7 @@ class _DateSeparator extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(
+          const Expanded(
               child: Divider(color: AppColors.border, thickness: 1)),
         ],
       ),
