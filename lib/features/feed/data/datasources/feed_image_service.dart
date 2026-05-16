@@ -31,6 +31,20 @@ class FeedImageService {
     return ref.getDownloadURL();
   }
 
+  Future<List<String>> uploadPostImages(
+      String postId, List<XFile> files) async {
+    final urls = <String>[];
+    for (var i = 0; i < files.length; i++) {
+      final ref = _storage.ref().child('post_images/${postId}_$i');
+      await ref.putFile(
+        File(files[i].path),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      urls.add(await ref.getDownloadURL());
+    }
+    return urls;
+  }
+
   Future<void> deletePostImage(String postId) async {
     final ref = _storage.ref().child('post_images/$postId');
     try {

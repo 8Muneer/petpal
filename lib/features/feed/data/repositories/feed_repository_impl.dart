@@ -24,6 +24,10 @@ class FeedRepositoryImpl implements FeedRepository {
       _datasource.addComment(postId, data);
 
   @override
+  Future<void> updatePost(String postId, Map<String, dynamic> data) =>
+      _datasource.updatePost(postId, data);
+
+  @override
   Future<void> deletePost(String postId) => _datasource.deletePost(postId);
 
   @override

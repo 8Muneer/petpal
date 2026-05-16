@@ -7,15 +7,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_scaffold.dart';
+import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
+const int _maxImages = 5;
+
 class CreatePostScreen extends ConsumerStatefulWidget {
-  const CreatePostScreen({super.key});
+  final FeedPost? post;
+  const CreatePostScreen({super.key, this.post});
 
   @override
   ConsumerState<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -24,8 +27,24 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _contentController = TextEditingController();
   PostType _type = PostType.post;
-  XFile? _pickedImage;
+  final List<String> _existingUrls = []; // already-uploaded URLs (edit mode)
+  final List<XFile> _newImages = [];     // freshly picked local files
   bool _isPublishing = false;
+
+  bool get _isEditMode => widget.post != null;
+  bool get _isValid => _contentController.text.trim().isNotEmpty;
+  int get _totalImageCount => _existingUrls.length + _newImages.length;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditMode) {
+      _contentController.text = widget.post!.content;
+      _type = widget.post!.type;
+      _existingUrls.addAll(widget.post!.imageUrls);
+    }
+    _contentController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -34,49 +53,103 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   Future<void> _pickImage() async {
+    if (_totalImageCount >= _maxImages) return;
     final imageService = ref.read(feedImageServiceProvider);
     final file = await imageService.pickImage(ImageSource.gallery);
-    if (file != null) {
-      setState(() => _pickedImage = file);
-    }
+    if (file != null) setState(() => _newImages.add(file));
+  }
+
+  void _removeExistingUrl(int index) =>
+      setState(() => _existingUrls.removeAt(index));
+
+  void _removeNewImage(int index) =>
+      setState(() => _newImages.removeAt(index));
+
+  Future<bool> _confirmDiscard() async {
+    final hasContent =
+        _contentController.text.trim().isNotEmpty || _newImages.isNotEmpty;
+    if (!hasContent) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Text('לבטל את הפוסט?',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          content: const Text('התוכן שכתבת יימחק.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('המשך בעריכה'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFFB7185)),
+              child: const Text('בטל פוסט',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _publish() async {
     final content = _contentController.text.trim();
-    if (content.isEmpty) {
-      _showSnack('יש לכתוב תוכן לפוסט', isError: true);
-      return;
-    }
-
+    if (content.isEmpty) return;
     setState(() => _isPublishing = true);
 
     try {
+      final repo = ref.read(feedRepositoryProvider);
+
+      if (_isEditMode) {
+        // Upload any newly added images and combine with kept existing URLs
+        List<String> updatedUrls = List.from(_existingUrls);
+        if (_newImages.isNotEmpty) {
+          final imageService = ref.read(feedImageServiceProvider);
+          final newUrls = await imageService.uploadPostImages(
+              widget.post!.id, _newImages);
+          updatedUrls.addAll(newUrls);
+        }
+        await repo.updatePost(widget.post!.id, {
+          'type': _type == PostType.tip ? 'tip' : 'post',
+          'content': content,
+          'imageUrls': updatedUrls,
+        });
+        if (!mounted) return;
+        context.pop();
+        _showSnack('הפוסט עודכן בהצלחה!');
+        return;
+      }
+
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Read photoUrl from Firestore (source of truth — Firebase Auth photoURL can be stale)
       final profile = ref.read(currentUserProfileProvider).asData?.value;
       final photoUrl = profile?.photoUrl ?? user.photoURL;
 
-      String? imageUrl;
+      final postId =
+          FirebaseFirestore.instance.collection('posts').doc().id;
 
-      // Upload image if exists and type is post
-      if (_type == PostType.post && _pickedImage != null) {
-        // Use a temp ID, then update after creating the doc
-        final tempId =
-            FirebaseFirestore.instance.collection('posts').doc().id;
+      List<String> imageUrls = [];
+      if (_type == PostType.post && _newImages.isNotEmpty) {
         final imageService = ref.read(feedImageServiceProvider);
-        imageUrl = await imageService.uploadPostImage(tempId, _pickedImage!);
+        imageUrls = await imageService.uploadPostImages(postId, _newImages);
       }
 
-      final repo = ref.read(feedRepositoryProvider);
       await repo.createPost({
         'authorUid': user.uid,
         'authorName': user.displayName ?? user.email?.split('@').first ?? '',
         'authorPhotoUrl': photoUrl,
         'type': _type == PostType.tip ? 'tip' : 'post',
         'content': content,
-        'imageUrl': imageUrl,
+        'imageUrls': imageUrls,
         'likes': <String>[],
         'commentCount': 0,
         'createdAt': FieldValue.serverTimestamp(),
@@ -88,7 +161,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPublishing = false);
-      _showSnack('שגיאה בפרסום הפוסט', isError: true);
+      _showSnack(
+          _isEditMode ? 'שגיאה בעדכון הפוסט' : 'שגיאה בפרסום הפוסט',
+          isError: true);
     }
   }
 
@@ -97,7 +172,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
             isError ? const Color(0xFFFB7185) : AppColors.primary,
@@ -107,212 +183,161 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final profile = ref.watch(currentUserProfileProvider).asData?.value;
+
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: AppScaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      color: AppColors.textPrimary,
-                    ),
-                    const Expanded(
+      child: Scaffold(
+        backgroundColor: AppColors.pureWhite,
+        appBar: AppBar(
+          backgroundColor: AppColors.pureWhite,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: false,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: AppColors.onSurface),
+            onPressed: () async {
+              if (_isEditMode) {
+                context.pop();
+                return;
+              }
+              final router = GoRouter.of(context);
+              final discard = await _confirmDiscard();
+              if (!mounted) return;
+              if (discard) router.pop();
+            },
+          ),
+          title: Text(
+            _isEditMode ? 'עריכת פוסט' : 'פוסט חדש',
+            style: AppTextStyles.h3,
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _isPublishing
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.primary),
+                    )
+                  : TextButton(
+                      onPressed: _isValid ? _publish : null,
+                      style: TextButton.styleFrom(
+                        backgroundColor: _isValid
+                            ? AppColors.primary
+                            : AppColors.surface,
+                        foregroundColor: _isValid
+                            ? Colors.white
+                            : AppColors.textMuted,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                      ),
                       child: Text(
-                        'פוסט חדש',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                        ),
+                        _isEditMode ? 'עדכן' : 'פרסם',
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  children: [
-                    // Type selector
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _TypeChip(
-                              label: 'פוסט',
-                              icon: Icons.article_outlined,
-                              selected: _type == PostType.post,
-                              onTap: () =>
-                                  setState(() => _type = PostType.post),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _TypeChip(
-                              label: 'טיפ',
-                              icon: Icons.lightbulb_outline_rounded,
-                              selected: _type == PostType.tip,
-                              onTap: () {
-                                setState(() {
-                                  _type = PostType.tip;
-                                  _pickedImage = null;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // User info header
+              Row(
+                children: [
+                  LiveUserAvatar(
+                    uid: user?.uid ?? '',
+                    fallbackName: user?.displayName ?? '',
+                    fallbackPhotoUrl: profile?.photoUrl ?? user?.photoURL,
+                    size: 40,
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.displayName ??
+                            user?.email?.split('@').first ??
+                            '',
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Content field
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _contentController,
-                        maxLines: 6,
-                        textDirection: TextDirection.rtl,
-                        decoration: InputDecoration(
-                          hintText: _type == PostType.tip
-                              ? 'שתף/י טיפ שימושי...'
-                              : 'מה חדש? שתף/י עם הקהילה...',
-                          hintStyle: TextStyle(
-                            color:
-                                AppColors.textSecondary.withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-
-                    // Image picker (only for post type)
-                    if (_type == PostType.post) ...[
-                      const SizedBox(height: 14),
-                      if (_pickedImage != null) ...[
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: Image.file(
-                                File(_pickedImage!.path),
-                                width: double.infinity,
-                                height: 200,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: InkWell(
-                                onTap: () =>
-                                    setState(() => _pickedImage = null),
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.close_rounded,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ] else
-                        InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap: _pickImage,
-                          child: AppCard(
-                            
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.add_photo_alternate_outlined,
-                                  size: 36,
-                                  color: AppColors.textSecondary
-                                      .withOpacity(0.5),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'הוסף/י תמונה',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary
-                                        .withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      Text('קהילת PetPal',
+                          style: AppTextStyles.labelSm),
                     ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
 
-                    const SizedBox(height: 20),
-
-                    // Publish button
-                    InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: _isPublishing ? null : _publish,
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [AppColors.primary, AppColors.statusOpen],
-                          ),
-                        ),
-                        child: Center(
-                          child: _isPublishing
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : const Text(
-                                  'פרסם/י',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                        ),
-                      ),
+              // Styled content text box
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _contentController.text.isNotEmpty
+                        ? AppColors.primary.withValues(alpha: 0.4)
+                        : AppColors.border,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
+                child: TextField(
+                  controller: _contentController,
+                  maxLines: 8,
+                  minLines: 3,
+                  textDirection: TextDirection.rtl,
+                  decoration: InputDecoration(
+                    hintText: 'מה תרצה לשתף עם הקהילה?',
+                    hintStyle: AppTextStyles.bodyLg
+                        .copyWith(color: AppColors.textMuted),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    fillColor: Colors.transparent,
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  style: AppTextStyles.bodyLg
+                      .copyWith(color: AppColors.textPrimary, height: 1.6),
+                ),
               ),
+              const SizedBox(height: 28),
+
+              // Photo picker (post type only)
+              if (_type == PostType.post) ...[
+                _PhotoPickerSection(
+                  existingUrls: _existingUrls,
+                  newImages: _newImages,
+                  onAdd: _pickImage,
+                  onRemoveExisting: _removeExistingUrl,
+                  onRemoveNew: _removeNewImage,
+                ),
+                const SizedBox(height: 32),
+              ],
+
+              // Category / type selector
+              _CategorySection(
+                selected: _type,
+                onChanged: (t) => setState(() {
+                  _type = t;
+                  if (t == PostType.tip) _newImages.clear();
+                }),
+              ),
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -321,51 +346,237 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 }
 
-class _TypeChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+// ─── Photo picker section ─────────────────────────────────────────────────────
 
-  const _TypeChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
+class _PhotoPickerSection extends StatelessWidget {
+  final List<String> existingUrls;
+  final List<XFile> newImages;
+  final VoidCallback onAdd;
+  final void Function(int) onRemoveExisting;
+  final void Function(int) onRemoveNew;
+
+  const _PhotoPickerSection({
+    required this.existingUrls,
+    required this.newImages,
+    required this.onAdd,
+    required this.onRemoveExisting,
+    required this.onRemoveNew,
   });
+
+  int get _total => existingUrls.length + newImages.length;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: selected
-              ? AppColors.primary
-              : Colors.transparent,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? Colors.white : AppColors.textSecondary,
-            ),
-            const SizedBox(width: 8),
             Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: selected ? Colors.white : AppColors.textSecondary,
-              ),
+              'תמונות (עד $_maxImages)',
+              style: AppTextStyles.labelMd.copyWith(
+                  color: AppColors.onSurface, fontWeight: FontWeight.bold),
             ),
+            Text('$_total/$_maxImages', style: AppTextStyles.labelSm),
           ],
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              // Already-uploaded thumbnails (URL)
+              for (var i = 0; i < existingUrls.length; i++)
+                _UrlPreview(
+                  url: existingUrls[i],
+                  onRemove: () => onRemoveExisting(i),
+                ),
+              // Newly picked local thumbnails (XFile)
+              for (var i = 0; i < newImages.length; i++)
+                _LocalPreview(
+                  path: newImages[i].path,
+                  onRemove: () => onRemoveNew(i),
+                ),
+              // Add button (hidden when at max)
+              if (_total < _maxImages) _AddPhotoButton(onTap: onAdd),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddPhotoButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddPhotoButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 100,
+        margin: const EdgeInsets.only(left: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Icon(Icons.add_a_photo_outlined,
+            color: AppColors.primary, size: 32),
       ),
+    );
+  }
+}
+
+Widget _removeOverlay(VoidCallback onRemove) => Positioned(
+      top: 4,
+      right: 4,
+      child: GestureDetector(
+        onTap: onRemove,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: const BoxDecoration(
+              color: Colors.black54, shape: BoxShape.circle),
+          child: const Icon(Icons.close, color: Colors.white, size: 16),
+        ),
+      ),
+    );
+
+class _UrlPreview extends StatelessWidget {
+  final String url;
+  final VoidCallback onRemove;
+  const _UrlPreview({required this.url, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      margin: const EdgeInsets.only(left: 12),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CachedNetworkImage(
+              imageUrl: url,
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                  color: AppColors.borderFaint,
+                  child: const Center(
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.primary))),
+              errorWidget: (_, __, ___) => Container(
+                  color: AppColors.borderFaint,
+                  child: const Icon(Icons.broken_image_rounded,
+                      color: AppColors.textMuted)),
+            ),
+          ),
+          _removeOverlay(onRemove),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalPreview extends StatelessWidget {
+  final String path;
+  final VoidCallback onRemove;
+  const _LocalPreview({required this.path, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      margin: const EdgeInsets.only(left: 12),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.file(
+              File(path),
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+            ),
+          ),
+          _removeOverlay(onRemove),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ─── Category / type selector ─────────────────────────────────────────────────
+
+class _CategorySection extends StatelessWidget {
+  final PostType selected;
+  final void Function(PostType) onChanged;
+
+  const _CategorySection(
+      {required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    const categories = [
+      (PostType.post, 'פוסט'),
+      (PostType.tip, 'טיפ'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'על מה הפוסט?',
+          style: AppTextStyles.labelMd.copyWith(
+              color: AppColors.onSurface, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 40,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final (type, label) = categories[index];
+              final isSelected = type == selected;
+              return Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: ChoiceChip(
+                  label: Text(label),
+                  selected: isSelected,
+                  onSelected: (_) => onChanged(type),
+                  backgroundColor: AppColors.pureWhite,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? Colors.white
+                        : AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.border,
+                    ),
+                  ),
+                  showCheckmark: false,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

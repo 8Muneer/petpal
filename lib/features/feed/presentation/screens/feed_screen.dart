@@ -201,6 +201,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                     .read(feedRepositoryProvider)
                                     .toggleLike(post.id, uid);
                               },
+                              onEdit: () => context.push(
+                                '/feed/edit',
+                                extra: post,
+                              ),
+                              onDelete: () async {
+                                await ref
+                                    .read(feedRepositoryProvider)
+                                    .deletePost(post.id);
+                              },
                             ),
                           );
                         },
@@ -419,12 +428,16 @@ class _PostCard extends StatelessWidget {
   final String currentUid;
   final VoidCallback onTap;
   final VoidCallback onLike;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
 
   const _PostCard({
     required this.post,
     required this.currentUid,
     required this.onTap,
     required this.onLike,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   String get _timeAgo {
@@ -508,6 +521,101 @@ class _PostCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                if (post.authorUid == currentUid)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded,
+                        size: 20, color: AppColors.textSecondary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    color: Colors.white,
+                    elevation: 8,
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        onEdit();
+                      } else if (value == 'delete') {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: AlertDialog(
+                              backgroundColor: Colors.white,
+                              surfaceTintColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22)),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.delete_outline_rounded,
+                                      color: Color(0xFFFB7185)),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'מחיקת פוסט',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w900),
+                                  ),
+                                ],
+                              ),
+                              content: const Text(
+                                'האם את/ה בטוח/ה שברצונך למחוק את הפוסט? פעולה זו אינה הפיכה.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(ctx, false),
+                                  child: const Text('ביטול'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      Navigator.pop(ctx, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFB7185),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text('מחק/י',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w900)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                        if (confirmed == true) await onDelete();
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined,
+                                size: 18, color: AppColors.textPrimary),
+                            SizedBox(width: 10),
+                            Text('עריכה',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded,
+                                size: 18, color: Color(0xFFFB7185)),
+                            SizedBox(width: 10),
+                            Text('מחיקה',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFFFB7185))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
 
@@ -524,34 +632,65 @@ class _PostCard extends StatelessWidget {
               ),
             ),
 
-            // Optional image
-            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+            // Images
+            if (post.imageUrls.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: post.imageUrl!,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
+              if (post.imageUrls.length == 1)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: post.imageUrls.first,
+                    width: double.infinity,
                     height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      height: 200,
+                      color: AppColors.borderFaint,
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.primary, strokeWidth: 2),
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      height: 200,
+                      color: AppColors.borderFaint,
+                      child: const Icon(Icons.broken_image_rounded,
+                          color: AppColors.textMuted),
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: post.imageUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) => ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: CachedNetworkImage(
+                        imageUrl: post.imageUrls[i],
+                        width: 160,
+                        height: 160,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          width: 160,
+                          color: AppColors.borderFaint,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary, strokeWidth: 2),
+                          ),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          width: 160,
+                          color: AppColors.borderFaint,
+                          child: const Icon(Icons.broken_image_rounded,
+                              color: AppColors.textMuted),
+                        ),
                       ),
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Icon(Icons.broken_image_rounded,
-                        color: AppColors.textMuted),
-                  ),
                 ),
-              ),
             ],
 
             const SizedBox(height: 12),

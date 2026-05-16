@@ -14,6 +14,7 @@ import 'package:petpal/features/profile/presentation/screens/profile_screen.dart
 import 'package:petpal/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/security_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/privacy_screen.dart';
+import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/create_post_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/post_detail_screen.dart';
@@ -94,6 +95,11 @@ class AppRouter {
       GoRoute(
         path: '/feed/create',
         builder: (context, state) => const CreatePostScreen(),
+      ),
+      GoRoute(
+        path: '/feed/edit',
+        builder: (context, state) =>
+            CreatePostScreen(post: state.extra as FeedPost),
       ),
       GoRoute(
         path: '/feed/:postId',

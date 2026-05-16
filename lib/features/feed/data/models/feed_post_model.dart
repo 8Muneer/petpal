@@ -9,7 +9,7 @@ class FeedPostModel extends FeedPost {
     super.authorPhotoUrl,
     required super.type,
     required super.content,
-    super.imageUrl,
+    super.imageUrls,
     super.likes,
     super.commentCount,
     super.createdAt,
@@ -17,6 +17,18 @@ class FeedPostModel extends FeedPost {
 
   factory FeedPostModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
+
+    // Support new `imageUrls` list and legacy `imageUrl` string
+    List<String> imageUrls;
+    if (data['imageUrls'] != null) {
+      imageUrls = List<String>.from(data['imageUrls'] as List);
+    } else if (data['imageUrl'] != null &&
+        (data['imageUrl'] as String).isNotEmpty) {
+      imageUrls = [data['imageUrl'] as String];
+    } else {
+      imageUrls = const [];
+    }
+
     return FeedPostModel(
       id: doc.id,
       authorUid: data['authorUid'] as String? ?? '',
@@ -24,7 +36,7 @@ class FeedPostModel extends FeedPost {
       authorPhotoUrl: data['authorPhotoUrl'] as String?,
       type: (data['type'] as String?) == 'tip' ? PostType.tip : PostType.post,
       content: data['content'] as String? ?? '',
-      imageUrl: data['imageUrl'] as String?,
+      imageUrls: imageUrls,
       likes: List<String>.from(data['likes'] ?? []),
       commentCount: data['commentCount'] as int? ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -38,7 +50,7 @@ class FeedPostModel extends FeedPost {
       'authorPhotoUrl': authorPhotoUrl,
       'type': type == PostType.tip ? 'tip' : 'post',
       'content': content,
-      'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
       'likes': likes,
       'commentCount': commentCount,
       'createdAt': FieldValue.serverTimestamp(),
