@@ -76,39 +76,43 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Color(0xFFC49A6C); // Premium Golden/Beige accent
-    
+    const accentColor = Color(0xFFC49A6C);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? accentColor.withOpacity(0.1)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
+      child: SizedBox(
+        height: double.infinity,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? accentColor.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                isSelected ? item.activeIcon : item.icon,
+                size: 24,
+                color: isSelected ? accentColor : AppColors.textMuted,
+              ),
             ),
-            child: Icon(
-              isSelected ? item.activeIcon : item.icon,
-              size: 24,
-              color: isSelected ? accentColor : AppColors.textMuted,
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 250),
+              style: AppTextStyles.caption.copyWith(
+                color: isSelected ? accentColor : AppColors.textMuted,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                fontSize: 10,
+              ),
+              child: Text(item.label),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            style: AppTextStyles.caption.copyWith(
-              color: isSelected ? AppColors.onSurface : AppColors.textMuted,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 10,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

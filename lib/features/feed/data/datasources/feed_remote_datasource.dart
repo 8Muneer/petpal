@@ -60,6 +60,10 @@ class FeedRemoteDatasource {
     }
   }
 
+  Future<void> updatePost(String postId, Map<String, dynamic> data) async {
+    await _postsRef.doc(postId).update(data);
+  }
+
   Future<void> deletePost(String postId) async {
     // Delete all comments in the subcollection first
     final comments = await _postsRef.doc(postId).collection('comments').get();
