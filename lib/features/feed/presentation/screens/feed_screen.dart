@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/time_ago_text.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
@@ -440,16 +441,6 @@ class _PostCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  String get _timeAgo {
-    if (post.createdAt == null) return '';
-    final diff = DateTime.now().difference(post.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLiked = post.isLikedBy(currentUid);
@@ -485,8 +476,8 @@ class _PostCard extends StatelessWidget {
                           fontSize: 14,
                         ),
                       ),
-                      Text(
-                        _timeAgo,
+                      TimeAgoText(
+                        createdAt: post.createdAt,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

@@ -8,6 +8,7 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/time_ago_text.dart';
 import 'package:petpal/features/feed/domain/entities/feed_comment.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
@@ -373,16 +374,6 @@ class _FullPostCard extends StatelessWidget {
     required this.onLike,
   });
 
-  String get _timeAgo {
-    if (post.createdAt == null) return '';
-    final diff = DateTime.now().difference(post.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLiked = post.isLikedBy(currentUid);
@@ -411,7 +402,8 @@ class _FullPostCard extends StatelessWidget {
                         style: AppTextStyles.bodyMd
                             .copyWith(fontWeight: FontWeight.w900,
                                 color: AppColors.textPrimary)),
-                    Text(_timeAgo,
+                    TimeAgoText(
+                        createdAt: post.createdAt,
                         style: AppTextStyles.labelSm
                             .copyWith(color: AppColors.textMuted)),
                   ],
@@ -704,15 +696,6 @@ class _CommentCard extends StatelessWidget {
 
   const _CommentCard({required this.comment});
 
-  String get _timeAgo {
-    if (comment.createdAt == null) return '';
-    final diff = DateTime.now().difference(comment.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    return 'לפני ${diff.inDays} ימים';
-  }
-
   @override
   Widget build(BuildContext context) {
     return AppCard.outline(
@@ -740,7 +723,7 @@ class _CommentCard extends StatelessWidget {
                           color: AppColors.textPrimary),
                     ),
                     const SizedBox(width: 8),
-                    Text(_timeAgo, style: AppTextStyles.labelSm),
+                    TimeAgoText(createdAt: comment.createdAt, style: AppTextStyles.labelSm),
                   ],
                 ),
                 const SizedBox(height: 5),
