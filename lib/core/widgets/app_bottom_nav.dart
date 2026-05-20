@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 
@@ -39,7 +39,7 @@ class AppBottomNav extends StatelessWidget {
         borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.10),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -76,7 +76,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Color(0xFFC49A6C);
+    const accentColor = AppColors.primary;
 
     return GestureDetector(
       onTap: onTap,

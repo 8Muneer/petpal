@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
@@ -39,7 +39,7 @@ class LostFoundToggleBar extends StatelessWidget {
   Widget _buildTabButton(int index, String label) {
     final bool isSelected = selectedIndex == index;
     final activeColor =
-        index == 0 ? const Color(0xFFBA1A1A) : AppColors.primary;
+        index == 0 ? AppColors.prussianBlue3 : AppColors.primary;
 
     return Expanded(
       child: GestureDetector(

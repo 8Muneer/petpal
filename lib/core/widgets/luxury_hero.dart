@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
 /// A premium hero section with parallax image and bottom-floating search bar.
