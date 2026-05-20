@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -46,7 +46,7 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            error ? const Color(0xFFFB7185) : AppColors.primary,
+            error ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -153,7 +153,7 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
           height: 54,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0D9488), AppColors.primary],
+              colors: [AppColors.prussianBlue, AppColors.primary],
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
             ),
@@ -189,9 +189,9 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFECFDF5),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF6EE7B7)),
+        border: Border.all(color: AppColors.blueSlate),
       ),
       child: Row(
         children: [

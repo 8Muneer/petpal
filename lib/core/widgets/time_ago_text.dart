@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Displays a Hebrew relative-time string ("עכשיו", "לפני 5 דק׳", etc.)

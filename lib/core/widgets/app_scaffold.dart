@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
 /// Unified app scaffold — clean flat background, no decorative blobs.

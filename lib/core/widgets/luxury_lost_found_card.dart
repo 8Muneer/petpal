@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/glass_pill.dart';
@@ -17,7 +17,7 @@ class LuxuryLostFoundCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLost = post.type == LostFoundType.lost;
-    final statusColor = isLost ? const Color(0xFFBA1A1A) : AppColors.primary;
+    final statusColor = isLost ? AppColors.prussianBlue3 : AppColors.primary;
     final statusLabel = isLost ? 'אבדה' : 'נמצאה';
 
     return GestureDetector(
