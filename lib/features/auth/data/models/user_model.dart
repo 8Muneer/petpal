@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/auth/domain/entities/app_user.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 

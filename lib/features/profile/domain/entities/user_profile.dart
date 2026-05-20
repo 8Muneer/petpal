@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+﻿import 'package:equatable/equatable.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 
 class UserProfile extends Equatable {

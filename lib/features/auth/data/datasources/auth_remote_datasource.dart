@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/core/constants/app_constants.dart';
 import 'package:petpal/features/auth/data/models/user_model.dart';

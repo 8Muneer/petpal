@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -259,7 +259,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             // ── Messages ────────────────────────────────────────────────────
             Expanded(
               child: ColoredBox(
-                color: const Color(0xFFF0F2F5),
+                color: AppColors.surface,
                 child: messagesAsync.when(
                 loading: () => const Center(
                     child: CircularProgressIndicator(
@@ -430,7 +430,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           hintStyle: const TextStyle(
                               color: AppColors.textMuted, fontSize: 14),
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: const BorderSide(
@@ -551,7 +551,7 @@ class _MessageRow extends StatelessWidget {
                           : _ChatAvatar(
                               name: senderName,
                               radius: 16,
-                              color: const Color(0xFF0EA5E9),
+                              color: AppColors.smartBlue,
                               photoUrl: senderPhotoUrl.isNotEmpty
                                   ? senderPhotoUrl
                                   : null,
@@ -666,7 +666,7 @@ class _Bubble extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: isMe ? Colors.white : const Color(0xFF1E293B),
+              color: isMe ? Colors.white : AppColors.onSurface,
               height: 1.4,
             ),
           ),
@@ -858,9 +858,9 @@ class _ContextCardState extends State<_ContextCard> {
   Widget build(BuildContext context) {
     final m = widget.metadata;
     final isWalk = m['requestType'] == 'walk';
-    final accent = isWalk ? AppColors.primary : const Color(0xFF7C3AED);
+    final accent = isWalk ? AppColors.primary : AppColors.primary;
     final bgColor =
-        isWalk ? const Color(0xFFECFDF5) : const Color(0xFFF5F3FF);
+        isWalk ? AppColors.surface : const Color(0xFFF5F3FF);
     final label = isWalk ? 'בקשת טיול' : 'בקשת שמירה';
     final typeIcon =
         isWalk ? Icons.directions_walk_rounded : Icons.home_rounded;
@@ -1073,7 +1073,7 @@ class _InfoChip extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF334155),
+              color: AppColors.textSecondary,
             ),
           ),
         ],

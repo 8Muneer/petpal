@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:petpal/features/auth/data/repositories/auth_repository_impl.dart';
