@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 
 class FeedPostModel extends FeedPost {

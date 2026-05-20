@@ -1,2 +1,2 @@
-// TODO: Implement service listing entity
+﻿// TODO: Implement service listing entity
 // Fields: id, providerId, serviceType, title, description, price, location, rating

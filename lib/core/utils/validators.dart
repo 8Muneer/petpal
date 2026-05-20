@@ -1,4 +1,4 @@
-class Validators {
+﻿class Validators {
   static final RegExp emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   static bool isValidEmail(String email) => emailRegex.hasMatch(email);

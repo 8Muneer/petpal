@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -118,8 +118,8 @@ class ProfileScreen extends ConsumerWidget {
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                     colors: [
-                      Color(0xFFECFDF5),
-                      Color(0xFFF6F7FB),
+                      AppColors.surface,
+                      AppColors.surface,
                       Colors.white,
                     ],
                   ),
@@ -138,8 +138,8 @@ class ProfileScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF34D399).withOpacity(0.20),
-                      const Color(0xFF0EA5E9).withOpacity(0.12),
+                      AppColors.primary.withValues(alpha: 0.20),
+                      AppColors.smartBlue.withValues(alpha: 0.12),
                     ],
                   ),
                 ),
@@ -155,8 +155,8 @@ class ProfileScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.statusOpen.withOpacity(0.12),
-                      AppColors.primary.withOpacity(0.14),
+                      AppColors.statusOpen.withValues(alpha: 0.12),
+                      AppColors.primary.withValues(alpha: 0.14),
                     ],
                   ),
                 ),
@@ -322,7 +322,7 @@ class _ProfileBody extends StatelessWidget {
                 title: '\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea',
                 value: '${profile.totalReviews}',
                 icon: Icons.rate_review_rounded,
-                accent: const Color(0xFF0EA5E9),
+                accent: AppColors.smartBlue,
                 onTap: () => onToast('TODO: My reviews'),
               ),
             ),
@@ -350,7 +350,7 @@ class _ProfileBody extends StatelessWidget {
                 icon: profile.role == UserRole.serviceProvider
                     ? Icons.pets_rounded
                     : Icons.person_rounded,
-                accent: const Color(0xFFFB7185),
+                accent: AppColors.error,
                 onTap: () {},
               ),
             ),
@@ -372,7 +372,7 @@ class _ProfileBody extends StatelessWidget {
               profile.bio!,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF334155).withOpacity(0.85),
+                color: AppColors.textSecondary.withValues(alpha: 0.85),
                 height: 1.5,
               ),
             ),
@@ -405,7 +405,7 @@ class _ProfileBody extends StatelessWidget {
                     : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                 badgeColor: profile.isVerified
                     ? AppColors.statusOpen
-                    : const Color(0xFFFB7185),
+                    : AppColors.error,
               ),
               if (profile.phone != null && profile.phone!.isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -454,7 +454,7 @@ class _ProfileBody extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(16)),
                               content: const Text(
                                   '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.'),
-                              backgroundColor: const Color(0xFFB91C1C),
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -519,7 +519,7 @@ class _ProfileHeroCard extends StatelessWidget {
                     ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   blurRadius: 24,
                   offset: const Offset(0, 16),
                 ),
@@ -570,7 +570,7 @@ class _ProfileHeroCard extends StatelessWidget {
                           : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                       color: verified
                           ? AppColors.statusOpen
-                          : const Color(0xFFFB7185),
+                          : AppColors.error,
                     ),
                   ],
                 ),
@@ -590,7 +590,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
+                    color: AppColors.textSecondary.withValues(alpha: 0.82),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -671,7 +671,7 @@ class _SettingTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF334155).withOpacity(0.82),
+                      color: AppColors.textSecondary.withValues(alpha: 0.82),
                     ),
                   ),
                 ],
@@ -715,7 +715,7 @@ class _StatCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                color: accent.withOpacity(0.14),
+                color: accent.withValues(alpha: 0.14),
               ),
               child: Icon(icon, color: accent),
             ),
@@ -766,7 +766,7 @@ class _KeyValueRow extends StatelessWidget {
             k,
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF334155).withOpacity(0.9),
+              color: AppColors.textSecondary.withValues(alpha: 0.9),
             ),
           ),
         ),
@@ -774,7 +774,7 @@ class _KeyValueRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: badgeColor!.withOpacity(0.12),
+              color: badgeColor!.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -822,10 +822,10 @@ class _PrimaryOutlineButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: enabled ? AppColors.borderFaint : const Color(0xFFF8FAFC),
+          color: enabled ? AppColors.borderFaint : AppColors.surface,
           border: Border.all(
             color: enabled
-                ? AppColors.primary.withOpacity(0.22)
+                ? AppColors.primary.withValues(alpha: 0.22)
                 : AppColors.border,
           ),
         ),
@@ -836,8 +836,8 @@ class _PrimaryOutlineButton extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: enabled
-                    ? AppColors.primary.withOpacity(0.12)
-                    : AppColors.textSecondary.withOpacity(0.10),
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : AppColors.textSecondary.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
@@ -892,9 +892,9 @@ class _DangerButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: const Color(0xFFFFF1F2),
+          color: AppColors.surface,
           border:
-              Border.all(color: const Color(0xFFFB7185).withOpacity(0.35)),
+              Border.all(color: AppColors.error.withValues(alpha: 0.35)),
         ),
         child: const Row(
           children: [
@@ -905,11 +905,11 @@ class _DangerButton extends StatelessWidget {
                 '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF9F1239),
+                  color: AppColors.error,
                 ),
               ),
             ),
-            Icon(Icons.chevron_left_rounded, color: Color(0xFF9F1239)),
+            Icon(Icons.chevron_left_rounded, color: AppColors.error),
           ],
         ),
       ),
@@ -926,10 +926,10 @@ class _DangerIcon extends StatelessWidget {
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: const Color(0xFFFB7185).withOpacity(0.16),
+        color: AppColors.error.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Icon(Icons.logout_rounded, color: Color(0xFF9F1239)),
+      child: const Icon(Icons.logout_rounded, color: AppColors.error),
     );
   }
 }
@@ -1029,7 +1029,7 @@ class _DividerLine extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 1,
-      color: AppColors.border.withOpacity(0.7),
+      color: AppColors.border.withValues(alpha: 0.7),
     );
   }
 }

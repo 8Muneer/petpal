@@ -1,4 +1,4 @@
-/// Returns a display-ready price string based on [priceType].
+﻿/// Returns a display-ready price string based on [priceType].
 ///
 /// Examples:
 ///   formatPrice('100₪', 'קבוע')       → '100₪ כולל'

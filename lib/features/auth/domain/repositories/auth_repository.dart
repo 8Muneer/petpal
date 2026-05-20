@@ -1,4 +1,4 @@
-import 'package:fpdart/fpdart.dart';
+﻿import 'package:fpdart/fpdart.dart';
 import 'package:petpal/core/error/failures.dart';
 import 'package:petpal/features/auth/domain/entities/app_user.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';

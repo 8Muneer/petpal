@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -89,7 +89,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFFB7185)),
+                  foregroundColor: AppColors.error),
               child: const Text('בטל פוסט',
                   style: TextStyle(fontWeight: FontWeight.w700)),
             ),
@@ -176,7 +176,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : AppColors.primary,
+            isError ? AppColors.error : AppColors.primary,
       ),
     );
   }

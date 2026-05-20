@@ -1,4 +1,4 @@
-import 'package:fpdart/fpdart.dart';
+﻿import 'package:fpdart/fpdart.dart';
 import 'package:petpal/core/error/failures.dart';
 import 'package:petpal/features/profile/domain/entities/user_profile.dart';
 

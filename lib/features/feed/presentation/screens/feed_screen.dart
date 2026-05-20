@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -536,7 +536,7 @@ class _PostCard extends StatelessWidget {
                               title: const Row(
                                 children: [
                                   Icon(Icons.delete_outline_rounded,
-                                      color: Color(0xFFFB7185)),
+                                      color: AppColors.error),
                                   SizedBox(width: 10),
                                   Text(
                                     'מחיקת פוסט',
@@ -558,7 +558,7 @@ class _PostCard extends StatelessWidget {
                                   onPressed: () =>
                                       Navigator.pop(ctx, true),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFB7185),
+                                    backgroundColor: AppColors.error,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(
@@ -596,12 +596,12 @@ class _PostCard extends StatelessWidget {
                         child: Row(
                           children: [
                             Icon(Icons.delete_outline_rounded,
-                                size: 18, color: Color(0xFFFB7185)),
+                                size: 18, color: AppColors.error),
                             SizedBox(width: 10),
                             Text('מחיקה',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFFFB7185))),
+                                    color: AppColors.error)),
                           ],
                         ),
                       ),
