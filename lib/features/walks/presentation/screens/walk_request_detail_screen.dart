@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -26,11 +26,19 @@ class WalkRequestDetailScreen extends ConsumerStatefulWidget {
 class _WalkRequestDetailScreenState
     extends ConsumerState<WalkRequestDetailScreen> {
   late WalkRequest _request;
+  final _pageCtrl = PageController();
+  int _page = 0;
 
   @override
   void initState() {
     super.initState();
     _request = widget.request;
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
   }
 
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
@@ -47,17 +55,6 @@ class _WalkRequestDetailScreenState
     );
   }
 
-  IconData get _petIcon {
-    switch (_request.petType) {
-      case PetType.dog:
-        return Icons.directions_walk_rounded;
-      case PetType.cat:
-        return Icons.pets_rounded;
-      case PetType.other:
-        return Icons.cruelty_free_rounded;
-    }
-  }
-
   String get _petTypeLabel {
     switch (_request.petType) {
       case PetType.dog:
@@ -69,15 +66,6 @@ class _WalkRequestDetailScreenState
     }
   }
 
-  String get _timeAgo {
-    if (_request.createdAt == null) return '';
-    final diff = DateTime.now().difference(_request.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${_request.createdAt!.day}/${_request.createdAt!.month}/${_request.createdAt!.year}';
-  }
 
   Future<void> _toggleStatus() async {
     final newStatus = _isOpen ? WalkStatus.closed : WalkStatus.open;
@@ -99,6 +87,7 @@ class _WalkRequestDetailScreenState
         duration: _request.duration,
         area: _request.area,
         petImageUrl: _request.petImageUrl,
+        petImageUrls: _request.petImageUrls,
         petGender: _request.petGender,
         specialInstructions: _request.specialInstructions,
         budget: _request.budget,
@@ -138,7 +127,7 @@ class _WalkRequestDetailScreenState
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFB7185),
+                backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -159,8 +148,7 @@ class _WalkRequestDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final hasPetPhoto =
-        _request.petImageUrl != null && _request.petImageUrl!.isNotEmpty;
+    final images = _request.allImages;
     final safeTop = MediaQuery.of(context).padding.top;
     final gender = _request.petGender == PetGender.male
         ? 'זכר'
@@ -172,7 +160,7 @@ class _WalkRequestDetailScreenState
         : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEEEEF5),
+      backgroundColor: AppColors.surface,
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Stack(
@@ -180,16 +168,117 @@ class _WalkRequestDetailScreenState
             // ── Hero photo ────────────────────────────────────────────────────────
             Positioned.fill(
               bottom: MediaQuery.of(context).size.height * 0.42,
-              child: hasPetPhoto
-                  ? CachedNetworkImage(
-                      imageUrl: _request.petImageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          _WalkHeroBg(petType: _request.petType),
-                      errorWidget: (_, __, ___) =>
-                          _WalkHeroBg(petType: _request.petType),
-                    )
-                  : _WalkHeroBg(petType: _request.petType),
+              child: images.isEmpty
+                  ? _WalkHeroBg(petType: _request.petType)
+                  : images.length == 1
+                      ? CachedNetworkImage(
+                          imageUrl: images.first,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              _WalkHeroBg(petType: _request.petType),
+                          errorWidget: (_, __, ___) =>
+                              _WalkHeroBg(petType: _request.petType),
+                        )
+                      : Stack(
+                          children: [
+                            PageView.builder(
+                              controller: _pageCtrl,
+                              onPageChanged: (i) =>
+                                  setState(() => _page = i),
+                              itemCount: images.length,
+                              itemBuilder: (_, i) => CachedNetworkImage(
+                                imageUrl: images[i],
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) =>
+                                    _WalkHeroBg(petType: _request.petType),
+                                errorWidget: (_, __, ___) =>
+                                    _WalkHeroBg(petType: _request.petType),
+                              ),
+                            ),
+                            // Left arrow → next image (RTL)
+                            if (_page < images.length - 1)
+                              Positioned(
+                                left: 12,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: GestureDetector(
+                                    onTap: () => _pageCtrl.nextPage(
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    ),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.35),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                          Icons.chevron_left_rounded,
+                                          color: Colors.white,
+                                          size: 26),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // Right arrow → previous image (RTL)
+                            if (_page > 0)
+                              Positioned(
+                                right: 12,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: GestureDetector(
+                                    onTap: () => _pageCtrl.previousPage(
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    ),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.35),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                          Icons.chevron_right_rounded,
+                                          color: Colors.white,
+                                          size: 26),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // Dot indicators
+                            Positioned(
+                              bottom: 12,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                  images.length,
+                                  (i) => AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    width: _page == i ? 18 : 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 3),
+                                    decoration: BoxDecoration(
+                                      color: _page == i
+                                          ? Colors.white
+                                          : Colors.white
+                                              .withValues(alpha: 0.5),
+                                      borderRadius:
+                                          BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
             ),
 
             // ── White info sheet ──────────────────────────────────────────────────
@@ -207,7 +296,7 @@ class _WalkRequestDetailScreenState
                     clipBehavior: Clip.none,
                     children: [
                       // Pet thumbnail (top-left corner, overlapping hero)
-                      if (hasPetPhoto)
+                      if (images.isNotEmpty)
                         Positioned(
                           top: -36,
                           left: 20,
@@ -220,13 +309,13 @@ class _WalkRequestDetailScreenState
                                   color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
+                                    color: Colors.black.withValues(alpha: 0.15),
                                     blurRadius: 12)
                               ],
                             ),
                             child: ClipOval(
                               child: CachedNetworkImage(
-                                imageUrl: _request.petImageUrl!,
+                                imageUrl: images.first,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -236,7 +325,7 @@ class _WalkRequestDetailScreenState
                       SingleChildScrollView(
                         padding: EdgeInsets.fromLTRB(
                             20,
-                            hasPetPhoto ? 48 : 24,
+                            images.isNotEmpty ? 48 : 24,
                             20,
                             _showProviderCta ? 110 : 40),
                         child: Column(
@@ -272,10 +361,10 @@ class _WalkRequestDetailScreenState
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
+                                color: AppColors.surface,
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                    color: const Color(0xFFE2E8F0)),
+                                    color: AppColors.border),
                               ),
                               child: Column(
                                 children: [
@@ -287,8 +376,8 @@ class _WalkRequestDetailScreenState
                                       valueColor:
                                           _request.petGender ==
                                                   PetGender.female
-                                              ? const Color(0xFFEC4899)
-                                              : const Color(0xFF0EA5E9),
+                                              ? AppColors.error
+                                              : AppColors.smartBlue,
                                     ),
                                     const _InfoDivider(),
                                   ],
@@ -303,7 +392,7 @@ class _WalkRequestDetailScreenState
                                     icon: Icons.location_on_rounded,
                                     label: 'אזור',
                                     value: _request.area,
-                                    valueColor: const Color(0xFFEF4444),
+                                    valueColor: AppColors.error,
                                   ),
                                   if (fullDateStr.isNotEmpty) ...[
                                     const _InfoDivider(),
@@ -311,7 +400,7 @@ class _WalkRequestDetailScreenState
                                       icon: Icons.calendar_today_rounded,
                                       label: 'תאריך',
                                       value: fullDateStr,
-                                      valueColor: const Color(0xFF0891B2),
+                                      valueColor: AppColors.regalNavy,
                                     ),
                                   ],
                                   if (_request.preferredTime.isNotEmpty) ...[
@@ -320,7 +409,7 @@ class _WalkRequestDetailScreenState
                                       icon: Icons.access_time_rounded,
                                       label: 'שעה',
                                       value: _request.preferredTime,
-                                      valueColor: const Color(0xFF059669),
+                                      valueColor: AppColors.success,
                                     ),
                                   ],
                                   if (_request.budget != null &&
@@ -332,7 +421,7 @@ class _WalkRequestDetailScreenState
                                       label: 'תקציב',
                                       value: withShekel(_request.budget!),
                                       valueColor:
-                                          const Color(0xFF8B5CF6),
+                                          AppColors.smartBlue,
                                     ),
                                   ],
                                 ],
@@ -373,7 +462,7 @@ class _WalkRequestDetailScreenState
                                   ),
                                   _CircleAction(
                                     icon: Icons.map_rounded,
-                                    color: const Color(0xFFEF4444),
+                                    color: AppColors.error,
                                     onTap: _openMaps,
                                   ),
                                   const SizedBox(width: 8),
@@ -395,11 +484,11 @@ class _WalkRequestDetailScreenState
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF7ED),
+                                  color: AppColors.surface,
                                   borderRadius:
                                       BorderRadius.circular(16),
                                   border: Border.all(
-                                      color: const Color(0xFFFED7AA)),
+                                      color: AppColors.border),
                                 ),
                                 child: Column(
                                   crossAxisAlignment:
@@ -411,7 +500,7 @@ class _WalkRequestDetailScreenState
                                             Icons
                                                 .sticky_note_2_outlined,
                                             size: 15,
-                                            color: Color(0xFFF97316)),
+                                            color: AppColors.warning),
                                         SizedBox(width: 6),
                                         Text(
                                           'הערות',
@@ -420,7 +509,7 @@ class _WalkRequestDetailScreenState
                                               fontWeight:
                                                   FontWeight.w800,
                                               color:
-                                                  Color(0xFFF97316)),
+                                                  AppColors.warning),
                                         ),
                                       ],
                                     ),
@@ -450,17 +539,17 @@ class _WalkRequestDetailScreenState
                                   decoration: BoxDecoration(
                                     color: _isOpen
                                         ? AppColors.textMuted
-                                            .withOpacity(0.10)
+                                            .withValues(alpha: 0.10)
                                         : AppColors.statusOpen
-                                            .withOpacity(0.10),
+                                            .withValues(alpha: 0.10),
                                     borderRadius:
                                         BorderRadius.circular(16),
                                     border: Border.all(
                                       color: _isOpen
                                           ? AppColors.textMuted
-                                              .withOpacity(0.3)
+                                              .withValues(alpha: 0.3)
                                           : AppColors.statusOpen
-                                              .withOpacity(0.3),
+                                              .withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Row(
@@ -475,7 +564,7 @@ class _WalkRequestDetailScreenState
                                         size: 20,
                                         color: _isOpen
                                             ? AppColors.textSecondary
-                                            : const Color(0xFF16A34A),
+                                            : AppColors.success,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
@@ -487,7 +576,7 @@ class _WalkRequestDetailScreenState
                                           fontWeight: FontWeight.w900,
                                           color: _isOpen
                                               ? AppColors.textSecondary
-                                              : const Color(0xFF16A34A),
+                                              : AppColors.success,
                                         ),
                                       ),
                                     ],
@@ -514,11 +603,11 @@ class _WalkRequestDetailScreenState
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.92),
+                    color: Colors.white.withValues(alpha: 0.92),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.12),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 8)
                     ],
                   ),
@@ -538,11 +627,11 @@ class _WalkRequestDetailScreenState
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.92),
+                      color: Colors.white.withValues(alpha: 0.92),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
+                            color: Colors.black.withValues(alpha: 0.12),
                             blurRadius: 8)
                       ],
                     ),
@@ -573,13 +662,13 @@ class _WalkRequestDetailScreenState
                       value: 'delete',
                       child: Row(children: [
                         Icon(Icons.delete_outline_rounded,
-                            size: 18, color: Color(0xFFFB7185)),
+                            size: 18, color: AppColors.error),
                         SizedBox(width: 10),
                         Text('מחק בקשה',
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
-                                color: Color(0xFFFB7185))),
+                                color: AppColors.error)),
                       ]),
                     ),
                   ],
@@ -606,7 +695,7 @@ class _WalkRequestDetailScreenState
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.35),
+                            color: AppColors.primary.withValues(alpha: 0.35),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -644,7 +733,7 @@ class _WalkHeroBg extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
+            colors: [AppColors.prussianBlue, AppColors.smartBlue],
           ),
         ),
         child: Center(
@@ -653,7 +742,7 @@ class _WalkHeroBg extends StatelessWidget {
                 ? Icons.directions_walk_rounded
                 : Icons.pets_rounded,
             size: 100,
-            color: Colors.white.withOpacity(0.30),
+            color: Colors.white.withValues(alpha: 0.30),
           ),
         ),
       );
@@ -676,14 +765,14 @@ class _InfoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: valueColor.withOpacity(0.6)),
+            Icon(icon, size: 16, color: valueColor.withValues(alpha: 0.6)),
             const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: valueColor.withOpacity(0.65),
+                color: valueColor.withValues(alpha: 0.65),
               ),
             ),
             const Spacer(),
@@ -707,7 +796,7 @@ class _InfoDivider extends StatelessWidget {
   Widget build(BuildContext context) => const Divider(
         height: 1,
         thickness: 1,
-        color: Color(0xFFE2E8F0),
+        color: AppColors.border,
       );
 }
 
@@ -725,7 +814,7 @@ class _CircleAction extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 20),
@@ -876,9 +965,9 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: AppColors.primary.withOpacity(0.06),
+                  color: AppColors.primary.withValues(alpha: 0.06),
                   border: Border.all(
-                      color: AppColors.primary.withOpacity(0.15)),
+                      color: AppColors.primary.withValues(alpha: 0.15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -997,7 +1086,7 @@ class _SummaryItem extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF334155))),
+                color: AppColors.textSecondary)),
       ],
     );
   }
@@ -1030,14 +1119,14 @@ class _OfferTextField extends StatelessWidget {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
         prefixText: prefix,
         prefixStyle: const TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.w800,
             fontSize: 14),
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: AppColors.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(

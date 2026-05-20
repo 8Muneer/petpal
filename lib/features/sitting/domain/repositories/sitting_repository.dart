@@ -1,4 +1,4 @@
-import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
+﻿import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 
 abstract class SittingRepository {
   Stream<List<SittingRequest>> watchRequests(String ownerUid);

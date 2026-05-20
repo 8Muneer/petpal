@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,17 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
-import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 class CreateSittingRequestScreen extends ConsumerStatefulWidget {
   final SittingRequest? initialRequest;
@@ -39,8 +34,8 @@ class _CreateSittingRequestScreenState
 
   PetType _petType = PetType.dog;
   PetGender? _petGender;
-  XFile? _pickedImage;
-  String? _existingImageUrl;
+  List<XFile> _pickedImages = [];
+  List<String> _existingImageUrls = [];
   DateTime? _startDate;
   DateTime? _endDate;
   SittingType _sittingType = SittingType.atOwnerHome;
@@ -60,7 +55,7 @@ class _CreateSittingRequestScreenState
       _startDate = r.startDate;
       _endDate = r.endDate;
       _sittingType = r.sittingType;
-      _existingImageUrl = r.petImageUrl;
+      _existingImageUrls = List.of(r.allImages);
     }
   }
 
@@ -72,23 +67,28 @@ class _CreateSittingRequestScreenState
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final imageService = ref.read(sittingImageServiceProvider);
-    final file = await imageService.pickImage(ImageSource.gallery);
-    if (file != null) {
-      setState(() {
-        _pickedImage = file;
-        _existingImageUrl = null;
-      });
-    }
-  }
+  static const _maxImages = 5;
 
-  void _removeImage() {
+  bool get _canAddMore =>
+      (_existingImageUrls.length + _pickedImages.length) < _maxImages;
+
+  Future<void> _addImages() async {
+    if (!_canAddMore) return;
+    final imageService = ref.read(sittingImageServiceProvider);
+    final picked = await imageService.pickImages();
+    if (picked.isEmpty) return;
     setState(() {
-      _pickedImage = null;
-      _existingImageUrl = null;
+      final remaining =
+          _maxImages - _existingImageUrls.length - _pickedImages.length;
+      _pickedImages.addAll(picked.take(remaining));
     });
   }
+
+  void _removeExistingImage(int index) =>
+      setState(() => _existingImageUrls.removeAt(index));
+
+  void _removePickedImage(int index) =>
+      setState(() => _pickedImages.removeAt(index));
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();
@@ -102,7 +102,7 @@ class _CreateSittingRequestScreenState
         child: Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF7C3AED),
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -135,7 +135,7 @@ class _CreateSittingRequestScreenState
         child: Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF7C3AED),
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -172,13 +172,17 @@ class _CreateSittingRequestScreenState
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        setState(() => _isPublishing = false);
+        _showSnack('יש להתחבר כדי לפרסם בקשה', isError: true);
+        return;
+      }
 
       final instructions = _instructionsController.text.trim();
       final budget = _budgetController.text.trim();
 
-      String? petImageUrl = _existingImageUrl;
-      if (_pickedImage != null) {
+      List<String> allUrls = List.of(_existingImageUrls);
+      if (_pickedImages.isNotEmpty) {
         final imageService = ref.read(sittingImageServiceProvider);
         final uploadId = widget._isEditing
             ? widget.initialRequest!.id
@@ -186,15 +190,17 @@ class _CreateSittingRequestScreenState
                 .collection('sitting_requests')
                 .doc()
                 .id;
-        petImageUrl =
-            await imageService.uploadPetImage(uploadId, _pickedImage!);
+        final newUrls =
+            await imageService.uploadPetImages(uploadId, _pickedImages);
+        allUrls.addAll(newUrls);
       }
 
       final data = {
         'petName': petName,
         'petType': _petType.name,
         'petGender': _petGender?.name,
-        'petImageUrl': petImageUrl,
+        'petImageUrl': allUrls.isNotEmpty ? allUrls.first : null,
+        'petImageUrls': allUrls,
         'startDate': Timestamp.fromDate(_startDate!),
         'endDate': Timestamp.fromDate(_endDate!),
         'sittingType': _sittingType.name,
@@ -208,8 +214,8 @@ class _CreateSittingRequestScreenState
       if (widget._isEditing) {
         await repo.updateRequest(widget.initialRequest!.id, data);
         if (!mounted) return;
-        context.pop();
         _showSnack('הבקשה עודכנה בהצלחה!');
+        context.pop();
       } else {
         await repo.createRequest({
           ...data,
@@ -220,10 +226,11 @@ class _CreateSittingRequestScreenState
           'createdAt': FieldValue.serverTimestamp(),
         });
         if (!mounted) return;
-        context.pop();
         _showSnack('הבקשה פורסמה בהצלחה!');
+        context.pop();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('_save sitting error: $e\n$stack');
       if (!mounted) return;
       setState(() => _isPublishing = false);
       _showSnack(
@@ -241,7 +248,7 @@ class _CreateSittingRequestScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : const Color(0xFF7C3AED),
+            isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -252,8 +259,7 @@ class _CreateSittingRequestScreenState
   @override
   Widget build(BuildContext context) {
     final isEditing = widget._isEditing;
-    final hasImage =
-        _pickedImage != null || (_existingImageUrl?.isNotEmpty == true);
+    final totalImages = _existingImageUrls.length + _pickedImages.length;
     final nights = (_startDate != null && _endDate != null)
         ? _endDate!.difference(_startDate!).inDays
         : 0;
@@ -304,13 +310,13 @@ class _CreateSittingRequestScreenState
                         decoration: InputDecoration(
                           hintText: 'לדוגמה: בלה',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.6),
+                            color: AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(14),
                           prefixIcon: const Icon(Icons.pets_rounded,
-                              color: Color(0xFF7C3AED)),
+                              color: AppColors.primary),
                         ),
                         style: const TextStyle(
                           fontSize: 15,
@@ -426,91 +432,70 @@ class _CreateSittingRequestScreenState
 
                     const SizedBox(height: 16),
 
-                    // Pet photo
-                    _FieldLabel('תמונה של חיית המחמד (אופציונלי)'),
+                    // Pet photos (multi-image)
+                    const _FieldLabel('תמונות של חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
-                    if (hasImage) ...[
-                      Stack(
+                    SizedBox(
+                      height: 110,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: _pickedImage != null
-                                ? Image.file(
-                                    File(_pickedImage!.path),
-                                    width: double.infinity,
-                                    height: 180,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.network(
-                                    _existingImageUrl!,
-                                    width: double.infinity,
-                                    height: 180,
-                                    fit: BoxFit.cover,
-                                  ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            left: 8,
-                            child: InkWell(
-                              onTap: _removeImage,
+                          for (int i = 0; i < _existingImageUrls.length; i++)
+                            _ImageThumb(
+                              child: Image.network(
+                                _existingImageUrls[i],
+                                fit: BoxFit.cover,
+                              ),
+                              onRemove: () => _removeExistingImage(i),
+                            ),
+                          for (int i = 0; i < _pickedImages.length; i++)
+                            _ImageThumb(
+                              child: Image.file(
+                                File(_pickedImages[i].path),
+                                fit: BoxFit.cover,
+                              ),
+                              onRemove: () => _removePickedImage(i),
+                            ),
+                          if (_canAddMore)
+                            GestureDetector(
+                              onTap: _addImages,
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                width: 90,
+                                margin: const EdgeInsets.only(left: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppColors.primaryFaint,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.3)),
                                 ),
-                                child: const Icon(Icons.close_rounded,
-                                    color: Colors.white, size: 18),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined,
+                                        size: 28,
+                                        color: AppColors.primary
+                                            .withValues(alpha: 0.7)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      totalImages == 0
+                                          ? 'הוסף תמונה'
+                                          : 'הוסף עוד',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary
+                                            .withValues(alpha: 0.8),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: InkWell(
-                              onTap: _pickImage,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.edit_rounded,
-                                    color: Colors.white, size: 18),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
-                    ] else
-                      InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: _pickImage,
-                        child: AppCard(
-                          
-                          padding: const EdgeInsets.symmetric(vertical: 22),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.add_photo_alternate_outlined,
-                                size: 36,
-                                color:
-                                    AppColors.textSecondary.withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'הוסף/י תמונה של החיה',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textSecondary
-                                      .withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -535,7 +520,7 @@ class _CreateSittingRequestScreenState
                                       const Icon(
                                           Icons.calendar_today_rounded,
                                           size: 20,
-                                          color: Color(0xFF7C3AED)),
+                                          color: AppColors.primary),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -548,7 +533,7 @@ class _CreateSittingRequestScreenState
                                             color: _startDate != null
                                                 ? AppColors.textPrimary
                                                 : AppColors.textSecondary
-                                                    .withOpacity(0.6),
+                                                    .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -578,7 +563,7 @@ class _CreateSittingRequestScreenState
                                       const Icon(
                                           Icons.calendar_month_rounded,
                                           size: 20,
-                                          color: Color(0xFF7C3AED)),
+                                          color: AppColors.primary),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -591,7 +576,7 @@ class _CreateSittingRequestScreenState
                                             color: _endDate != null
                                                 ? AppColors.textPrimary
                                                 : AppColors.textSecondary
-                                                    .withOpacity(0.6),
+                                                    .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -614,7 +599,7 @@ class _CreateSittingRequestScreenState
                               horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
                             color:
-                                const Color(0xFF7C3AED).withOpacity(0.10),
+                                AppColors.primary.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -622,7 +607,7 @@ class _CreateSittingRequestScreenState
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF7C3AED),
+                              color: AppColors.primary,
                             ),
                           ),
                         ),
@@ -655,7 +640,7 @@ class _CreateSittingRequestScreenState
                           hintText:
                               'לדוגמה: החתולה אוכלת רק מזון יבש, צריך לנקות ארגז חול פעם ביום...',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.6),
+                            color: AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -685,14 +670,14 @@ class _CreateSittingRequestScreenState
                         decoration: InputDecoration(
                           hintText: 'לדוגמה: ₪80-₪120 ללילה',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.6),
+                            color: AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(14),
                           prefixIcon: const Icon(
                               Icons.account_balance_wallet_rounded,
-                              color: Color(0xFF7C3AED)),
+                              color: AppColors.primary),
                         ),
                         style: const TextStyle(
                           fontSize: 15,
@@ -715,7 +700,7 @@ class _CreateSittingRequestScreenState
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                            colors: [AppColors.primary, AppColors.blueSlate],
                           ),
                         ),
                         child: Center(
@@ -759,7 +744,7 @@ class _CreateSittingRequestScreenState
           height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? const Color(0xFF7C3AED) : Colors.transparent,
+            color: selected ? AppColors.primary : Colors.transparent,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -795,8 +780,8 @@ class _CreateSittingRequestScreenState
             borderRadius: BorderRadius.circular(16),
             color: selected
                 ? (gender == PetGender.male
-                    ? const Color(0xFF0EA5E9)
-                    : const Color(0xFFEC4899))
+                    ? AppColors.smartBlue
+                    : AppColors.error)
                 : Colors.transparent,
           ),
           child: Row(
@@ -832,7 +817,7 @@ class _CreateSittingRequestScreenState
           height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? const Color(0xFF7C3AED) : Colors.transparent,
+            color: selected ? AppColors.primary : Colors.transparent,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -871,7 +856,48 @@ class _FieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w900,
-        color: Color(0xFF334155),
+        color: AppColors.textSecondary,
+      ),
+    );
+  }
+}
+
+class _ImageThumb extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onRemove;
+
+  const _ImageThumb({required this.child, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 90,
+      height: 110,
+      margin: const EdgeInsets.only(left: 8),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: child,
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded,
+                    color: Colors.white, size: 14),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

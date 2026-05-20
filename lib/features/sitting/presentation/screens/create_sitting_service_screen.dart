@@ -1,16 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
@@ -41,7 +37,7 @@ class _CreateSittingServiceScreenState
   static const _allPetTypes = ['כלב', 'חתול', 'אחר'];
   static const _days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
-  static const _purple = Color(0xFF7C3AED);
+  static const _purple = AppColors.primary;
 
   bool get _isEditMode => widget.service != null;
   bool get _allDaysSelected => _availableDays.length == _days.length;
@@ -150,7 +146,7 @@ class _CreateSittingServiceScreenState
         margin: const EdgeInsets.all(14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor: isError ? const Color(0xFFFB7185) : _purple,
+        backgroundColor: isError ? AppColors.error : _purple,
       ),
     );
   }
@@ -249,7 +245,7 @@ class _CreateSittingServiceScreenState
                                           color: selected
                                               ? _purple
                                               : AppColors.textSecondary
-                                                  .withOpacity(0.25),
+                                                  .withValues(alpha: 0.25),
                                         ),
                                       ),
                                       child: Column(
@@ -284,7 +280,7 @@ class _CreateSittingServiceScreenState
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
-                                color: _purple.withOpacity(0.06),
+                                color: _purple.withValues(alpha: 0.06),
                               ),
                               child: TextField(
                                 controller: _priceController,
@@ -296,7 +292,7 @@ class _CreateSittingServiceScreenState
                                       : '₪60 ליום',
                                   hintStyle: TextStyle(
                                     color: AppColors.textSecondary
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                     fontWeight: FontWeight.w600,
                                   ),
                                   border: InputBorder.none,
@@ -331,13 +327,13 @@ class _CreateSittingServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color:
-                                    AppColors.textSecondary.withOpacity(0.06),
+                                    AppColors.textSecondary.withValues(alpha: 0.06),
                               ),
                               child: Row(
                                 children: [
                                   Icon(Icons.handshake_outlined,
                                       color: AppColors.textSecondary
-                                          .withOpacity(0.7),
+                                          .withValues(alpha: 0.7),
                                       size: 18),
                                   const SizedBox(width: 8),
                                   Text(
@@ -346,7 +342,7 @@ class _CreateSittingServiceScreenState
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textSecondary
-                                          .withOpacity(0.8),
+                                          .withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ],
@@ -400,7 +396,7 @@ class _CreateSittingServiceScreenState
                                       color: selected
                                           ? _purple
                                           : AppColors.textSecondary
-                                              .withOpacity(0.25),
+                                              .withValues(alpha: 0.25),
                                     ),
                                   ),
                                   child: Column(
@@ -483,7 +479,7 @@ class _CreateSittingServiceScreenState
                                       color: selected
                                           ? _purple
                                           : AppColors.textSecondary
-                                              .withOpacity(0.25),
+                                              .withValues(alpha: 0.25),
                                     ),
                                   ),
                                   child: Column(
@@ -539,11 +535,11 @@ class _CreateSittingServiceScreenState
                                 borderRadius: BorderRadius.circular(12),
                                 color: _allDaysSelected
                                     ? _purple
-                                    : _purple.withOpacity(0.07),
+                                    : _purple.withValues(alpha: 0.07),
                                 border: Border.all(
                                   color: _allDaysSelected
                                       ? _purple
-                                      : _purple.withOpacity(0.3),
+                                      : _purple.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Row(
@@ -606,7 +602,7 @@ class _CreateSittingServiceScreenState
                                           color: selected
                                               ? _purple
                                               : AppColors.textSecondary
-                                                  .withOpacity(0.25),
+                                                  .withValues(alpha: 0.25),
                                         ),
                                       ),
                                       child: Center(
@@ -667,7 +663,7 @@ class _CreateSittingServiceScreenState
                           hintText:
                               'תאר/י את הניסיון שלך, הזמינות, ומה מייחד אותך כשומר/ת חיות מחמד...',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.6),
+                            color: AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                             height: 1.5,
                           ),
@@ -704,14 +700,14 @@ class _CreateSittingServiceScreenState
                                   ]
                                 : [
                                     _purple,
-                                    const Color(0xFFA78BFA),
+                                    AppColors.blueSlate,
                                   ],
                           ),
                           boxShadow: _isPublishing
                               ? []
                               : [
                                   BoxShadow(
-                                    color: _purple.withOpacity(0.3),
+                                    color: _purple.withValues(alpha: 0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
@@ -779,9 +775,9 @@ class _SectionHeader extends StatelessWidget {
           height: 30,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(9),
-            color: const Color(0xFF7C3AED).withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
           ),
-          child: Icon(icon, size: 16, color: const Color(0xFF7C3AED)),
+          child: Icon(icon, size: 16, color: AppColors.primary),
         ),
         const SizedBox(width: 9),
         Text(

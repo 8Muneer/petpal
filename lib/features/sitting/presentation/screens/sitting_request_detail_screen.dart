@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +27,8 @@ class SittingRequestDetailScreen extends ConsumerStatefulWidget {
 class _SittingRequestDetailScreenState
     extends ConsumerState<SittingRequestDetailScreen> {
   late SittingRequest _request;
+  final _pageCtrl = PageController();
+  int _page = 0;
 
   @override
   void initState() {
@@ -34,20 +36,15 @@ class _SittingRequestDetailScreenState
     _request = widget.request;
   }
 
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
   bool get _isOwner => _uid != null && _uid == _request.ownerUid;
   bool get _isOpen => _request.status == SittingStatus.open;
-
-  IconData get _petIcon {
-    switch (_request.petType) {
-      case PetType.dog:
-        return Icons.directions_walk_rounded;
-      case PetType.cat:
-        return Icons.pets_rounded;
-      case PetType.other:
-        return Icons.cruelty_free_rounded;
-    }
-  }
 
   String get _petTypeLabel {
     switch (_request.petType) {
@@ -67,16 +64,6 @@ class _SittingRequestDetailScreenState
       case SittingType.atSitterHome:
         return 'בבית השומר/ת';
     }
-  }
-
-  String get _timeAgo {
-    if (_request.createdAt == null) return '';
-    final diff = DateTime.now().difference(_request.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${_request.createdAt!.day}/${_request.createdAt!.month}/${_request.createdAt!.year}';
   }
 
   String _formatDate(DateTime d) =>
@@ -108,6 +95,7 @@ class _SittingRequestDetailScreenState
         petType: _request.petType,
         petGender: _request.petGender,
         petImageUrl: _request.petImageUrl,
+        petImageUrls: _request.petImageUrls,
         startDate: _request.startDate,
         endDate: _request.endDate,
         sittingType: _request.sittingType,
@@ -151,7 +139,7 @@ class _SittingRequestDetailScreenState
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFB7185),
+                backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -173,8 +161,7 @@ class _SittingRequestDetailScreenState
   @override
   @override
   Widget build(BuildContext context) {
-    final hasPetPhoto =
-        _request.petImageUrl != null && _request.petImageUrl!.isNotEmpty;
+    final images = _request.allImages;
     final safeTop = MediaQuery.of(context).padding.top;
     final showProviderCta = !_isOwner && _isOpen;
     final startStr =
@@ -187,10 +174,10 @@ class _SittingRequestDetailScreenState
         : _request.petGender == PetGender.female
             ? 'נקבה'
             : null;
-    const purple = Color(0xFF7C3AED);
+    const purple = AppColors.primary;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3EEFF),
+      backgroundColor: AppColors.surface,
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Stack(
@@ -198,16 +185,117 @@ class _SittingRequestDetailScreenState
             // ── Hero photo ────────────────────────────────────────────────────────
             Positioned.fill(
               bottom: MediaQuery.of(context).size.height * 0.42,
-              child: hasPetPhoto
-                  ? CachedNetworkImage(
-                      imageUrl: _request.petImageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          _SittingHeroBg(petType: _request.petType),
-                      errorWidget: (_, __, ___) =>
-                          _SittingHeroBg(petType: _request.petType),
-                    )
-                  : _SittingHeroBg(petType: _request.petType),
+              child: images.isEmpty
+                  ? _SittingHeroBg(petType: _request.petType)
+                  : images.length == 1
+                      ? CachedNetworkImage(
+                          imageUrl: images.first,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              _SittingHeroBg(petType: _request.petType),
+                          errorWidget: (_, __, ___) =>
+                              _SittingHeroBg(petType: _request.petType),
+                        )
+                      : Stack(
+                          children: [
+                            PageView.builder(
+                              controller: _pageCtrl,
+                              onPageChanged: (i) =>
+                                  setState(() => _page = i),
+                              itemCount: images.length,
+                              itemBuilder: (_, i) => CachedNetworkImage(
+                                imageUrl: images[i],
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) =>
+                                    _SittingHeroBg(petType: _request.petType),
+                                errorWidget: (_, __, ___) =>
+                                    _SittingHeroBg(petType: _request.petType),
+                              ),
+                            ),
+                            // Left arrow → next image (RTL)
+                            if (_page < images.length - 1)
+                              Positioned(
+                                left: 12,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: GestureDetector(
+                                    onTap: () => _pageCtrl.nextPage(
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    ),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.35),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                          Icons.chevron_left_rounded,
+                                          color: Colors.white,
+                                          size: 26),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // Right arrow → previous image (RTL)
+                            if (_page > 0)
+                              Positioned(
+                                right: 12,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: GestureDetector(
+                                    onTap: () => _pageCtrl.previousPage(
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    ),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.35),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                          Icons.chevron_right_rounded,
+                                          color: Colors.white,
+                                          size: 26),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // Dot indicators
+                            Positioned(
+                              bottom: 12,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                  images.length,
+                                  (i) => AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    width: _page == i ? 18 : 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 3),
+                                    decoration: BoxDecoration(
+                                      color: _page == i
+                                          ? Colors.white
+                                          : Colors.white
+                                              .withValues(alpha: 0.5),
+                                      borderRadius:
+                                          BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
             ),
 
             // ── White info sheet ──────────────────────────────────────────────────
@@ -225,7 +313,7 @@ class _SittingRequestDetailScreenState
                     clipBehavior: Clip.none,
                     children: [
                       // Pet thumbnail
-                      if (hasPetPhoto)
+                      if (images.isNotEmpty)
                         Positioned(
                           top: -36,
                           left: 20,
@@ -238,13 +326,13 @@ class _SittingRequestDetailScreenState
                                   color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
+                                    color: Colors.black.withValues(alpha: 0.15),
                                     blurRadius: 12)
                               ],
                             ),
                             child: ClipOval(
                               child: CachedNetworkImage(
-                                imageUrl: _request.petImageUrl!,
+                                imageUrl: images.first,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -254,7 +342,7 @@ class _SittingRequestDetailScreenState
                       SingleChildScrollView(
                         padding: EdgeInsets.fromLTRB(
                             20,
-                            hasPetPhoto ? 48 : 24,
+                            images.isNotEmpty ? 48 : 24,
                             20,
                             showProviderCta ? 110 : 40),
                         child: Column(
@@ -291,10 +379,10 @@ class _SittingRequestDetailScreenState
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
+                                color: AppColors.surface,
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                    color: const Color(0xFFE2E8F0)),
+                                    color: AppColors.border),
                               ),
                               child: Column(
                                 children: [
@@ -306,8 +394,8 @@ class _SittingRequestDetailScreenState
                                       valueColor:
                                           _request.petGender ==
                                                   PetGender.female
-                                              ? const Color(0xFFEC4899)
-                                              : const Color(0xFF0EA5E9),
+                                              ? AppColors.error
+                                              : AppColors.smartBlue,
                                     ),
                                     const _SInfoDivider(),
                                   ],
@@ -315,7 +403,7 @@ class _SittingRequestDetailScreenState
                                     icon: Icons.location_on_rounded,
                                     label: 'אזור',
                                     value: _request.area,
-                                    valueColor: const Color(0xFFEF4444),
+                                    valueColor: AppColors.error,
                                   ),
                                   if (startStr.isNotEmpty) ...[
                                     const _SInfoDivider(),
@@ -323,7 +411,7 @@ class _SittingRequestDetailScreenState
                                       icon: Icons.calendar_today_rounded,
                                       label: 'תאריך התחלה',
                                       value: startStr,
-                                      valueColor: const Color(0xFF0891B2),
+                                      valueColor: AppColors.regalNavy,
                                     ),
                                   ],
                                   if (endStr.isNotEmpty) ...[
@@ -332,7 +420,7 @@ class _SittingRequestDetailScreenState
                                       icon: Icons.event_rounded,
                                       label: 'תאריך סיום',
                                       value: endStr,
-                                      valueColor: const Color(0xFF059669),
+                                      valueColor: AppColors.success,
                                     ),
                                   ],
                                   if (nights > 0) ...[
@@ -342,7 +430,7 @@ class _SittingRequestDetailScreenState
                                       label: 'מספר לילות',
                                       value: '$nights לילות',
                                       valueColor:
-                                          const Color(0xFF6366F1),
+                                          AppColors.regalNavy,
                                     ),
                                   ],
                                   const _SInfoDivider(),
@@ -354,7 +442,7 @@ class _SittingRequestDetailScreenState
                                     label: 'מיקום השמירה',
                                     value: _sittingTypeLabel,
                                     valueColor:
-                                        const Color(0xFF0D9488),
+                                        AppColors.prussianBlue,
                                   ),
                                   if (_request.budget != null &&
                                       _request.budget!.isNotEmpty) ...[
@@ -405,7 +493,7 @@ class _SittingRequestDetailScreenState
                                   ),
                                   _SittingCircleAction(
                                     icon: Icons.map_rounded,
-                                    color: const Color(0xFFEF4444),
+                                    color: AppColors.error,
                                     onTap: _openMaps,
                                   ),
                                   const SizedBox(width: 8),
@@ -427,11 +515,11 @@ class _SittingRequestDetailScreenState
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF7ED),
+                                  color: AppColors.surface,
                                   borderRadius:
                                       BorderRadius.circular(16),
                                   border: Border.all(
-                                      color: const Color(0xFFFED7AA)),
+                                      color: AppColors.border),
                                 ),
                                 child: Column(
                                   crossAxisAlignment:
@@ -443,7 +531,7 @@ class _SittingRequestDetailScreenState
                                             Icons
                                                 .sticky_note_2_outlined,
                                             size: 15,
-                                            color: Color(0xFFF97316)),
+                                            color: AppColors.warning),
                                         SizedBox(width: 6),
                                         Text(
                                           'הערות',
@@ -452,7 +540,7 @@ class _SittingRequestDetailScreenState
                                               fontWeight:
                                                   FontWeight.w800,
                                               color:
-                                                  Color(0xFFF97316)),
+                                                  AppColors.warning),
                                         ),
                                       ],
                                     ),
@@ -482,17 +570,17 @@ class _SittingRequestDetailScreenState
                                   decoration: BoxDecoration(
                                     color: _isOpen
                                         ? AppColors.textMuted
-                                            .withOpacity(0.10)
+                                            .withValues(alpha: 0.10)
                                         : AppColors.statusOpen
-                                            .withOpacity(0.10),
+                                            .withValues(alpha: 0.10),
                                     borderRadius:
                                         BorderRadius.circular(16),
                                     border: Border.all(
                                       color: _isOpen
                                           ? AppColors.textMuted
-                                              .withOpacity(0.3)
+                                              .withValues(alpha: 0.3)
                                           : AppColors.statusOpen
-                                              .withOpacity(0.3),
+                                              .withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Row(
@@ -507,7 +595,7 @@ class _SittingRequestDetailScreenState
                                         size: 20,
                                         color: _isOpen
                                             ? AppColors.textSecondary
-                                            : const Color(0xFF16A34A),
+                                            : AppColors.success,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
@@ -519,7 +607,7 @@ class _SittingRequestDetailScreenState
                                           fontWeight: FontWeight.w900,
                                           color: _isOpen
                                               ? AppColors.textSecondary
-                                              : const Color(0xFF16A34A),
+                                              : AppColors.success,
                                         ),
                                       ),
                                     ],
@@ -546,11 +634,11 @@ class _SittingRequestDetailScreenState
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.92),
+                    color: Colors.white.withValues(alpha: 0.92),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.12),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 8)
                     ],
                   ),
@@ -570,11 +658,11 @@ class _SittingRequestDetailScreenState
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.92),
+                      color: Colors.white.withValues(alpha: 0.92),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
+                            color: Colors.black.withValues(alpha: 0.12),
                             blurRadius: 8)
                       ],
                     ),
@@ -584,9 +672,11 @@ class _SittingRequestDetailScreenState
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   onSelected: (v) {
-                    if (v == 'edit')
+                    if (v == 'edit') {
                       context.push('/sitting/edit', extra: _request);
-                    else if (v == 'delete') _delete();
+                    } else if (v == 'delete') {
+                      _delete();
+                    }
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(
@@ -605,13 +695,13 @@ class _SittingRequestDetailScreenState
                       value: 'delete',
                       child: Row(children: [
                         Icon(Icons.delete_outline_rounded,
-                            size: 18, color: Color(0xFFFB7185)),
+                            size: 18, color: AppColors.error),
                         SizedBox(width: 10),
                         Text('מחק בקשה',
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
-                                color: Color(0xFFFB7185))),
+                                color: AppColors.error)),
                       ]),
                     ),
                   ],
@@ -634,11 +724,11 @@ class _SittingRequestDetailScreenState
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         gradient: const LinearGradient(
-                          colors: [purple, Color(0xFFA78BFA)],
+                          colors: [purple, AppColors.blueSlate],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: purple.withOpacity(0.35),
+                            color: purple.withValues(alpha: 0.35),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -676,7 +766,7 @@ class _SittingHeroBg extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+            colors: [AppColors.primary, AppColors.blueSlate],
           ),
         ),
         child: Center(
@@ -685,7 +775,7 @@ class _SittingHeroBg extends StatelessWidget {
                 ? Icons.directions_walk_rounded
                 : Icons.pets_rounded,
             size: 100,
-            color: Colors.white.withOpacity(0.30),
+            color: Colors.white.withValues(alpha: 0.30),
           ),
         ),
       );
@@ -708,14 +798,14 @@ class _SInfoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: valueColor.withOpacity(0.6)),
+            Icon(icon, size: 16, color: valueColor.withValues(alpha: 0.6)),
             const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: valueColor.withOpacity(0.65),
+                color: valueColor.withValues(alpha: 0.65),
               ),
             ),
             const Spacer(),
@@ -739,7 +829,7 @@ class _SInfoDivider extends StatelessWidget {
   Widget build(BuildContext context) => const Divider(
         height: 1,
         thickness: 1,
-        color: Color(0xFFE2E8F0),
+        color: AppColors.border,
       );
 }
 
@@ -757,7 +847,7 @@ class _SittingCircleAction extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 20),
@@ -908,7 +998,7 @@ class _SittingOfferBottomSheetState
                 child: Row(
                   children: [
                     const Icon(Icons.home_rounded,
-                        size: 15, color: Color(0xFF7C3AED)),
+                        size: 15, color: AppColors.primary),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -932,13 +1022,13 @@ class _SittingOfferBottomSheetState
                 decoration: InputDecoration(
                   hintText: 'מחיר מוצע (₪)',
                   hintStyle: const TextStyle(
-                      color: Color(0xFFCBD5E1), fontSize: 14),
+                      color: AppColors.textMuted, fontSize: 14),
                   prefixText: '₪ ',
                   prefixStyle: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700),
                   filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
+                  fillColor: AppColors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: AppColors.border),
@@ -950,7 +1040,7 @@ class _SittingOfferBottomSheetState
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(
-                        color: Color(0xFF7C3AED), width: 1.5),
+                        color: AppColors.primary, width: 1.5),
                   ),
                 ),
               ),
@@ -964,9 +1054,9 @@ class _SittingOfferBottomSheetState
                 decoration: InputDecoration(
                   hintText: 'כתוב הודעה לבעל החיה...',
                   hintStyle: const TextStyle(
-                      color: Color(0xFFCBD5E1), fontSize: 14),
+                      color: AppColors.textMuted, fontSize: 14),
                   filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
+                  fillColor: AppColors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: AppColors.border),
@@ -978,7 +1068,7 @@ class _SittingOfferBottomSheetState
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(
-                        color: Color(0xFF7C3AED), width: 1.5),
+                        color: AppColors.primary, width: 1.5),
                   ),
                 ),
               ),
