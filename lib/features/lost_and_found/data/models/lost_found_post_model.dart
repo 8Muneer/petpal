@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
 
 class LostFoundMatchModel extends LostFoundMatch {
@@ -43,6 +43,8 @@ class LostFoundPostModel extends LostFoundPost {
     required super.description,
     required super.area,
     required super.imageUrl,
+    super.size,
+    super.gender,
     super.status,
     super.matchingStatus,
     super.createdAt,
@@ -82,6 +84,8 @@ class LostFoundPostModel extends LostFoundPost {
       description: data['description'] as String? ?? '',
       area: data['area'] as String? ?? '',
       imageUrl: data['imageUrl'] as String? ?? '',
+      size: data['size'] as String?,
+      gender: data['gender'] as String?,
       status: (data['status'] as String?) == 'resolved'
           ? LostFoundStatus.resolved
           : LostFoundStatus.active,
@@ -103,6 +107,8 @@ class LostFoundPostModel extends LostFoundPost {
         'description': description,
         'area': area,
         'imageUrl': imageUrl,
+        'size': size,
+        'gender': gender,
         'status': 'active',
         'matchingStatus': 'pending',
         'matches': [],

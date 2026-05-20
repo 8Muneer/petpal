@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+﻿import 'package:equatable/equatable.dart';
 
 enum LostFoundType { lost, found }
 
@@ -38,6 +38,8 @@ class LostFoundPost extends Equatable {
   final String description;
   final String area;
   final String imageUrl;
+  final String? size;   // 'קטן' | 'בינוני' | 'גדול'
+  final String? gender; // 'זכר' | 'נקבה'
   final LostFoundStatus status;
   final MatchingStatus matchingStatus;
   final DateTime? createdAt;
@@ -56,6 +58,8 @@ class LostFoundPost extends Equatable {
     required this.description,
     required this.area,
     required this.imageUrl,
+    this.size,
+    this.gender,
     this.status = LostFoundStatus.active,
     this.matchingStatus = MatchingStatus.pending,
     this.createdAt,
@@ -63,5 +67,5 @@ class LostFoundPost extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, reporterUid, type, status, matchingStatus, imageUrl];
+  List<Object?> get props => [id, reporterUid, type, status, matchingStatus, imageUrl, size, gender];
 }
