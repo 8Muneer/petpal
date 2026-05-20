@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -35,8 +35,8 @@ class _CreateWalkRequestScreenState
 
   PetType _petType = PetType.dog;
   PetGender? _petGender;
-  XFile? _pickedImage; // newly picked local image
-  String? _existingImageUrl; // URL of image already in Storage (edit mode)
+  List<XFile> _pickedImages = [];
+  List<String> _existingImageUrls = [];
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String _duration = 'שעה';
@@ -56,7 +56,7 @@ class _CreateWalkRequestScreenState
       _petType = r.petType;
       _petGender = r.petGender;
       _selectedDate = r.preferredDate;
-      _existingImageUrl = r.petImageUrl;
+      _existingImageUrls = List.of(r.allImages);
       _duration = r.duration;
       // Parse stored time string "HH:MM"
       final parts = r.preferredTime.split(':');
@@ -78,23 +78,27 @@ class _CreateWalkRequestScreenState
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final imageService = ref.read(walkImageServiceProvider);
-    final file = await imageService.pickImage(ImageSource.gallery);
-    if (file != null) {
-      setState(() {
-        _pickedImage = file;
-        _existingImageUrl = null; // replaced by the new pick
-      });
-    }
-  }
+  static const _maxImages = 5;
 
-  void _removeImage() {
+  bool get _canAddMore =>
+      (_existingImageUrls.length + _pickedImages.length) < _maxImages;
+
+  Future<void> _addImages() async {
+    if (!_canAddMore) return;
+    final imageService = ref.read(walkImageServiceProvider);
+    final picked = await imageService.pickImages();
+    if (picked.isEmpty) return;
     setState(() {
-      _pickedImage = null;
-      _existingImageUrl = null;
+      final remaining = _maxImages - _existingImageUrls.length - _pickedImages.length;
+      _pickedImages.addAll(picked.take(remaining));
     });
   }
+
+  void _removeExistingImage(int index) =>
+      setState(() => _existingImageUrls.removeAt(index));
+
+  void _removePickedImage(int index) =>
+      setState(() => _pickedImages.removeAt(index));
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -166,21 +170,26 @@ class _CreateWalkRequestScreenState
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        setState(() => _isPublishing = false);
+        _showSnack('יש להתחבר כדי לפרסם בקשה', isError: true);
+        return;
+      }
 
       final timeStr =
           '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
       final instructions = _instructionsController.text.trim();
       final budget = _budgetController.text.trim();
 
-      // Resolve the final image URL
-      String? petImageUrl = _existingImageUrl;
-      if (_pickedImage != null) {
+      // Upload newly picked images and combine with existing URLs
+      List<String> allUrls = List.of(_existingImageUrls);
+      if (_pickedImages.isNotEmpty) {
         final imageService = ref.read(walkImageServiceProvider);
         final uploadId = widget._isEditing
             ? widget.initialRequest!.id
             : FirebaseFirestore.instance.collection('walk_requests').doc().id;
-        petImageUrl = await imageService.uploadPetImage(uploadId, _pickedImage!);
+        final newUrls = await imageService.uploadPetImages(uploadId, _pickedImages);
+        allUrls.addAll(newUrls);
       }
 
       final data = {
@@ -190,7 +199,8 @@ class _CreateWalkRequestScreenState
         'preferredTime': timeStr,
         'duration': _duration,
         'area': area,
-        'petImageUrl': petImageUrl,
+        'petImageUrl': allUrls.isNotEmpty ? allUrls.first : null,
+        'petImageUrls': allUrls,
         'specialInstructions': instructions.isNotEmpty ? instructions : null,
         'budget': budget.isNotEmpty ? budget : null,
         'petGender': _petGender?.name,
@@ -201,8 +211,8 @@ class _CreateWalkRequestScreenState
       if (widget._isEditing) {
         await repo.updateRequest(widget.initialRequest!.id, data);
         if (!mounted) return;
-        context.pop();
         _showSnack('הבקשה עודכנה בהצלחה!');
+        context.pop();
       } else {
         await repo.createRequest({
           ...data,
@@ -213,10 +223,11 @@ class _CreateWalkRequestScreenState
           'createdAt': FieldValue.serverTimestamp(),
         });
         if (!mounted) return;
-        context.pop();
         _showSnack('הבקשה פורסמה בהצלחה!');
+        context.pop();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('_save walk error: $e\n$stack');
       if (!mounted) return;
       setState(() => _isPublishing = false);
       _showSnack(
@@ -234,7 +245,7 @@ class _CreateWalkRequestScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : AppColors.primary,
+            isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -242,7 +253,7 @@ class _CreateWalkRequestScreenState
   @override
   Widget build(BuildContext context) {
     final isEditing = widget._isEditing;
-    final hasImage = _pickedImage != null || (_existingImageUrl?.isNotEmpty == true);
+    final totalImages = _existingImageUrls.length + _pickedImages.length;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -291,7 +302,7 @@ class _CreateWalkRequestScreenState
                           hintText: 'לדוגמה: רקסי',
                           hintStyle: TextStyle(
                             color:
-                                AppColors.textSecondary.withOpacity(0.6),
+                                AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -389,98 +400,73 @@ class _CreateWalkRequestScreenState
 
                     const SizedBox(height: 16),
 
-                    // Pet photo
-                    const _FieldLabel('תמונה של חיית המחמד (אופציונלי)'),
+                    // Pet photos (multi-image)
+                    const _FieldLabel('תמונות של חיית המחמד (אופציונלי)'),
                     const SizedBox(height: 6),
-                    if (hasImage) ...[
-                      Stack(
+                    SizedBox(
+                      height: 110,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: _pickedImage != null
-                                ? Image.file(
-                                    File(_pickedImage!.path),
-                                    width: double.infinity,
-                                    height: 180,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.network(
-                                    _existingImageUrl!,
-                                    width: double.infinity,
-                                    height: 180,
-                                    fit: BoxFit.cover,
-                                  ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            left: 8,
-                            child: InkWell(
-                              onTap: _removeImage,
+                          // Existing (network) thumbnails
+                          for (int i = 0; i < _existingImageUrls.length; i++)
+                            _ImageThumb(
+                              child: Image.network(
+                                _existingImageUrls[i],
+                                fit: BoxFit.cover,
+                              ),
+                              onRemove: () => _removeExistingImage(i),
+                            ),
+                          // Newly picked (local) thumbnails
+                          for (int i = 0; i < _pickedImages.length; i++)
+                            _ImageThumb(
+                              child: Image.file(
+                                File(_pickedImages[i].path),
+                                fit: BoxFit.cover,
+                              ),
+                              onRemove: () => _removePickedImage(i),
+                            ),
+                          // Add button
+                          if (_canAddMore)
+                            GestureDetector(
+                              onTap: _addImages,
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                width: 90,
+                                margin: const EdgeInsets.only(left: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppColors.primaryFaint,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.3)),
                                 ),
-                                child: const Icon(
-                                  Icons.close_rounded,
-                                  color: Colors.white,
-                                  size: 18,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined,
+                                        size: 28,
+                                        color: AppColors.primary
+                                            .withValues(alpha: 0.7)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      totalImages == 0
+                                          ? 'הוסף תמונה'
+                                          : 'הוסף עוד',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary
+                                            .withValues(alpha: 0.8),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: InkWell(
-                              onTap: _pickImage,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.edit_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
-                    ] else
-                      InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: _pickImage,
-                        child: AppCard(
-                          
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 22),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.add_photo_alternate_outlined,
-                                size: 36,
-                                color: AppColors.textSecondary
-                                    .withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'הוסף/י תמונה של החיה',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textSecondary
-                                      .withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -518,7 +504,7 @@ class _CreateWalkRequestScreenState
                                             color: _selectedDate != null
                                                 ? AppColors.textPrimary
                                                 : AppColors.textSecondary
-                                                    .withOpacity(0.6),
+                                                    .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -561,7 +547,7 @@ class _CreateWalkRequestScreenState
                                             color: _selectedTime != null
                                                 ? AppColors.textPrimary
                                                 : AppColors.textSecondary
-                                                    .withOpacity(0.6),
+                                                    .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -625,7 +611,7 @@ class _CreateWalkRequestScreenState
                               'למשל: הכלב מפחד מכלבים גדולים, צריך רצועה קצרה...',
                           hintStyle: TextStyle(
                             color:
-                                AppColors.textSecondary.withOpacity(0.6),
+                                AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -656,7 +642,7 @@ class _CreateWalkRequestScreenState
                           hintText: 'לדוגמה: ₪50-₪80',
                           hintStyle: TextStyle(
                             color:
-                                AppColors.textSecondary.withOpacity(0.6),
+                                AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -771,8 +757,8 @@ class _CreateWalkRequestScreenState
             borderRadius: BorderRadius.circular(16),
             color: selected
                 ? (gender == PetGender.male
-                    ? const Color(0xFF0EA5E9)
-                    : const Color(0xFFEC4899))
+                    ? AppColors.smartBlue
+                    : AppColors.error)
                 : Colors.transparent,
           ),
           child: Row(
@@ -834,7 +820,48 @@ class _FieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w900,
-        color: Color(0xFF334155),
+        color: AppColors.textSecondary,
+      ),
+    );
+  }
+}
+
+class _ImageThumb extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onRemove;
+
+  const _ImageThumb({required this.child, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 90,
+      height: 110,
+      margin: const EdgeInsets.only(left: 8),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: child,
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded,
+                    color: Colors.white, size: 14),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

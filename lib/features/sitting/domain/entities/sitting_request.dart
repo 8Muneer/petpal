@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+﻿import 'package:equatable/equatable.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 export 'package:petpal/features/walks/domain/entities/walk_request.dart'
@@ -17,6 +17,7 @@ class SittingRequest extends Equatable {
   final PetType petType;
   final PetGender? petGender;
   final String? petImageUrl;
+  final List<String> petImageUrls;
   final DateTime? startDate;
   final DateTime? endDate;
   final SittingType sittingType;
@@ -35,6 +36,7 @@ class SittingRequest extends Equatable {
     required this.petType,
     this.petGender,
     this.petImageUrl,
+    this.petImageUrls = const [],
     this.startDate,
     this.endDate,
     required this.sittingType,
@@ -50,6 +52,12 @@ class SittingRequest extends Equatable {
     return endDate!.difference(startDate!).inDays;
   }
 
+  List<String> get allImages {
+    if (petImageUrls.isNotEmpty) return petImageUrls;
+    if (petImageUrl != null && petImageUrl!.isNotEmpty) return [petImageUrl!];
+    return [];
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -60,6 +68,7 @@ class SittingRequest extends Equatable {
         petType,
         petGender,
         petImageUrl,
+        petImageUrls,
         startDate,
         endDate,
         sittingType,

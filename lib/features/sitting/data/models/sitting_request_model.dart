@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
@@ -12,6 +12,7 @@ class SittingRequestModel extends SittingRequest {
     required super.petType,
     super.petGender,
     super.petImageUrl,
+    super.petImageUrls,
     super.startDate,
     super.endDate,
     required super.sittingType,
@@ -70,6 +71,12 @@ class SittingRequestModel extends SittingRequest {
         status = SittingStatus.open;
     }
 
+    final legacyUrl = data['petImageUrl'] as String?;
+    final rawUrls = data['petImageUrls'];
+    final List<String> petImageUrls = rawUrls is List
+        ? rawUrls.whereType<String>().toList()
+        : (legacyUrl != null && legacyUrl.isNotEmpty ? [legacyUrl] : []);
+
     return SittingRequestModel(
       id: doc.id,
       ownerUid: data['ownerUid'] as String? ?? '',
@@ -78,7 +85,8 @@ class SittingRequestModel extends SittingRequest {
       petName: data['petName'] as String? ?? '',
       petType: petType,
       petGender: petGender,
-      petImageUrl: data['petImageUrl'] as String?,
+      petImageUrl: legacyUrl,
+      petImageUrls: petImageUrls,
       startDate: (data['startDate'] as Timestamp?)?.toDate(),
       endDate: (data['endDate'] as Timestamp?)?.toDate(),
       sittingType: sittingType,
