@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -165,11 +165,11 @@ class _GuestTopBar extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                color: Colors.white.withOpacity(0.85),
-                border: Border.all(color: Colors.white.withOpacity(0.55)),
+                color: Colors.white.withValues(alpha: 0.85),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.55)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
+                    color: Colors.black.withValues(alpha: 0.10),
                     blurRadius: 18,
                     offset: const Offset(0, 10),
                   ),
@@ -206,7 +206,7 @@ class _GuestTopBar extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF334155).withOpacity(0.82),
+                            color: AppColors.textSecondary.withValues(alpha: 0.82),
                           ),
                         ),
                       ],
@@ -251,7 +251,7 @@ class _HomeTab extends ConsumerWidget {
           children: [
             Icon(Icons.error_outline_rounded,
                 size: 48,
-                color: const Color(0xFFFB7185).withOpacity(0.6)),
+                color: AppColors.error.withValues(alpha: 0.6)),
             const SizedBox(height: 12),
             const Text(
               'שגיאה בטעינת הפיד',
@@ -272,7 +272,7 @@ class _HomeTab extends ConsumerWidget {
               children: [
                 Icon(Icons.feed_outlined,
                     size: 64,
-                    color: AppColors.textSecondary.withOpacity(0.5)),
+                    color: AppColors.textSecondary.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
                 const Text(
                   'אין פוסטים עדיין',
@@ -336,7 +336,7 @@ class _HomeTab extends ConsumerWidget {
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color:
-                                  AppColors.textSecondary.withOpacity(0.7),
+                                  AppColors.textSecondary.withValues(alpha: 0.7),
                             ),
                           ),
                         ),
@@ -386,14 +386,14 @@ class _LostPetsTab extends StatelessWidget {
           title: 'כלב אבוד - רקס',
           subtitle: 'נראה לאחרונה בשכונת בית הכרם',
           timeAgo: 'לפני 2 שעות',
-          accent: Color(0xFFFB7185),
+          accent: AppColors.error,
         ),
         const SizedBox(height: 12),
         const _LostPetModernCard(
           title: 'חתולה נמצאה - לולה',
           subtitle: 'נמצאה ליד גן סאקר',
           timeAgo: 'אתמול',
-          accent: Color(0xFF60A5FA),
+          accent: AppColors.blueSlate,
         ),
         const SizedBox(height: 18),
 
@@ -593,7 +593,7 @@ class _GuestPostCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary.withOpacity(0.8),
+                          color: AppColors.textSecondary.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -604,7 +604,7 @@ class _GuestPostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.12),
+                      color: AppColors.warning.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(
@@ -763,8 +763,8 @@ class _LostPetModernCard extends StatelessWidget {
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
                 colors: [
-                  accent.withOpacity(0.95),
-                  accent.withOpacity(0.55),
+                  accent.withValues(alpha: 0.95),
+                  accent.withValues(alpha: 0.55),
                 ],
               ),
             ),
@@ -788,7 +788,7 @@ class _LostPetModernCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
+                    color: AppColors.textSecondary.withValues(alpha: 0.82),
                   ),
                 ),
               ],
@@ -806,7 +806,7 @@ class _LostPetModernCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF334155),
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -850,7 +850,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
   Color get _accent {
     switch (data.type) {
       case ServiceType.dogWalk:
-        return const Color(0xFF0EA5E9);
+        return AppColors.smartBlue;
       case ServiceType.petSitting:
         return AppColors.primary;
       case ServiceType.available:
@@ -871,7 +871,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  color: _accent.withOpacity(0.14),
+                  color: _accent.withValues(alpha: 0.14),
                 ),
                 child: Icon(_typeIcon, color: _accent),
               ),
@@ -893,7 +893,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.82),
+                        color: AppColors.textSecondary.withValues(alpha: 0.82),
                       ),
                     ),
                   ],
@@ -933,7 +933,7 @@ class _ModernServiceCardLocked extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: _accent.withOpacity(0.12),
+                  color: _accent.withValues(alpha: 0.12),
                 ),
                 child: Text(
                   '$_typeLabel • 🔒',

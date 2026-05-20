@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +14,6 @@ import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 import 'package:petpal/core/widgets/pill_icon_button.dart';
 import 'package:petpal/core/widgets/discovery_chip.dart';
-import 'package:petpal/core/widgets/tiny_chip.dart';
 import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -87,52 +86,6 @@ class _ServiceProviderHomeScreenState
     extends ConsumerState<ServiceProviderHomeScreen> {
   int _currentIndex = 0;
 
-  // Mock requests (later replace with Firestore)
-  final List<BookingRequestData> _requests = [
-    const BookingRequestData(
-      ownerName: 'מוניר',
-      serviceType: ProviderServiceType.dogWalk,
-      city: 'ירושלים',
-      whenText: 'היום 18:30',
-      priceText: '₪90',
-      status: RequestStatus.pending,
-    ),
-    const BookingRequestData(
-      ownerName: 'לוג׳יין',
-      serviceType: ProviderServiceType.petSitting,
-      city: 'ירושלים',
-      whenText: 'מחר • 2 ימים',
-      priceText: '₪220',
-      status: RequestStatus.pending,
-    ),
-    const BookingRequestData(
-      ownerName: 'סאמר',
-      serviceType: ProviderServiceType.dogWalk,
-      city: 'ירושלים',
-      whenText: 'אתמול 20:00',
-      priceText: '₪70',
-      status: RequestStatus.accepted,
-    ),
-  ];
-
-  final bool _isAvailable = true;
-
-  User? get _user => FirebaseAuth.instance.currentUser;
-
-  String get _displayName {
-    final u = _user;
-    final dn = (u?.displayName ?? '').trim();
-    if (dn.isNotEmpty) return dn;
-
-    final email = (u?.email ?? '').trim();
-    if (email.contains('@')) return email.split('@').first;
-
-    return 'נותן שירות';
-  }
-
-  int get _pendingCount =>
-      _requests.where((r) => r.status == RequestStatus.pending).length;
-
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -145,57 +98,6 @@ class _ServiceProviderHomeScreenState
     );
   }
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    context.go('/');
-  }
-
-  void _confirmLogout() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text(
-            'להתנתק מהחשבון?',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: const Text('תוכל/י להתחבר שוב בכל זמן.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('ביטול'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                await _logout();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text(
-                'התנתקות',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -203,8 +105,8 @@ class _ServiceProviderHomeScreenState
       _ProviderHomeTab(onAction: (msg) => _toast(msg)),
       const FeedScreen(),
       const LostFoundFeedScreen(),
-      const _ProviderWalksTab(),
-      const _ProviderSittingTab(),
+      const _ProviderMyServicesTab(),
+      const _ProviderAllRequestsTab(),
       const _MessagesTab(),
     ];
 
@@ -231,8 +133,8 @@ class _ServiceProviderHomeScreenState
             AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
             AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
             AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
-            AppNavItem(icon: Icons.directions_walk_outlined, activeIcon: Icons.directions_walk_rounded, label: 'טיולים'),
-            AppNavItem(icon: Icons.home_work_outlined, activeIcon: Icons.home_work_rounded, label: 'שמירה'),
+            AppNavItem(icon: Icons.campaign_outlined, activeIcon: Icons.campaign_rounded, label: 'שירותים שלי'),
+            AppNavItem(icon: Icons.assignment_outlined, activeIcon: Icons.assignment_rounded, label: 'הבקשות'),
             AppNavItem(icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
           ],
         ),
@@ -513,198 +415,132 @@ class _ProviderHomeTab extends ConsumerWidget {
   }
 }
 
-class _ProviderDashboardTab extends StatelessWidget {
-  final String displayName;
-  final bool isAvailable;
-  final int pendingCount;
-  final ValueChanged<bool> onToggleAvailability;
-  final List<BookingRequestData> upcoming;
-  final void Function(String msg) onAction;
 
-  const _ProviderDashboardTab({
-    required this.displayName,
-    required this.isAvailable,
-    required this.pendingCount,
-    required this.onToggleAvailability,
-    required this.upcoming,
-    required this.onAction,
-  });
+// ── Provider Walks Tab ────────────────────────────────────────────────────────
+
+// ── שירותים שלי — publish walk + sitting services ─────────────────────────
+class _ProviderMyServicesTab extends ConsumerStatefulWidget {
+  const _ProviderMyServicesTab();
+
+  @override
+  ConsumerState<_ProviderMyServicesTab> createState() =>
+      _ProviderMyServicesTabState();
+}
+
+class _ProviderMyServicesTabState
+    extends ConsumerState<_ProviderMyServicesTab> {
+  int _selected = 0; // 0 = walk, 1 = sitting
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      children: [
-        GlassCard(
-          useBlur: true,
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [AppColors.primary, AppColors.statusOpen],
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: GlassCard(
+              useBlur: true,
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'פרסם שירותי טיולים',
+                      icon: Icons.directions_walk_rounded,
+                      selected: _selected == 0,
+                      onTap: () => setState(() => _selected = 0),
+                    ),
                   ),
-                ),
-                child: const Icon(Icons.shield_rounded, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'מרכז נותן שירות',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                      ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'פרסם שירותי שמירה',
+                      icon: Icons.home_work_rounded,
+                      selected: _selected == 1,
+                      onTap: () => setState(() => _selected = 1),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'סטטוס: ${isAvailable ? "זמין" : "לא זמין"} • $pendingCount בקשות ממתינות',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155).withOpacity(0.82),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Switch.adaptive(
-                value: isAvailable,
-                onChanged: onToggleAvailability,
-                activeColor: AppColors.primary,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        SectionHeader(
-          title: 'סטטיסטיקות מהירות',
-          subtitle: 'סיכום קצר להיום',
-          trailing: TinyChip(
-            text: 'LIVE',
-            fill: AppColors.statusOpen.withOpacity(0.10),
-            textColor: AppColors.statusOpen,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                title: '₪260',
-                subtitle: 'היום',
-                icon: Icons.payments_outlined,
-                accent: Color(0xFF0EA5E9),
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                title: '4.9',
-                subtitle: 'דירוג',
-                icon: Icons.star_rounded,
-                accent: AppColors.warning,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                title: '$pendingCount',
-                subtitle: 'בקשות ממתינות',
-                icon: Icons.inbox_rounded,
-                accent: AppColors.danger,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: _StatCard(
-                title: '3',
-                subtitle: 'משימות קרובות',
-                icon: Icons.event_available_rounded,
-                accent: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        const SectionHeader(
-          title: 'פעולות מהירות',
-          subtitle: 'עדכן זמינות, שירותים ועוד',
-          trailing: TinyChip(
-            text: 'חדש',
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: GradientActionCard(
-                title: 'עדכן זמינות',
-                subtitle: 'פתח/סגור בקשות',
-                icon: Icons.toggle_on_rounded,
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [AppColors.primary, AppColors.statusOpen],
-                ),
-                onTap: () => context.push('/provider/availability'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GradientActionCard(
-                title: 'נהל שירותים',
-                subtitle: 'מחירים, סוג שירות',
-                icon: Icons.settings_suggest_outlined,
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
-                ),
-                onTap: () => context.push('/provider/services'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        const SectionHeader(
-          title: 'הזמנות קרובות',
-          subtitle: 'רק אחרי אישור הבקשה',
-        ),
-        const SizedBox(height: 10),
-        if (upcoming.isEmpty)
-          EmptyStateCard(
-            title: 'אין הזמנות קרובות עדיין',
-            subtitle: 'אשר/י בקשות חדשות כדי להתחיל.',
-            icon: Icons.event_busy_rounded,
-            onTap: () => onAction('עבור/י לבקשות'),
-          )
-        else
-          ...upcoming.map(
-            (r) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _UpcomingBookingCard(data: r),
             ),
           ),
-      ],
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _selected == 0
+                  ? const _ProviderAdvertiseView(key: ValueKey('adv_walk'))
+                  : const _ProviderSittingAdvertiseView(
+                      key: ValueKey('adv_sitting')),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ── Provider Walks Tab ────────────────────────────────────────────────────────
+// ── הבקשות — walk + sitting requests from pet owners ─────────────────────
+class _ProviderAllRequestsTab extends ConsumerStatefulWidget {
+  const _ProviderAllRequestsTab();
+
+  @override
+  ConsumerState<_ProviderAllRequestsTab> createState() =>
+      _ProviderAllRequestsTabState();
+}
+
+class _ProviderAllRequestsTabState
+    extends ConsumerState<_ProviderAllRequestsTab> {
+  int _selected = 0; // 0 = walk requests, 1 = sitting requests
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: GlassCard(
+              useBlur: true,
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'בקשות טיולים',
+                      icon: Icons.directions_walk_rounded,
+                      selected: _selected == 0,
+                      onTap: () => setState(() => _selected = 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'בקשות שמירה',
+                      icon: Icons.home_work_rounded,
+                      selected: _selected == 1,
+                      onTap: () => setState(() => _selected = 1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _selected == 0
+                  ? const _ProviderRequestsView(key: ValueKey('req_walk'))
+                  : const _ProviderSittingRequestsView(
+                      key: ValueKey('req_sitting')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ProviderWalksTab extends ConsumerStatefulWidget {
   const _ProviderWalksTab();
@@ -785,7 +621,7 @@ class _ProviderRequestsView extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.directions_walk_rounded,
-                    size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
+                    size: 64, color: AppColors.textSecondary.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
                 const Text('אין בקשות טיול פתוחות כרגע',
                     style: TextStyle(
@@ -942,7 +778,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF334155))),
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 10),
                 ...services.map((s) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -1023,8 +859,8 @@ class _MyServiceCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: isActive
-                      ? AppColors.statusOpen.withOpacity(0.12)
-                      : AppColors.warning.withOpacity(0.12),
+                      ? AppColors.statusOpen.withValues(alpha: 0.12)
+                      : AppColors.warning.withValues(alpha: 0.12),
                 ),
                 child: Text(
                   isActive ? 'פעיל' : 'מושהה',
@@ -1032,7 +868,7 @@ class _MyServiceCard extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color:
-                        isActive ? AppColors.success : const Color(0xFFD97706),
+                        isActive ? AppColors.success : AppColors.warning,
                   ),
                 ),
               ),
@@ -1050,7 +886,7 @@ class _MyServiceCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    color: teal.withOpacity(0.08),
+                    color: teal.withValues(alpha: 0.08),
                   ),
                   child: Text(type,
                       style: const TextStyle(
@@ -1069,7 +905,7 @@ class _MyServiceCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: AppColors.primary.withOpacity(0.05),
+                color: AppColors.primary.withValues(alpha: 0.05),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1109,13 +945,13 @@ class _MyServiceCard extends StatelessWidget {
               _ServiceActionButton(
                 label: isActive ? 'השהה' : 'הפעל',
                 icon: isActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: isActive ? const Color(0xFFD97706) : teal,
+                color: isActive ? AppColors.warning : teal,
                 bgColor: isActive
-                    ? AppColors.warning.withOpacity(0.1)
-                    : teal.withOpacity(0.1),
+                    ? AppColors.warning.withValues(alpha: 0.1)
+                    : teal.withValues(alpha: 0.1),
                 borderColor: isActive
-                    ? AppColors.warning.withOpacity(0.35)
-                    : teal.withOpacity(0.3),
+                    ? AppColors.warning.withValues(alpha: 0.35)
+                    : teal.withValues(alpha: 0.3),
                 onTap: () => ref
                     .read(walkDatasourceProvider)
                     .updateWalkService(service.id, {'isActive': !isActive}),
@@ -1125,9 +961,9 @@ class _MyServiceCard extends StatelessWidget {
               _ServiceActionButton(
                 label: 'ערוך',
                 icon: Icons.edit_rounded,
-                color: const Color(0xFF0EA5E9),
-                bgColor: const Color(0xFF0EA5E9).withOpacity(0.08),
-                borderColor: const Color(0xFF0EA5E9).withOpacity(0.3),
+                color: AppColors.smartBlue,
+                bgColor: AppColors.smartBlue.withValues(alpha: 0.08),
+                borderColor: AppColors.smartBlue.withValues(alpha: 0.3),
                 onTap: () =>
                     context.push('/walks/service/create', extra: service),
               ),
@@ -1242,14 +1078,14 @@ class _ProviderWalkRequestCard extends StatelessWidget {
       {required this.request, required this.colorIndex});
 
   static const _bgColors = [
-    Color(0xFFFFB347),
-    Color(0xFFCE93D8),
-    Color(0xFFF48FB1),
-    Color(0xFF80DEEA),
-    Color(0xFFFFCC80),
-    Color(0xFF90CAF9),
-    Color(0xFFA5D6A7),
-    Color(0xFFEF9A9A),
+    AppColors.sapphire,
+    AppColors.blueSlate,
+    AppColors.regalNavy,
+    AppColors.smartBlue,
+    AppColors.prussianBlue2,
+    AppColors.prussianBlue,
+    AppColors.twilightIndigo,
+    AppColors.blueSlate,
   ];
 
   String get _petTypeLabel {
@@ -1313,17 +1149,17 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Center(
                           child: Icon(_fallbackIcon,
-                              size: 52, color: Colors.white.withOpacity(0.6)),
+                              size: 52, color: Colors.white.withValues(alpha: 0.6)),
                         ),
                         errorWidget: (_, __, ___) => Center(
                           child: Icon(_fallbackIcon,
-                              size: 52, color: Colors.white.withOpacity(0.6)),
+                              size: 52, color: Colors.white.withValues(alpha: 0.6)),
                         ),
                       )
                     else
                       Center(
                         child: Icon(_fallbackIcon,
-                            size: 60, color: Colors.white.withOpacity(0.7)),
+                            size: 60, color: Colors.white.withValues(alpha: 0.7)),
                       ),
                     // Heart icon
                     Positioned(
@@ -1333,11 +1169,11 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.favorite_border_rounded,
-                            size: 16, color: Color(0xFFEF4444)),
+                            size: 16, color: AppColors.error),
                       ),
                     ),
                   ],
@@ -1379,13 +1215,13 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                             icon: Icons.transgender_rounded,
                             label: _genderLabel,
                             color: request.petGender == PetGender.female
-                                ? const Color(0xFFEC4899)
-                                : const Color(0xFF0EA5E9),
+                                ? AppColors.error
+                                : AppColors.smartBlue,
                           ),
                         _IconChip(
                           icon: Icons.location_on_rounded,
                           label: request.area,
-                          color: const Color(0xFFEF4444),
+                          color: AppColors.error,
                         ),
                         _IconChip(
                           icon: Icons.timer_rounded,
@@ -1548,127 +1384,6 @@ class _MessagesTab extends ConsumerWidget {
   }
 }
 
-class _UpcomingBookingCard extends StatelessWidget {
-  final BookingRequestData data;
-
-  const _UpcomingBookingCard({required this.data});
-
-  IconData get _typeIcon {
-    switch (data.serviceType) {
-      case ProviderServiceType.dogWalk:
-        return Icons.directions_walk_rounded;
-      case ProviderServiceType.petSitting:
-        return Icons.home_work_rounded;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: AppColors.primary.withOpacity(0.12),
-            ),
-            child: Icon(_typeIcon, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${data.ownerName} • ${data.city}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${data.whenText} • ${data.priceText}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          const Icon(Icons.arrow_back_rounded, color: AppColors.textSecondary),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color accent;
-
-  const _StatCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.accent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      useBlur: true,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: accent.withOpacity(0.14),
-            ),
-            child: Icon(icon, color: accent),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Provider offer bottom sheet ───────────────────────────────────────────────
 class _ProviderOfferSheet extends ConsumerStatefulWidget {
@@ -1819,9 +1534,9 @@ class _ProviderOfferSheetState extends ConsumerState<_ProviderOfferSheet> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: AppColors.primary.withOpacity(0.06),
+                  color: AppColors.primary.withValues(alpha: 0.06),
                   border:
-                      Border.all(color: AppColors.primary.withOpacity(0.15)),
+                      Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1939,7 +1654,7 @@ class _BenefitRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF334155),
+            color: AppColors.textSecondary,
           ),
         ),
       ],
@@ -1963,7 +1678,7 @@ class _OfferSummaryItem extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF334155))),
+                color: AppColors.textSecondary)),
       ],
     );
   }
@@ -1996,14 +1711,14 @@ class _OfferInputField extends StatelessWidget {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
         prefixText: prefix,
         prefixStyle: const TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.w800,
             fontSize: 14),
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: AppColors.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
@@ -2107,7 +1822,7 @@ class _ProviderSittingRequestsView extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.home_work_rounded,
-                    size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
+                    size: 64, color: AppColors.textSecondary.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
                 const Text('אין בקשות שמירה פתוחות כרגע',
                     style: TextStyle(
@@ -2184,7 +1899,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                          colors: [AppColors.sitting, Color(0xFFA78BFA)]),
+                          colors: [AppColors.sitting, AppColors.blueSlate]),
                     ),
                     child: const Icon(Icons.campaign_rounded,
                         color: Colors.white, size: 24),
@@ -2233,7 +1948,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.sitting, Color(0xFFA78BFA)],
+                      colors: [AppColors.sitting, AppColors.blueSlate],
                     ),
                   ),
                   child: const Center(
@@ -2286,14 +2001,14 @@ class _ProviderSittingRequestCard extends StatelessWidget {
       {required this.request, required this.colorIndex});
 
   static const _bgColors = [
-    Color(0xFFCE93D8),
-    Color(0xFF80DEEA),
-    Color(0xFFFFB347),
-    Color(0xFFF48FB1),
-    Color(0xFFA5D6A7),
-    Color(0xFF90CAF9),
-    Color(0xFFFFCC80),
-    Color(0xFFEF9A9A),
+    AppColors.blueSlate,
+    AppColors.smartBlue,
+    AppColors.sapphire,
+    AppColors.regalNavy,
+    AppColors.twilightIndigo,
+    AppColors.prussianBlue,
+    AppColors.prussianBlue2,
+    AppColors.blueSlate,
   ];
 
   String get _petTypeLabel {
@@ -2357,17 +2072,17 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Center(
                           child: Icon(_fallbackIcon,
-                              size: 52, color: Colors.white.withOpacity(0.6)),
+                              size: 52, color: Colors.white.withValues(alpha: 0.6)),
                         ),
                         errorWidget: (_, __, ___) => Center(
                           child: Icon(_fallbackIcon,
-                              size: 52, color: Colors.white.withOpacity(0.6)),
+                              size: 52, color: Colors.white.withValues(alpha: 0.6)),
                         ),
                       )
                     else
                       Center(
                         child: Icon(_fallbackIcon,
-                            size: 60, color: Colors.white.withOpacity(0.7)),
+                            size: 60, color: Colors.white.withValues(alpha: 0.7)),
                       ),
                     // Heart icon
                     Positioned(
@@ -2377,11 +2092,11 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.favorite_border_rounded,
-                            size: 16, color: Color(0xFFEF4444)),
+                            size: 16, color: AppColors.error),
                       ),
                     ),
                   ],
@@ -2423,19 +2138,19 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                             icon: Icons.transgender_rounded,
                             label: _genderLabel,
                             color: request.petGender == PetGender.female
-                                ? const Color(0xFFEC4899)
-                                : const Color(0xFF0EA5E9),
+                                ? AppColors.error
+                                : AppColors.smartBlue,
                           ),
                         _IconChip(
                           icon: Icons.location_on_rounded,
                           label: request.area,
-                          color: const Color(0xFFEF4444),
+                          color: AppColors.error,
                         ),
                         if (request.numberOfNights > 0)
                           _IconChip(
                             icon: Icons.nights_stay_rounded,
                             label: '${request.numberOfNights} לילות',
-                            color: const Color(0xFF6366F1),
+                            color: AppColors.regalNavy,
                           ),
                       ],
                     ),
@@ -2479,7 +2194,7 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                             gradient: const LinearGradient(
                               colors: [
                                 AppColors.sitting,
-                                Color(0xFFA78BFA),
+                                AppColors.blueSlate,
                               ],
                             ),
                             borderRadius: BorderRadius.circular(10),
@@ -2665,8 +2380,8 @@ class _SittingProviderOfferSheetState
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: purple.withOpacity(0.06),
-                  border: Border.all(color: purple.withOpacity(0.15)),
+                  color: purple.withValues(alpha: 0.06),
+                  border: Border.all(color: purple.withValues(alpha: 0.15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2737,7 +2452,7 @@ class _SittingProviderOfferSheetState
                             ]
                           : [
                               purple,
-                              const Color(0xFFA78BFA),
+                              AppColors.blueSlate,
                             ],
                     ),
                   ),
@@ -2837,8 +2552,8 @@ class _MySittingServiceCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: isActive
-                      ? AppColors.statusOpen.withOpacity(0.12)
-                      : AppColors.warning.withOpacity(0.12),
+                      ? AppColors.statusOpen.withValues(alpha: 0.12)
+                      : AppColors.warning.withValues(alpha: 0.12),
                 ),
                 child: Text(
                   isActive ? 'פעיל' : 'מושהה',
@@ -2846,7 +2561,7 @@ class _MySittingServiceCard extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color:
-                        isActive ? AppColors.success : const Color(0xFFD97706),
+                        isActive ? AppColors.success : AppColors.warning,
                   ),
                 ),
               ),
@@ -2862,7 +2577,7 @@ class _MySittingServiceCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    color: purple.withOpacity(0.08),
+                    color: purple.withValues(alpha: 0.08),
                   ),
                   child: Text(type,
                       style: const TextStyle(
@@ -2885,7 +2600,7 @@ class _MySittingServiceCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: purple.withOpacity(0.4)),
+                    border: Border.all(color: purple.withValues(alpha: 0.4)),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -2915,8 +2630,8 @@ class _MySittingServiceCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     color: isActive
-                        ? AppColors.warning.withOpacity(0.12)
-                        : purple.withOpacity(0.12),
+                        ? AppColors.warning.withValues(alpha: 0.12)
+                        : purple.withValues(alpha: 0.12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -2926,7 +2641,7 @@ class _MySittingServiceCard extends StatelessWidget {
                             ? Icons.pause_rounded
                             : Icons.play_arrow_rounded,
                         size: 14,
-                        color: isActive ? const Color(0xFFD97706) : purple,
+                        color: isActive ? AppColors.warning : purple,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -2934,7 +2649,7 @@ class _MySittingServiceCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: isActive ? const Color(0xFFD97706) : purple,
+                          color: isActive ? AppColors.warning : purple,
                         ),
                       ),
                     ],
@@ -2980,7 +2695,7 @@ class _IconChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.10),
+          color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -3024,7 +2739,7 @@ class _ListYourServiceCTA extends ConsumerWidget {
                 'פרסם את שירותי השמירה שלך והתחל לקבל פניות מבעלי חיות באזורך',
             icon: Icons.add_business_rounded,
             gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFFD4A373)],
+              colors: [AppColors.primary, AppColors.blueSlate],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
