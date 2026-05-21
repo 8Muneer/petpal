@@ -39,6 +39,8 @@ import 'package:petpal/features/lost_and_found/presentation/screens/create_lost_
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_post_detail_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_browse_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/create_booking_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/provider_profile_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -212,6 +214,32 @@ class AppRouter {
             post2: extra['post2']!,
           );
         },
+      ),
+      GoRoute(
+        path: '/bookings/create',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return CreateBookingScreen(
+            providerUid: extra['providerUid'] as String,
+            providerName: extra['providerName'] as String,
+            providerPhotoUrl: extra['providerPhotoUrl'] as String?,
+            serviceId: extra['serviceId'] as String,
+            serviceType: extra['serviceType'] as String,
+            priceText: extra['priceText'] as String,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/services/provider/walk',
+        builder: (context, state) => ProviderProfileScreen.walk(
+          service: state.extra as WalkService,
+        ),
+      ),
+      GoRoute(
+        path: '/services/provider/sitting',
+        builder: (context, state) => ProviderProfileScreen.sitting(
+          service: state.extra as SittingService,
+        ),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
