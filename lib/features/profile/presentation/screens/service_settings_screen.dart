@@ -173,7 +173,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
                                 value: _offersWalks,
                                 onChanged: (v) =>
                                     setState(() => _offersWalks = v),
-                                activeColor: AppColors.walks,
+                                activeThumbColor: AppColors.walks,
+                                activeTrackColor: AppColors.walks.withValues(alpha: 0.35),
                               ),
                             ],
                           ),
@@ -235,7 +236,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
                                 value: _offersSitting,
                                 onChanged: (v) =>
                                     setState(() => _offersSitting = v),
-                                activeColor: AppColors.sitting,
+                                activeThumbColor: AppColors.sitting,
+                                activeTrackColor: AppColors.sitting.withValues(alpha: 0.35),
                               ),
                             ],
                           ),
