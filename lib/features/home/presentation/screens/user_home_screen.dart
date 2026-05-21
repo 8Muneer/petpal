@@ -30,6 +30,8 @@ import 'package:petpal/features/messaging/data/datasources/messaging_datasource.
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
+import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
+import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
@@ -548,7 +550,7 @@ class _MyRequestsTab extends ConsumerStatefulWidget {
 class _MyRequestsTabState extends ConsumerState<_MyRequestsTab> {
   int _selected = 0; // 0 = הכל, 1 = טיולים, 2 = שמירה
 
-  static const _filters = ['הכל', 'בקשות טיולים', 'בקשות שמירה'];
+  static const _filters = ['הכל', 'בקשות טיולים', 'בקשות שמירה', 'הזמנות'];
 
   void _showCreateSheet(BuildContext context) {
     showModalBottomSheet(
@@ -689,6 +691,7 @@ class _MyRequestsTabState extends ConsumerState<_MyRequestsTab> {
               child: switch (_selected) {
                 1 => const _WalkRequestsView(key: ValueKey('walk')),
                 2 => const _SittingRequestsView(key: ValueKey('sitting')),
+                3 => const _MyBookingsView(key: ValueKey('bookings')),
                 _ => const _AllRequestsFeed(key: ValueKey('all')),
               },
             ),
@@ -3528,48 +3531,94 @@ class _SittingServiceDetailSheetState
                   ),
                 ],
                 const SizedBox(height: 20),
-                // Chat button
-                GestureDetector(
-                  onTap: _loading ? null : _startChat,
-                  child: Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.blueSlate]),
-                      boxShadow: [
-                        BoxShadow(
-                            color: accent.withValues(alpha: 0.35),
-                            blurRadius: 14,
-                            offset: const Offset(0, 5))
-                      ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _loading ? null : _startChat,
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: const LinearGradient(
+                                colors: [AppColors.primary, AppColors.blueSlate]),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: accent.withValues(alpha: 0.35),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5))
+                            ],
+                          ),
+                          child: Center(
+                            child: _loading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white))
+                                : const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline_rounded,
+                                          color: Colors.white, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('צור קשר',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w900)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
-                    child: Center(
-                      child: _loading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white))
-                          : const Row(
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/bookings/create', extra: {
+                            'providerUid': widget.service.providerUid,
+                            'providerName': widget.service.providerName,
+                            'providerPhotoUrl': widget.service.providerPhotoUrl,
+                            'serviceId': widget.service.id,
+                            'serviceType': 'sitting',
+                            'priceText': widget.service.priceText,
+                          });
+                        },
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: AppColors.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.35),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5))
+                            ],
+                          ),
+                          child: const Center(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    color: Colors.white,
-                                    size: 18),
+                                Icon(Icons.calendar_month_rounded,
+                                    color: Colors.white, size: 18),
                                 SizedBox(width: 8),
-                                Text('צור קשר',
+                                Text('הזמן עכשיו',
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w900)),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -3791,50 +3840,94 @@ class _WalkServiceDetailSheetState
                   ),
                 ],
                 const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: _loading ? null : _startChat,
-                  child: Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                          colors: [
-                            AppColors.primary,
-                            AppColors.statusOpen
-                          ]),
-                      boxShadow: [
-                        BoxShadow(
-                            color: accent.withValues(alpha: 0.35),
-                            blurRadius: 14,
-                            offset: const Offset(0, 5))
-                      ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _loading ? null : _startChat,
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: const LinearGradient(
+                                colors: [AppColors.primary, AppColors.statusOpen]),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: accent.withValues(alpha: 0.35),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5))
+                            ],
+                          ),
+                          child: Center(
+                            child: _loading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white))
+                                : const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline_rounded,
+                                          color: Colors.white, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('צור קשר',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w900)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
-                    child: Center(
-                      child: _loading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white))
-                          : const Row(
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/bookings/create', extra: {
+                            'providerUid': widget.service.providerUid,
+                            'providerName': widget.service.providerName,
+                            'providerPhotoUrl': widget.service.providerPhotoUrl,
+                            'serviceId': widget.service.id,
+                            'serviceType': 'walk',
+                            'priceText': widget.service.priceText,
+                          });
+                        },
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: AppColors.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.35),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5))
+                            ],
+                          ),
+                          child: const Center(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    color: Colors.white,
-                                    size: 18),
+                                Icon(Icons.calendar_month_rounded,
+                                    color: Colors.white, size: 18),
                                 SizedBox(width: 8),
-                                Text('צור קשר',
+                                Text('הזמן עכשיו',
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w900)),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -4091,6 +4184,122 @@ class _ChatTab extends ConsumerWidget {
         ],
       ),
     ),
+    );
+  }
+}
+
+// ── My Bookings inline view (embedded in _MyRequestsTab) ─────────────────────
+
+class _MyBookingsView extends ConsumerWidget {
+  const _MyBookingsView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookingsAsync = ref.watch(myBookingsProvider);
+
+    return bookingsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (bookings) {
+        if (bookings.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.calendar_today_outlined,
+                    size: 64, color: AppColors.textMuted),
+                const SizedBox(height: 16),
+                Text('אין הזמנות עדיין',
+                    style: AppTextStyles.headlineSm
+                        .copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                Text('גלוש לשירותים ושלח בקשת הזמנה',
+                    style: AppTextStyles.labelMd
+                        .copyWith(color: AppColors.textMuted)),
+              ],
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: bookings.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (_, i) => _BookingTile(booking: bookings[i]),
+        );
+      },
+    );
+  }
+}
+
+class _BookingTile extends StatelessWidget {
+  final BookingRequest booking;
+  const _BookingTile({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final isWalk = booking.serviceType == BookingServiceType.walk;
+    final (label, color) = switch (booking.status) {
+      BookingStatus.pending => ('ממתין', AppColors.warning),
+      BookingStatus.accepted => ('אושר', AppColors.success),
+      BookingStatus.declined => ('נדחה', AppColors.error),
+      BookingStatus.cancelled => ('בוטל', AppColors.textMuted),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.pureWhite,
+        borderRadius: AppRadius.lgRadius,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.subtle,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.primaryFaint,
+            backgroundImage: (booking.providerPhotoUrl?.isNotEmpty == true)
+                ? NetworkImage(booking.providerPhotoUrl!)
+                : null,
+            child: (booking.providerPhotoUrl?.isNotEmpty != true)
+                ? Text(
+                    booking.providerName.isNotEmpty
+                        ? booking.providerName.characters.first.toUpperCase()
+                        : '?',
+                    style: AppTextStyles.labelMd.copyWith(
+                        color: AppColors.primary, fontWeight: FontWeight.w700),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(booking.providerName,
+                    style: AppTextStyles.bodyMd
+                        .copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  '${isWalk ? 'טיולים' : 'שמירה'} • ${booking.petName}',
+                  style: AppTextStyles.labelMd
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.4)),
+            ),
+            child: Text(label,
+                style: AppTextStyles.labelMd
+                    .copyWith(color: color, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
     );
   }
 }

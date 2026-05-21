@@ -30,6 +30,8 @@ import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
+import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 
@@ -491,7 +493,7 @@ class _ProviderAllRequestsTab extends ConsumerStatefulWidget {
 
 class _ProviderAllRequestsTabState
     extends ConsumerState<_ProviderAllRequestsTab> {
-  int _selected = 0; // 0 = walk requests, 1 = sitting requests
+  int _selected = 0; // 0 = walk, 1 = sitting, 2 = bookings
 
   @override
   Widget build(BuildContext context) {
@@ -508,19 +510,28 @@ class _ProviderAllRequestsTabState
                 children: [
                   Expanded(
                     child: _ProviderToggleChip(
-                      label: 'בקשות טיולים',
+                      label: 'טיולים',
                       icon: Icons.directions_walk_rounded,
                       selected: _selected == 0,
                       onTap: () => setState(() => _selected = 0),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: _ProviderToggleChip(
-                      label: 'בקשות שמירה',
+                      label: 'שמירה',
                       icon: Icons.home_work_rounded,
                       selected: _selected == 1,
                       onTap: () => setState(() => _selected = 1),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'הזמנות',
+                      icon: Icons.calendar_month_rounded,
+                      selected: _selected == 2,
+                      onTap: () => setState(() => _selected = 2),
                     ),
                   ),
                 ],
@@ -530,10 +541,11 @@ class _ProviderAllRequestsTabState
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: _selected == 0
-                  ? const _ProviderRequestsView(key: ValueKey('req_walk'))
-                  : const _ProviderSittingRequestsView(
-                      key: ValueKey('req_sitting')),
+              child: switch (_selected) {
+                1 => const _ProviderSittingRequestsView(key: ValueKey('req_sitting')),
+                2 => const _IncomingBookingsView(key: ValueKey('req_bookings')),
+                _ => const _ProviderRequestsView(key: ValueKey('req_walk')),
+              },
             ),
           ),
         ],
@@ -2749,6 +2761,246 @@ class _ListYourServiceCTA extends ConsumerWidget {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ── Incoming Bookings inline view ─────────────────────────────────────────────
+
+class _IncomingBookingsView extends ConsumerWidget {
+  const _IncomingBookingsView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookingsAsync = ref.watch(incomingBookingsProvider);
+
+    return bookingsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (bookings) {
+        if (bookings.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inbox_outlined, size: 64, color: AppColors.textMuted),
+                const SizedBox(height: 16),
+                Text('אין הזמנות נכנסות',
+                    style: AppTextStyles.headlineSm
+                        .copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                Text('הזמנות מלקוחות יופיעו כאן',
+                    style: AppTextStyles.labelMd
+                        .copyWith(color: AppColors.textMuted)),
+              ],
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: bookings.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (_, i) => _IncomingBookingTile(booking: bookings[i]),
+        );
+      },
+    );
+  }
+}
+
+class _IncomingBookingTile extends ConsumerStatefulWidget {
+  final BookingRequest booking;
+  const _IncomingBookingTile({required this.booking});
+
+  @override
+  ConsumerState<_IncomingBookingTile> createState() =>
+      _IncomingBookingTileState();
+}
+
+class _IncomingBookingTileState extends ConsumerState<_IncomingBookingTile> {
+  bool _loading = false;
+
+  Future<void> _updateStatus(BookingStatus status, {String? note}) async {
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .updateBookingStatus(widget.booking.id, status, providerNote: note);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _showDeclineDialog() async {
+    final noteCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('דחיית הזמנה'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('האם לדחות את הבקשה?'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteCtrl,
+                decoration: const InputDecoration(
+                  hintText: 'הסבר (אופציונלי)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
+              child: const Text('דחה'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _updateStatus(BookingStatus.declined,
+          note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final b = widget.booking;
+    final isWalk = b.serviceType == BookingServiceType.walk;
+    final isPending = b.status == BookingStatus.pending;
+    final (label, color) = switch (b.status) {
+      BookingStatus.pending => ('ממתין', AppColors.warning),
+      BookingStatus.accepted => ('אושר', AppColors.success),
+      BookingStatus.declined => ('נדחה', AppColors.error),
+      BookingStatus.cancelled => ('בוטל', AppColors.textMuted),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.pureWhite,
+        borderRadius: AppRadius.lgRadius,
+        border: Border.all(
+          color: isPending
+              ? AppColors.warning.withValues(alpha: 0.4)
+              : AppColors.border,
+        ),
+        boxShadow: AppShadows.subtle,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.primaryFaint,
+                backgroundImage: (b.ownerPhotoUrl?.isNotEmpty == true)
+                    ? NetworkImage(b.ownerPhotoUrl!)
+                    : null,
+                child: (b.ownerPhotoUrl?.isNotEmpty != true)
+                    ? Text(
+                        b.ownerName.isNotEmpty
+                            ? b.ownerName.characters.first.toUpperCase()
+                            : '?',
+                        style: AppTextStyles.labelMd.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(b.ownerName,
+                        style: AppTextStyles.bodyMd
+                            .copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      '${isWalk ? 'טיולים' : 'שמירה'} • ${b.petName} (${b.petType})',
+                      style: AppTextStyles.labelMd
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: color.withValues(alpha: 0.4)),
+                ),
+                child: Text(label,
+                    style: AppTextStyles.labelMd.copyWith(
+                        color: color, fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+          if (b.specialInstructions != null &&
+              b.specialInstructions!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(b.specialInstructions!,
+                style: AppTextStyles.labelMd
+                    .copyWith(color: AppColors.textSecondary)),
+          ],
+          if (isPending) ...[
+            const SizedBox(height: 12),
+            _loading
+                ? const Center(
+                    child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2)))
+                : Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _showDeclineDialog,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            side: BorderSide(
+                                color:
+                                    AppColors.error.withValues(alpha: 0.5)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('דחה'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              _updateStatus(BookingStatus.accepted),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('אשר'),
+                        ),
+                      ),
+                    ],
+                  ),
+          ],
+        ],
+      ),
     );
   }
 }
