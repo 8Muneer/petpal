@@ -244,7 +244,7 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
           return const SliverFillRemaining(child: _EmptyState());
         }
         return SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+          padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewPadding.bottom + 84),
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,

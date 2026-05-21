@@ -626,32 +626,35 @@ class _MyRequestsTabState extends ConsumerState<_MyRequestsTab> {
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.divider)),
             ),
-            child: Row(
-              children: List.generate(_filters.length, (i) {
-                final selected = _selected == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _selected = i),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: selected ? AppColors.primary : Colors.transparent,
-                          width: 2.5,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(_filters.length, (i) {
+                  final selected = _selected == i;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selected = i),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: selected ? AppColors.primary : Colors.transparent,
+                            width: 2.5,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        _filters[i],
+                        style: AppTextStyles.bodyMd.copyWith(
+                          color: selected ? AppColors.primary : AppColors.textMuted,
+                          fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                          fontSize: 14,
                         ),
                       ),
                     ),
-                    child: Text(
-                      _filters[i],
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: selected ? AppColors.primary : AppColors.textMuted,
-                        fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ),
 
@@ -803,7 +806,7 @@ class _AllRequestsFeed extends ConsumerWidget {
     final List<Widget> allCards = [...walkCards, ...sittingCards];
 
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewPadding.bottom + 84),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 0.47,
@@ -1580,7 +1583,7 @@ class _ServicesTabState extends ConsumerState<_ServicesTab> {
                 );
               }
               return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 84),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
@@ -1874,8 +1877,7 @@ class _WalkRequestsView extends ConsumerWidget {
                   ),
                   Expanded(
                     child: GridView.builder(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 84),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -2060,55 +2062,49 @@ class _WalkRequestCardState extends State<_WalkRequestCard> {
             Expanded(
               flex: 44,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Name
                     Text(
                       widget.request.petName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontWeight: FontWeight.w900,
-                          fontSize: 14,
+                          fontSize: 15,
                           color: AppColors.textPrimary),
                     ),
-                    const SizedBox(height: 1),
-                    Text(_petTypeLabel,
-                        style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 3,
+                    // Type + gender pills
+                    Row(
                       children: [
-                        if (_genderLabel.isNotEmpty)
-                          _OwnerChip(
-                            icon: Icons.transgender_rounded,
+                        _MiniPill(label: _petTypeLabel, color: AppColors.primary),
+                        if (_genderLabel.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          _MiniPill(
                             label: _genderLabel,
                             color: widget.request.petGender == PetGender.female
                                 ? AppColors.error
                                 : AppColors.smartBlue,
                           ),
-                        _OwnerChip(
-                          icon: Icons.location_on_rounded,
-                          label: widget.request.area,
-                          color: AppColors.error,
-                        ),
-                        if (widget.request.preferredTime.isNotEmpty)
-                          _OwnerChip(
-                            icon: Icons.access_time_rounded,
-                            label: widget.request.preferredTime,
-                            color: AppColors.primary,
-                          ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 6),
+                    // Location
+                    _InfoRow(icon: Icons.location_on_rounded, label: widget.request.area),
+                    // Time
+                    if (widget.request.preferredTime.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      _InfoRow(icon: Icons.access_time_rounded, label: widget.request.preferredTime),
+                    ],
+                    const Spacer(),
+                    // Button — always pinned to bottom
                     SizedBox(
                       width: double.infinity,
-                      height: 30,
+                      height: 32,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: AppColors.primaryGradient,
@@ -2134,41 +2130,45 @@ class _WalkRequestCardState extends State<_WalkRequestCard> {
   }
 }
 
-
-// ── Icon chip used in owner request cards ────────────────────────────────────
-class _OwnerChip extends StatelessWidget {
-  final IconData icon;
+class _MiniPill extends StatelessWidget {
   final String label;
   final Color color;
-  const _OwnerChip(
-      {required this.icon, required this.label, required this.color});
+  const _MiniPill({required this.label, required this.color});
 
   @override
-  Widget build(BuildContext context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 120),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 11, color: color),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w700, color: color),
-                ),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(6),
         ),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+        ),
+      );
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _InfoRow({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Icon(icon, size: 11, color: AppColors.textMuted),
+          const SizedBox(width: 3),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+            ),
+          ),
+        ],
       );
 }
 
@@ -2415,8 +2415,7 @@ class _SittingRequestsView extends ConsumerWidget {
                   ),
                   Expanded(
                     child: GridView.builder(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 84),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -2605,55 +2604,49 @@ class _SittingRequestCardState extends State<_SittingRequestCard> {
             Expanded(
               flex: 44,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Name
                     Text(
                       widget.request.petName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontWeight: FontWeight.w900,
-                          fontSize: 14,
+                          fontSize: 15,
                           color: AppColors.textPrimary),
                     ),
-                    const SizedBox(height: 1),
-                    Text(_petTypeLabel,
-                        style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 3,
+                    // Type + gender pills
+                    Row(
                       children: [
-                        if (_genderLabel.isNotEmpty)
-                          _OwnerChip(
-                            icon: Icons.transgender_rounded,
+                        _MiniPill(label: _petTypeLabel, color: purple),
+                        if (_genderLabel.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          _MiniPill(
                             label: _genderLabel,
                             color: widget.request.petGender == PetGender.female
                                 ? AppColors.error
                                 : AppColors.smartBlue,
                           ),
-                        _OwnerChip(
-                          icon: Icons.location_on_rounded,
-                          label: widget.request.area,
-                          color: AppColors.error,
-                        ),
-                        if (startStr.isNotEmpty)
-                          _OwnerChip(
-                            icon: Icons.calendar_today_rounded,
-                            label: startStr,
-                            color: purple,
-                          ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 6),
+                    // Location
+                    _InfoRow(icon: Icons.location_on_rounded, label: widget.request.area),
+                    // Date
+                    if (startStr.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      _InfoRow(icon: Icons.calendar_today_rounded, label: startStr),
+                    ],
+                    const Spacer(),
+                    // Button — always pinned to bottom
                     SizedBox(
                       width: double.infinity,
-                      height: 30,
+                      height: 32,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(

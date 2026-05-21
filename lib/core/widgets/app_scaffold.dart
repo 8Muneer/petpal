@@ -18,20 +18,35 @@ class AppScaffold extends StatelessWidget {
     this.appBar,
     this.floatingActionButton,
     this.floatingActionButtonLocation,
-    this.extendBody = true,
+    this.extendBody = false,
     this.resizeToAvoidBottomInset = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    // Pill height (72) + bottom gap (12) = 84 dp clearance above the system bar.
+    // Injecting this into MediaQuery means any primary scroll view gets the right
+    // bottom padding automatically, without touching individual screens.
+    final adjustedBody = bottomNavigationBar != null
+        ? MediaQuery(
+            data: mq.copyWith(
+              padding: mq.padding.copyWith(
+                bottom: mq.padding.bottom + 84,
+              ),
+            ),
+            child: body,
+          )
+        : body;
+
     return Scaffold(
-      extendBody: extendBody,
+      extendBody: true,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       backgroundColor: AppColors.surfaceBase,
       appBar: appBar,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
-      body: body,
+      body: adjustedBody,
       bottomNavigationBar: bottomNavigationBar,
     );
   }
