@@ -1,6 +1,5 @@
 ﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
-import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 class SittingRequestModel extends SittingRequest {
   const SittingRequestModel({

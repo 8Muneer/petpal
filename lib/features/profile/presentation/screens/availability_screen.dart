@@ -164,7 +164,8 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                             value: _isAvailable,
                             onChanged: (v) =>
                                 setState(() => _isAvailable = v),
-                            activeColor: AppColors.primary,
+                            activeThumbColor: AppColors.primary,
+                            activeTrackColor: AppColors.primary.withValues(alpha: 0.35),
                           ),
                         ],
                       ),
