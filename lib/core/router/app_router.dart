@@ -241,6 +241,10 @@ class AppRouter {
           service: state.extra as SittingService,
         ),
       ),
+      GoRoute(
+        path: '/my-pets',
+        builder: (context, state) => const MyPetsScreen(),
+      ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
     redirect: (context, state) async {
