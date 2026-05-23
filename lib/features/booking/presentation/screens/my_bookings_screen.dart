@@ -1,9 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
+import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 
 class MyBookingsScreen extends ConsumerWidget {
   const MyBookingsScreen({super.key});
@@ -57,9 +61,92 @@ class MyBookingsScreen extends ConsumerWidget {
   }
 }
 
-class _BookingCard extends StatelessWidget {
+class _BookingCard extends ConsumerStatefulWidget {
   final BookingRequest booking;
   const _BookingCard({required this.booking});
+
+  @override
+  ConsumerState<_BookingCard> createState() => _BookingCardState();
+}
+
+class _BookingCardState extends ConsumerState<_BookingCard> {
+  bool _isCancelling = false;
+  bool _isOpeningChat = false;
+
+  BookingRequest get booking => widget.booking;
+
+  Future<void> _cancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('ביטול הזמנה'),
+          content: const Text('האם אתה בטוח שברצונך לבטל את ההזמנה?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('לא'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('בטל הזמנה',
+                  style: TextStyle(color: AppColors.error)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isCancelling = true);
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .cancelBooking(booking.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ההזמנה בוטלה')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('שגיאה בביטול ההזמנה')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
+    }
+  }
+
+  Future<void> _openChat() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    setState(() => _isOpeningChat = true);
+    try {
+      final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+      final convoId = await ds.getOrCreateConversation(
+        myUid: user.uid,
+        myName: user.displayName ?? user.email ?? '',
+        otherUid: booking.providerUid,
+        otherName: booking.providerName,
+        myPhotoUrl: user.photoURL ?? '',
+        otherPhotoUrl: booking.providerPhotoUrl ?? '',
+      );
+      if (!mounted) return;
+      context.push('/chat/$convoId', extra: {
+        'otherName': booking.providerName,
+        'otherPhotoUrl': booking.providerPhotoUrl,
+        'otherUid': booking.providerUid,
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('שגיאה בפתיחת הצ\'אט')),
+      );
+    } finally {
+      if (mounted) setState(() => _isOpeningChat = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +310,71 @@ class _BookingCard extends StatelessWidget {
                       booking.providerNote!,
                       style: AppTextStyles.labelMd
                           .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Action buttons ────────────────────────────────────
+          if (booking.status == BookingStatus.pending ||
+              booking.status == BookingStatus.accepted) ...[
+            const Divider(height: 1, color: AppColors.divider),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  if (booking.status == BookingStatus.accepted)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isOpeningChat ? null : _openChat,
+                        icon: _isOpeningChat
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
+                              )
+                            : const Icon(Icons.chat_bubble_outline_rounded,
+                                size: 16),
+                        label: const Text('פתח צ\'אט'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          textStyle: AppTextStyles.labelMd
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  if (booking.status == BookingStatus.accepted)
+                    const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isCancelling ? null : _cancel,
+                      icon: _isCancelling
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.error),
+                            )
+                          : const Icon(Icons.cancel_outlined, size: 16),
+                      label: const Text('בטל הזמנה'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: BorderSide(
+                            color: AppColors.error.withValues(alpha: 0.6)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        textStyle: AppTextStyles.labelMd
+                            .copyWith(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ],
