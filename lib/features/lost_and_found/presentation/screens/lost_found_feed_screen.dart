@@ -151,7 +151,20 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
           color: AppColors.textPrimary,
         ),
       ),
-      actions: const [],
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.map_outlined, color: AppColors.textMuted),
+          tooltip: 'תצוגת מפה',
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('תצוגת מפה — בקרוב!'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 

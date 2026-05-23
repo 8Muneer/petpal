@@ -288,7 +288,19 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     height: 180,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 16, color: AppColors.error),
+                      const SizedBox(width: 8),
+                      Text('שגיאה בטעינה',
+                          style: AppTextStyles.labelMd
+                              .copyWith(color: AppColors.error)),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -318,7 +330,19 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     height: 180,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 16, color: AppColors.error),
+                      const SizedBox(width: 8),
+                      Text('שגיאה בטעינה',
+                          style: AppTextStyles.labelMd
+                              .copyWith(color: AppColors.error)),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -348,7 +372,9 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                         rating: (s.rating ?? 0).toStringAsFixed(1),
                         location: s.area,
                         imageUrl: s.providerPhotoUrl ?? '',
-                        onTap: () => widget.onTabChange(3),
+                        onTap: () => context.push(
+                            '/services/provider/sitting',
+                            extra: s),
                       );
                     },
                   );
@@ -357,7 +383,19 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     height: 340,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 16, color: AppColors.error),
+                      const SizedBox(width: 8),
+                      Text('שגיאה בטעינה',
+                          style: AppTextStyles.labelMd
+                              .copyWith(color: AppColors.error)),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -387,7 +425,9 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                         rating: (w.rating ?? 0).toStringAsFixed(1),
                         location: w.area,
                         imageUrl: w.providerPhotoUrl ?? '',
-                        onTap: () => widget.onTabChange(3),
+                        onTap: () => context.push(
+                            '/services/provider/walk',
+                            extra: w),
                       );
                     },
                   );
@@ -396,7 +436,19 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     height: 340,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 16, color: AppColors.error),
+                      const SizedBox(width: 8),
+                      Text('שגיאה בטעינה',
+                          style: AppTextStyles.labelMd
+                              .copyWith(color: AppColors.error)),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -874,6 +926,8 @@ class _ServiceEntry {
   }
 }
 
+const double _kMaxPrice = 1000.0;
+
 // ── Filter state (passed into the sheet so it can compute live counts) ──────
 class _FilterState {
   String typeFilter;
@@ -890,7 +944,7 @@ class _FilterState {
     Set<String>? petTypes,
     Set<String>? selectedDays,
     this.minRating = 0,
-    this.priceRange = const RangeValues(0, 500),
+    this.priceRange = const RangeValues(0, _kMaxPrice),
     this.activeOnly = false,
     this.hasReviewsOnly = false,
     this.sortBy = 'ברירת מחדל',
@@ -924,7 +978,7 @@ class _FilterState {
       selectedDays.isEmpty &&
       minRating == 0 &&
       priceRange.start == 0 &&
-      priceRange.end == 500 &&
+      priceRange.end == _kMaxPrice &&
       !activeOnly &&
       !hasReviewsOnly &&
       sortBy == 'ברירת מחדל';
@@ -935,7 +989,7 @@ class _FilterState {
     if (petTypes.isNotEmpty) n++;
     if (selectedDays.isNotEmpty) n++;
     if (minRating > 0) n++;
-    if (priceRange.start > 0 || priceRange.end < 500) n++;
+    if (priceRange.start > 0 || priceRange.end < _kMaxPrice) n++;
     if (activeOnly) n++;
     if (hasReviewsOnly) n++;
     if (sortBy != 'ברירת מחדל') n++;
@@ -964,7 +1018,7 @@ List<_ServiceEntry> _runFilter(
   if (f.minRating > 0) {
     all = all.where((e) => (e.rating ?? 0) >= f.minRating).toList();
   }
-  final priceDefault = f.priceRange.start == 0 && f.priceRange.end == 500;
+  final priceDefault = f.priceRange.start == 0 && f.priceRange.end == _kMaxPrice;
   if (!priceDefault) {
     all = all
         .where((e) =>
@@ -1201,7 +1255,7 @@ class _ServicesTabState extends ConsumerState<_ServicesTab> {
                           child: RangeSlider(
                             values: draft.priceRange,
                             min: 0,
-                            max: 500,
+                            max: _kMaxPrice,
                             divisions: 50,
                             onChanged: (v) => setSheet(() => draft = draft.copyWith(priceRange: v)),
                           ),
@@ -1210,7 +1264,7 @@ class _ServicesTabState extends ConsumerState<_ServicesTab> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('₪0', style: AppTextStyles.labelSm),
-                            Text('₪500+', style: AppTextStyles.labelSm),
+                            Text('₪${_kMaxPrice.round()}+', style: AppTextStyles.labelSm),
                           ],
                         ),
 

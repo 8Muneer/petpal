@@ -1,21 +1,20 @@
-﻿import 'dart:io';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
+import 'package:petpal/features/pets/domain/entities/pet.dart';
+import 'package:petpal/features/pets/presentation/providers/pets_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 
 class CreateSittingRequestScreen extends ConsumerStatefulWidget {
   final SittingRequest? initialRequest;
-
   const CreateSittingRequestScreen({super.key, this.initialRequest});
 
   bool get _isEditing => initialRequest != null;
@@ -32,14 +31,17 @@ class _CreateSittingRequestScreenState
   String _area = '';
   final _budgetController = TextEditingController();
 
+  Pet? _selectedPet;
   PetType _petType = PetType.dog;
   PetGender? _petGender;
-  List<XFile> _pickedImages = [];
-  List<String> _existingImageUrls = [];
   DateTime? _startDate;
   DateTime? _endDate;
   SittingType _sittingType = SittingType.atOwnerHome;
   bool _isPublishing = false;
+
+  // In edit mode, preserve existing image data
+  String? _existingPetImageUrl;
+  List<String> _existingPetImageUrls = [];
 
   @override
   void initState() {
@@ -55,7 +57,8 @@ class _CreateSittingRequestScreenState
       _startDate = r.startDate;
       _endDate = r.endDate;
       _sittingType = r.sittingType;
-      _existingImageUrls = List.of(r.allImages);
+      _existingPetImageUrl = r.petImageUrl;
+      _existingPetImageUrls = List.of(r.petImageUrls);
     }
   }
 
@@ -67,28 +70,22 @@ class _CreateSittingRequestScreenState
     super.dispose();
   }
 
-  static const _maxImages = 5;
-
-  bool get _canAddMore =>
-      (_existingImageUrls.length + _pickedImages.length) < _maxImages;
-
-  Future<void> _addImages() async {
-    if (!_canAddMore) return;
-    final imageService = ref.read(sittingImageServiceProvider);
-    final picked = await imageService.pickImages();
-    if (picked.isEmpty) return;
+  void _onPetSelected(Pet pet) {
     setState(() {
-      final remaining =
-          _maxImages - _existingImageUrls.length - _pickedImages.length;
-      _pickedImages.addAll(picked.take(remaining));
+      _selectedPet = pet;
+      _petNameController.text = pet.name;
+      _petType = switch (pet.type) {
+        'כלב' => PetType.dog,
+        'חתול' => PetType.cat,
+        _ => PetType.other,
+      };
+      _petGender = switch (pet.gender) {
+        'זכר' => PetGender.male,
+        'נקבה' => PetGender.female,
+        _ => null,
+      };
     });
   }
-
-  void _removeExistingImage(int index) =>
-      setState(() => _existingImageUrls.removeAt(index));
-
-  void _removePickedImage(int index) =>
-      setState(() => _pickedImages.removeAt(index));
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();
@@ -114,10 +111,7 @@ class _CreateSittingRequestScreenState
     if (picked != null) {
       setState(() {
         _startDate = picked;
-        // Reset end date if it's before the new start date
-        if (_endDate != null && !_endDate!.isAfter(picked)) {
-          _endDate = null;
-        }
+        if (_endDate != null && !_endDate!.isAfter(picked)) _endDate = null;
       });
     }
   }
@@ -151,6 +145,10 @@ class _CreateSittingRequestScreenState
     final petName = _petNameController.text.trim();
     final area = _area.trim();
 
+    if (!widget._isEditing && _selectedPet == null) {
+      _showSnack('יש לבחור חיית מחמד', isError: true);
+      return;
+    }
     if (petName.isEmpty) {
       _showSnack('יש להזין את שם חיית המחמד', isError: true);
       return;
@@ -181,26 +179,20 @@ class _CreateSittingRequestScreenState
       final instructions = _instructionsController.text.trim();
       final budget = _budgetController.text.trim();
 
-      List<String> allUrls = List.of(_existingImageUrls);
-      if (_pickedImages.isNotEmpty) {
-        final imageService = ref.read(sittingImageServiceProvider);
-        final uploadId = widget._isEditing
-            ? widget.initialRequest!.id
-            : FirebaseFirestore.instance
-                .collection('sitting_requests')
-                .doc()
-                .id;
-        final newUrls =
-            await imageService.uploadPetImages(uploadId, _pickedImages);
-        allUrls.addAll(newUrls);
-      }
+      // Use pet profile image (create) or preserve existing (edit)
+      final petImgUrl = widget._isEditing
+          ? _existingPetImageUrl
+          : _selectedPet?.imageUrl;
+      final petImgUrls = widget._isEditing
+          ? _existingPetImageUrls
+          : [if (_selectedPet?.imageUrl != null) _selectedPet!.imageUrl!];
 
       final data = {
         'petName': petName,
         'petType': _petType.name,
         'petGender': _petGender?.name,
-        'petImageUrl': allUrls.isNotEmpty ? allUrls.first : null,
-        'petImageUrls': allUrls,
+        'petImageUrl': petImgUrl,
+        'petImageUrls': petImgUrls,
         'startDate': Timestamp.fromDate(_startDate!),
         'endDate': Timestamp.fromDate(_endDate!),
         'sittingType': _sittingType.name,
@@ -247,8 +239,7 @@ class _CreateSittingRequestScreenState
         margin: const EdgeInsets.all(14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor:
-            isError ? AppColors.error : AppColors.primary,
+        backgroundColor: isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -259,7 +250,6 @@ class _CreateSittingRequestScreenState
   @override
   Widget build(BuildContext context) {
     final isEditing = widget._isEditing;
-    final totalImages = _existingImageUrls.length + _pickedImages.length;
     final nights = (_startDate != null && _endDate != null)
         ? _endDate!.difference(_startDate!).inDays
         : 0;
@@ -298,120 +288,132 @@ class _CreateSittingRequestScreenState
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   children: [
-                    // Pet name
-                    _FieldLabel('שם חיית המחמד'),
-                    const SizedBox(height: 6),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(4),
-                      child: TextField(
-                        controller: _petNameController,
-                        textDirection: TextDirection.rtl,
-                        decoration: InputDecoration(
-                          hintText: 'לדוגמה: בלה',
-                          hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withValues(alpha: 0.6),
-                            fontWeight: FontWeight.w600,
+                    // ── Pet selector (create) / name+type+gender (edit) ──
+                    if (!isEditing) ...[
+                      const _FieldLabel('בחר חיית מחמד'),
+                      const SizedBox(height: 8),
+                      ref.watch(userPetsProvider).when(
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary),
                           ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                          prefixIcon: const Icon(Icons.pets_rounded,
-                              color: AppColors.primary),
                         ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                        error: (e, _) => Text('שגיאה: $e'),
+                        data: (pets) => _PetSelectorRow(
+                          pets: pets,
+                          selectedPet: _selectedPet,
+                          onSelect: _onPetSelected,
+                          onAddNew: () => context.push('/my-pets'),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Pet type
-                    _FieldLabel('סוג חיית המחמד'),
-                    const SizedBox(height: 6),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(6),
-                      child: Row(
-                        children: [
-                          _buildPetTypeChip(
-                              'כלב', PetType.dog, Icons.directions_walk_rounded),
-                          const SizedBox(width: 8),
-                          _buildPetTypeChip(
-                              'חתול', PetType.cat, Icons.pets_rounded),
-                          const SizedBox(width: 8),
-                          _buildPetTypeChip(
-                              'אחר', PetType.other, Icons.cruelty_free_rounded),
-                        ],
+                      const SizedBox(height: 16),
+                    ] else ...[
+                      const _FieldLabel('שם חיית המחמד'),
+                      const SizedBox(height: 6),
+                      AppCard(
+                        padding: const EdgeInsets.all(4),
+                        child: TextField(
+                          controller: _petNameController,
+                          textDirection: TextDirection.rtl,
+                          decoration: InputDecoration(
+                            hintText: 'לדוגמה: בלה',
+                            hintStyle: TextStyle(
+                              color: AppColors.textSecondary
+                                  .withValues(alpha: 0.6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.all(14),
+                            prefixIcon: const Icon(Icons.pets_rounded,
+                                color: AppColors.primary),
+                          ),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Pet gender
-                    _FieldLabel('מין חיית המחמד (אופציונלי)'),
-                    const SizedBox(height: 6),
-                    AppCard(
-                      
-                      padding: const EdgeInsets.all(6),
-                      child: Row(
-                        children: [
-                          _buildGenderChip(
-                              'זכר', PetGender.male, Icons.male_rounded),
-                          const SizedBox(width: 8),
-                          _buildGenderChip(
-                              'נקבה', PetGender.female, Icons.female_rounded),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () => setState(() => _petGender = null),
-                              child: Container(
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  color: _petGender == null
-                                      ? AppColors.textSecondary
-                                      : Colors.transparent,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                        Icons.remove_circle_outline_rounded,
-                                        size: 18,
-                                        color: _petGender == null
-                                            ? Colors.white
-                                            : AppColors.textSecondary),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'לא ידוע',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 13,
-                                        color: _petGender == null
-                                            ? Colors.white
-                                            : AppColors.textSecondary,
+                      const SizedBox(height: 16),
+                      const _FieldLabel('סוג חיית המחמד'),
+                      const SizedBox(height: 6),
+                      AppCard(
+                        padding: const EdgeInsets.all(6),
+                        child: Row(
+                          children: [
+                            _buildPetTypeChip('כלב', PetType.dog,
+                                Icons.directions_walk_rounded),
+                            const SizedBox(width: 8),
+                            _buildPetTypeChip(
+                                'חתול', PetType.cat, Icons.pets_rounded),
+                            const SizedBox(width: 8),
+                            _buildPetTypeChip('אחר', PetType.other,
+                                Icons.cruelty_free_rounded),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const _FieldLabel('מין חיית המחמד (אופציונלי)'),
+                      const SizedBox(height: 6),
+                      AppCard(
+                        padding: const EdgeInsets.all(6),
+                        child: Row(
+                          children: [
+                            _buildGenderChip(
+                                'זכר', PetGender.male, Icons.male_rounded),
+                            const SizedBox(width: 8),
+                            _buildGenderChip('נקבה', PetGender.female,
+                                Icons.female_rounded),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () => setState(() => _petGender = null),
+                                child: Container(
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: _petGender == null
+                                        ? AppColors.textSecondary
+                                        : Colors.transparent,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                          Icons.remove_circle_outline_rounded,
+                                          size: 18,
+                                          color: _petGender == null
+                                              ? Colors.white
+                                              : AppColors.textSecondary),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'לא ידוע',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 13,
+                                          color: _petGender == null
+                                              ? Colors.white
+                                              : AppColors.textSecondary,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Sitting type
-                    _FieldLabel('מיקום השמירה'),
+                    const _FieldLabel('מיקום השמירה'),
                     const SizedBox(height: 6),
                     AppCard(
-                      
                       padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
@@ -432,95 +434,25 @@ class _CreateSittingRequestScreenState
 
                     const SizedBox(height: 16),
 
-                    // Pet photos (multi-image)
-                    const _FieldLabel('תמונות של חיית המחמד (אופציונלי)'),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 110,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          for (int i = 0; i < _existingImageUrls.length; i++)
-                            _ImageThumb(
-                              child: Image.network(
-                                _existingImageUrls[i],
-                                fit: BoxFit.cover,
-                              ),
-                              onRemove: () => _removeExistingImage(i),
-                            ),
-                          for (int i = 0; i < _pickedImages.length; i++)
-                            _ImageThumb(
-                              child: Image.file(
-                                File(_pickedImages[i].path),
-                                fit: BoxFit.cover,
-                              ),
-                              onRemove: () => _removePickedImage(i),
-                            ),
-                          if (_canAddMore)
-                            GestureDetector(
-                              onTap: _addImages,
-                              child: Container(
-                                width: 90,
-                                margin: const EdgeInsets.only(left: 8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryFaint,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.3)),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.add_photo_alternate_outlined,
-                                        size: 28,
-                                        color: AppColors.primary
-                                            .withValues(alpha: 0.7)),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      totalImages == 0
-                                          ? 'הוסף תמונה'
-                                          : 'הוסף עוד',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primary
-                                            .withValues(alpha: 0.8),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Date range row
+                    // Date range
                     Row(
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FieldLabel('תאריך התחלה'),
+                              const _FieldLabel('תאריך התחלה'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
                                 onTap: _pickStartDate,
                                 child: AppCard(
-                                  
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 14),
                                   child: Row(
                                     children: [
-                                      const Icon(
-                                          Icons.calendar_today_rounded,
-                                          size: 20,
-                                          color: AppColors.primary),
+                                      const Icon(Icons.calendar_today_rounded,
+                                          size: 20, color: AppColors.primary),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -549,21 +481,18 @@ class _CreateSittingRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FieldLabel('תאריך סיום'),
+                              const _FieldLabel('תאריך סיום'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
                                 onTap: _pickEndDate,
                                 child: AppCard(
-                                  
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 14),
                                   child: Row(
                                     children: [
-                                      const Icon(
-                                          Icons.calendar_month_rounded,
-                                          size: 20,
-                                          color: AppColors.primary),
+                                      const Icon(Icons.calendar_month_rounded,
+                                          size: 20, color: AppColors.primary),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -590,7 +519,6 @@ class _CreateSittingRequestScreenState
                       ],
                     ),
 
-                    // Nights counter badge
                     if (nights > 0) ...[
                       const SizedBox(height: 8),
                       Center(
@@ -598,8 +526,7 @@ class _CreateSittingRequestScreenState
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color:
-                                AppColors.primary.withValues(alpha: 0.10),
+                            color: AppColors.primary.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -617,7 +544,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Area
-                    _FieldLabel('מיקום'),
+                    const _FieldLabel('מיקום'),
                     const SizedBox(height: 6),
                     LocationPickerField(
                       initialValue: _area,
@@ -627,10 +554,9 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Special instructions
-                    _FieldLabel('הוראות מיוחדות (אופציונלי)'),
+                    const _FieldLabel('הוראות מיוחדות (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
-                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _instructionsController,
@@ -640,7 +566,8 @@ class _CreateSittingRequestScreenState
                           hintText:
                               'לדוגמה: החתולה אוכלת רק מזון יבש, צריך לנקות ארגז חול פעם ביום...',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withValues(alpha: 0.6),
+                            color:
+                                AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -658,19 +585,20 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Budget
-                    _FieldLabel('תקציב (אופציונלי)'),
+                    const _FieldLabel('תקציב (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
-                      
                       padding: const EdgeInsets.all(4),
                       child: TextField(
                         controller: _budgetController,
                         textDirection: TextDirection.rtl,
-                        keyboardType: TextInputType.text,
+                        keyboardType: TextInputType.phone,
+                        autocorrect: false,
                         decoration: InputDecoration(
                           hintText: 'לדוגמה: ₪80-₪120 ללילה',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withValues(alpha: 0.6),
+                            color:
+                                AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
@@ -806,8 +734,7 @@ class _CreateSittingRequestScreenState
     );
   }
 
-  Widget _buildSittingTypeChip(
-      String label, SittingType type, IconData icon) {
+  Widget _buildSittingTypeChip(String label, SittingType type, IconData icon) {
     final selected = _sittingType == type;
     return Expanded(
       child: InkWell(
@@ -862,42 +789,148 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-class _ImageThumb extends StatelessWidget {
-  final Widget child;
-  final VoidCallback onRemove;
+class _PetSelectorRow extends StatelessWidget {
+  final List<Pet> pets;
+  final Pet? selectedPet;
+  final ValueChanged<Pet> onSelect;
+  final VoidCallback onAddNew;
 
-  const _ImageThumb({required this.child, required this.onRemove});
+  const _PetSelectorRow({
+    required this.pets,
+    required this.selectedPet,
+    required this.onSelect,
+    required this.onAddNew,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 90,
+    return SizedBox(
       height: 110,
-      margin: const EdgeInsets.only(left: 8),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: child,
-          ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: onRemove,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: pets.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          if (i == pets.length) {
+            return GestureDetector(
+              onTap: onAddNew,
               child: Container(
-                padding: const EdgeInsets.all(3),
+                width: 80,
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  shape: BoxShape.circle,
+                  color: AppColors.pureWhite,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border, width: 1.5),
                 ),
-                child: const Icon(Icons.close_rounded,
-                    color: Colors.white, size: 14),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryFaint,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.add_rounded,
+                          color: AppColors.primary, size: 24),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'הוסף חיה',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          final pet = pets[i];
+          final isSelected = selectedPet?.id == pet.id;
+          return GestureDetector(
+            onTap: () => onSelect(pet),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 80,
+              decoration: BoxDecoration(
+                color:
+                    isSelected ? AppColors.primaryFaint : AppColors.pureWhite,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.border,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundColor: AppColors.surface,
+                        backgroundImage: (pet.imageUrl?.isNotEmpty == true)
+                            ? CachedNetworkImageProvider(pet.imageUrl!)
+                            : null,
+                        child: (pet.imageUrl?.isNotEmpty != true)
+                            ? const Icon(Icons.pets_rounded,
+                                size: 22, color: AppColors.textMuted)
+                            : null,
+                      ),
+                      if (isSelected)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.check,
+                                size: 10, color: Colors.white),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      pet.name,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Text(
+                    pet.type,
+                    style: const TextStyle(
+                        fontSize: 9, color: AppColors.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
