@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
+import 'package:petpal/core/widgets/request_form_widgets.dart';
 import 'package:petpal/features/pets/domain/entities/pet.dart';
 import 'package:petpal/features/pets/presentation/providers/pets_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
@@ -290,7 +290,7 @@ class _CreateSittingRequestScreenState
                   children: [
                     // ── Pet selector (create) / name+type+gender (edit) ──
                     if (!isEditing) ...[
-                      const _FieldLabel('בחר חיית מחמד'),
+                      const RequestFieldLabel('בחר חיית מחמד'),
                       const SizedBox(height: 8),
                       ref.watch(userPetsProvider).when(
                         loading: () => const Center(
@@ -301,7 +301,7 @@ class _CreateSittingRequestScreenState
                           ),
                         ),
                         error: (e, _) => Text('שגיאה: $e'),
-                        data: (pets) => _PetSelectorRow(
+                        data: (pets) => PetSelectorRow(
                           pets: pets,
                           selectedPet: _selectedPet,
                           onSelect: _onPetSelected,
@@ -310,7 +310,7 @@ class _CreateSittingRequestScreenState
                       ),
                       const SizedBox(height: 16),
                     ] else ...[
-                      const _FieldLabel('שם חיית המחמד'),
+                      const RequestFieldLabel('שם חיית המחמד'),
                       const SizedBox(height: 6),
                       AppCard(
                         padding: const EdgeInsets.all(4),
@@ -337,7 +337,7 @@ class _CreateSittingRequestScreenState
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const _FieldLabel('סוג חיית המחמד'),
+                      const RequestFieldLabel('סוג חיית המחמד'),
                       const SizedBox(height: 6),
                       AppCard(
                         padding: const EdgeInsets.all(6),
@@ -355,7 +355,7 @@ class _CreateSittingRequestScreenState
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const _FieldLabel('מין חיית המחמד (אופציונלי)'),
+                      const RequestFieldLabel('מין חיית המחמד (אופציונלי)'),
                       const SizedBox(height: 6),
                       AppCard(
                         padding: const EdgeInsets.all(6),
@@ -411,7 +411,7 @@ class _CreateSittingRequestScreenState
                     ],
 
                     // Sitting type
-                    const _FieldLabel('מיקום השמירה'),
+                    const RequestFieldLabel('מיקום השמירה'),
                     const SizedBox(height: 6),
                     AppCard(
                       padding: const EdgeInsets.all(6),
@@ -441,7 +441,7 @@ class _CreateSittingRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _FieldLabel('תאריך התחלה'),
+                              const RequestFieldLabel('תאריך התחלה'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
@@ -481,7 +481,7 @@ class _CreateSittingRequestScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _FieldLabel('תאריך סיום'),
+                              const RequestFieldLabel('תאריך סיום'),
                               const SizedBox(height: 6),
                               InkWell(
                                 borderRadius: BorderRadius.circular(22),
@@ -544,7 +544,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Area
-                    const _FieldLabel('מיקום'),
+                    const RequestFieldLabel('מיקום'),
                     const SizedBox(height: 6),
                     LocationPickerField(
                       initialValue: _area,
@@ -554,7 +554,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Special instructions
-                    const _FieldLabel('הוראות מיוחדות (אופציונלי)'),
+                    const RequestFieldLabel('הוראות מיוחדות (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       padding: const EdgeInsets.all(4),
@@ -585,7 +585,7 @@ class _CreateSittingRequestScreenState
                     const SizedBox(height: 16),
 
                     // Budget
-                    const _FieldLabel('תקציב (אופציונלי)'),
+                    const RequestFieldLabel('תקציב (אופציונלי)'),
                     const SizedBox(height: 6),
                     AppCard(
                       padding: const EdgeInsets.all(4),
@@ -767,170 +767,6 @@ class _CreateSittingRequestScreenState
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  const _FieldLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w900,
-        color: AppColors.textSecondary,
-      ),
-    );
-  }
-}
-
-class _PetSelectorRow extends StatelessWidget {
-  final List<Pet> pets;
-  final Pet? selectedPet;
-  final ValueChanged<Pet> onSelect;
-  final VoidCallback onAddNew;
-
-  const _PetSelectorRow({
-    required this.pets,
-    required this.selectedPet,
-    required this.onSelect,
-    required this.onAddNew,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: pets.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          if (i == pets.length) {
-            return GestureDetector(
-              onTap: onAddNew,
-              child: Container(
-                width: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.pureWhite,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border, width: 1.5),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryFaint,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add_rounded,
-                          color: AppColors.primary, size: 24),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'הוסף חיה',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          final pet = pets[i];
-          final isSelected = selectedPet?.id == pet.id;
-          return GestureDetector(
-            onTap: () => onSelect(pet),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 80,
-              decoration: BoxDecoration(
-                color:
-                    isSelected ? AppColors.primaryFaint : AppColors.pureWhite,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.border,
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: AppColors.surface,
-                        backgroundImage: (pet.imageUrl?.isNotEmpty == true)
-                            ? CachedNetworkImageProvider(pet.imageUrl!)
-                            : null,
-                        child: (pet.imageUrl?.isNotEmpty != true)
-                            ? const Icon(Icons.pets_rounded,
-                                size: 22, color: AppColors.textMuted)
-                            : null,
-                      ),
-                      if (isSelected)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(Icons.check,
-                                size: 10, color: Colors.white),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      pet.name,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  Text(
-                    pet.type,
-                    style: const TextStyle(
-                        fontSize: 9, color: AppColors.textMuted),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
     );
   }
