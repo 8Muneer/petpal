@@ -35,47 +35,6 @@ import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 
-enum RequestStatus { pending, accepted, declined }
-
-class BookingRequestData {
-  final String ownerName;
-  final ProviderServiceType serviceType;
-  final String city;
-  final String whenText;
-  final String priceText;
-  final RequestStatus status;
-
-  const BookingRequestData({
-    required this.ownerName,
-    required this.serviceType,
-    required this.city,
-    required this.whenText,
-    required this.priceText,
-    required this.status,
-  });
-
-  BookingRequestData copyWith({RequestStatus? status}) => BookingRequestData(
-        ownerName: ownerName,
-        serviceType: serviceType,
-        city: city,
-        whenText: whenText,
-        priceText: priceText,
-        status: status ?? this.status,
-      );
-}
-
-class ChatPreviewData {
-  final String name;
-  final String lastMessage;
-  final String timeAgo;
-
-  const ChatPreviewData({
-    required this.name,
-    required this.lastMessage,
-    required this.timeAgo,
-  });
-}
-
 class ServiceProviderHomeScreen extends ConsumerStatefulWidget {
   const ServiceProviderHomeScreen({super.key});
 

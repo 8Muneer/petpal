@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
@@ -36,7 +35,7 @@ class PetsNotifier extends AsyncNotifier<void> {
     String? microchipId,
     File? imageFile,
   }) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authStateChangesProvider).valueOrNull;
     if (user == null) throw Exception('Not logged in');
 
     String? imageUrl;
@@ -84,7 +83,7 @@ class PetsNotifier extends AsyncNotifier<void> {
     File? imageFile,
     String? existingImageUrl,
   }) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authStateChangesProvider).valueOrNull;
     if (user == null) throw Exception('Not logged in');
 
     String? imageUrl = existingImageUrl;
@@ -117,7 +116,7 @@ class PetsNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> deletePet(String petId) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authStateChangesProvider).valueOrNull;
     if (user == null) return;
     await FirebaseFirestore.instance
         .collection('users')
