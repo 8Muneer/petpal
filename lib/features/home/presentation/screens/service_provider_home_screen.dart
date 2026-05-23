@@ -8,6 +8,7 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
+import 'package:petpal/core/widgets/luxury_hero.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
@@ -46,6 +47,7 @@ class ServiceProviderHomeScreen extends ConsumerStatefulWidget {
 class _ServiceProviderHomeScreenState
     extends ConsumerState<ServiceProviderHomeScreen> {
   int _currentIndex = 0;
+  bool _showMyServices = false;
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -59,17 +61,27 @@ class _ServiceProviderHomeScreenState
     );
   }
 
+  void _onNavChanged(int i) => setState(() {
+        _showMyServices = false;
+        _currentIndex = i;
+      });
 
   @override
   Widget build(BuildContext context) {
     final tabs = <Widget>[
-      _ProviderHomeTab(onAction: (msg) => _toast(msg)),
+      _ProviderHomeTab(
+        onAction: (msg) => _toast(msg),
+        onOpenMyServices: () => setState(() => _showMyServices = true),
+      ),
       const FeedScreen(),
       const LostFoundFeedScreen(),
-      const _ProviderMyServicesTab(),
       const _ProviderAllRequestsTab(),
       const _MessagesTab(),
     ];
+
+    final body = _showMyServices
+        ? const _ProviderMyServicesTab()
+        : tabs[_currentIndex];
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -83,18 +95,17 @@ class _ServiceProviderHomeScreenState
             child: child,
           ),
           child: KeyedSubtree(
-            key: ValueKey(_currentIndex),
-            child: tabs[_currentIndex],
+            key: ValueKey(_showMyServices ? 'services' : '$_currentIndex'),
+            child: body,
           ),
         ),
         bottomNavigationBar: AppBottomNav(
-          currentIndex: _currentIndex,
-          onChanged: (i) => setState(() => _currentIndex = i),
+          currentIndex: _showMyServices ? -1 : _currentIndex,
+          onChanged: _onNavChanged,
           items: const [
             AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
             AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
             AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
-            AppNavItem(icon: Icons.campaign_outlined, activeIcon: Icons.campaign_rounded, label: 'שירותים שלי'),
             AppNavItem(icon: Icons.assignment_outlined, activeIcon: Icons.assignment_rounded, label: 'הבקשות'),
             AppNavItem(icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
           ],
@@ -204,9 +215,11 @@ class _ActiveJobTracker extends StatelessWidget {
 
 class _ProviderHomeTab extends ConsumerWidget {
   final void Function(String msg) onAction;
+  final VoidCallback onOpenMyServices;
 
   const _ProviderHomeTab({
     required this.onAction,
+    required this.onOpenMyServices,
   });
 
   @override
@@ -253,11 +266,31 @@ class _ProviderHomeTab extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Row(
                   children: [
-                    AppAvatar(
+                    ProfileAvatarButton(
+                      imageUrl: profile?.photoUrl,
                       name: displayName,
-                      photoUrl: profile?.photoUrl,
-                      size: 52,
-                      onTap: () => context.push('/profile'),
+                      menuItems: [
+                        ProfileMenuItem(
+                          icon: Icons.person_rounded,
+                          label: 'הפרופיל שלי',
+                          subtitle: 'ניהול פרטים אישיים',
+                          onTap: () => context.push('/profile'),
+                        ),
+                        ProfileMenuItem(
+                          icon: Icons.campaign_rounded,
+                          iconColor: AppColors.sapphire,
+                          label: 'השירותים שלי',
+                          subtitle: 'ניהול מודעות ושירותים',
+                          onTap: onOpenMyServices,
+                        ),
+                        ProfileMenuItem(
+                          icon: Icons.logout_rounded,
+                          iconColor: Colors.redAccent,
+                          label: 'יציאה',
+                          subtitle: 'התנתקות מהחשבון',
+                          onTap: () => FirebaseAuth.instance.signOut(),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 14),
                     Expanded(

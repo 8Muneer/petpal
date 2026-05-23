@@ -92,7 +92,7 @@ class LuxuryHero extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _ProfileAvatar(
+                  ProfileAvatarButton(
                     imageUrl: profileImageUrl,
                     name: userName,
                     menuItems: profileMenuItems,
@@ -129,17 +129,19 @@ class LuxuryHero extends StatelessWidget {
 
 // ─── Profile Avatar ─────────────────────────────────────────────────────────
 
-class _ProfileAvatar extends StatefulWidget {
+/// Tappable avatar that opens the [_SideMenu] overlay.
+/// Can be used independently outside of [LuxuryHero].
+class ProfileAvatarButton extends StatefulWidget {
   final String? imageUrl;
   final String? name;
   final List<ProfileMenuItem> menuItems;
-  const _ProfileAvatar({this.imageUrl, this.name, required this.menuItems});
+  const ProfileAvatarButton({super.key, this.imageUrl, this.name, required this.menuItems});
 
   @override
-  State<_ProfileAvatar> createState() => _ProfileAvatarState();
+  State<ProfileAvatarButton> createState() => _ProfileAvatarState();
 }
 
-class _ProfileAvatarState extends State<_ProfileAvatar>
+class _ProfileAvatarState extends State<ProfileAvatarButton>
     with SingleTickerProviderStateMixin {
   OverlayEntry? _overlay;
   late final AnimationController _press;

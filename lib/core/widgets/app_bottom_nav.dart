@@ -107,10 +107,12 @@ class _AppBottomNavState extends State<AppBottomNav>
               builder: (context, constraints) {
                 final totalWidth = constraints.maxWidth;
                 final itemWidth = totalWidth / n;
+                final clampedFrom = _fromIndex.clamp(0, n - 1);
+                final clampedTo = widget.currentIndex.clamp(0, n - 1);
                 final effectiveFrom =
-                    isRtl ? (n - 1 - _fromIndex) : _fromIndex;
+                    isRtl ? (n - 1 - clampedFrom) : clampedFrom;
                 final effectiveTo =
-                    isRtl ? (n - 1 - widget.currentIndex) : widget.currentIndex;
+                    isRtl ? (n - 1 - clampedTo) : clampedTo;
 
                 return Stack(
                   children: [
