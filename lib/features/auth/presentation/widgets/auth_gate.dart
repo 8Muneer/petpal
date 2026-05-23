@@ -1,96 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'package:petpal/core/constants/app_constants.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:petpal/core/providers/firebase_providers.dart';
+import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
-class AuthGate extends StatefulWidget {
+class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
-  @override
-  State<AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<AuthGate> {
-  int _retryCount = 0;
-
-  Future<String?> _fetchUserRole(String uid) async {
-    final doc = await FirebaseFirestore.instance
-        .collection(AppConstants.usersCollection)
-        .doc(uid)
-        .get();
-    final data = doc.data();
-    if (data == null) return null;
-
-    final role = (data['role'] ?? data['userType'])?.toString().trim();
-    if (role == null || role.isEmpty) return null;
-    return role;
-  }
+  static const _loading = Scaffold(
+    body: Center(child: CircularProgressIndicator()),
+  );
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authAsync = ref.watch(authStateChangesProvider);
 
-        final user = snapshot.data;
+    return authAsync.when(
+      loading: () => _loading,
+      error: (_, __) => _loading,
+      data: (user) {
+        if (user == null) return const OnboardingScreen();
 
-        if (user != null) {
-          return FutureBuilder<String?>(
-            key: ValueKey(_retryCount),
-            future: _fetchUserRole(user.uid),
-            builder: (context, roleSnap) {
-              if (roleSnap.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (roleSnap.hasError) {
-                return Scaffold(
-                  body: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.wifi_off_rounded,
-                            size: 48, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text('לא ניתן לטעון את הפרופיל',
-                            style: TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () =>
-                              setState(() => _retryCount++),
-                          child: const Text('נסה שוב'),
-                        ),
-                      ],
-                    ),
+        final profileAsync = ref.watch(currentUserProfileProvider);
+        return profileAsync.when(
+          loading: () => _loading,
+          error: (_, __) => Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.wifi_off_rounded,
+                      size: 48, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('לא ניתן לטעון את הפרופיל',
+                      style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () =>
+                        ref.invalidate(currentUserProfileProvider),
+                    child: const Text('נסה שוב'),
                   ),
-                );
-              }
-
-              final role = (roleSnap.data ?? '').toLowerCase();
-
-              if (role == 'serviceprovider' ||
-                  role == 'service_provider' ||
-                  role == 'provider') {
-                return const ServiceProviderHomeScreen();
-              }
-
-              return const UserHomeScreen();
-            },
-          );
-        }
-
-        return const OnboardingScreen();
+                ],
+              ),
+            ),
+          ),
+          data: (profile) {
+            if (profile?.role == UserRole.serviceProvider) {
+              return const ServiceProviderHomeScreen();
+            }
+            return const UserHomeScreen();
+          },
+        );
       },
     );
   }

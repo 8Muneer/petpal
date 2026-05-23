@@ -172,7 +172,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                   radius: 20,
                   backgroundColor: AppColors.primaryFaint,
                   backgroundImage: (booking.providerPhotoUrl?.isNotEmpty == true)
-                      ? NetworkImage(booking.providerPhotoUrl!)
+                      ? CachedNetworkImageProvider(booking.providerPhotoUrl!)
                       : null,
                   child: (booking.providerPhotoUrl?.isNotEmpty != true)
                       ? Text(
