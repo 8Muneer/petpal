@@ -1,4 +1,5 @@
-﻿import 'dart:ui' show ImageFilter;
+﻿import 'dart:async';
+import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -66,9 +67,25 @@ class UserHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
-class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
-    with SingleTickerProviderStateMixin {
+class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = [
+      _HomeTab(
+        onAction: _toast,
+        onTabChange: (i) => setState(() => _currentIndex = i),
+      ),
+      const FeedScreen(),
+      const LostFoundFeedScreen(),
+      const _ServicesTab(),
+      const _MyRequestsTab(),
+      const _ChatTab(),
+    ];
+  }
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -84,33 +101,12 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final tabs = <Widget>[
-      _HomeTab(
-        onAction: _toast,
-        onTabChange: (i) => setState(() => _currentIndex = i),
-      ),
-      const FeedScreen(),
-      const LostFoundFeedScreen(),
-      const _ServicesTab(),
-      const _MyRequestsTab(),
-      const _ChatTab(),
-    ];
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AppScaffold(
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, anim) => FadeTransition(
-            opacity: anim,
-            child: child,
-          ),
-          child: KeyedSubtree(
-            key: ValueKey(_currentIndex),
-            child: tabs[_currentIndex],
-          ),
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _tabs,
         ),
         bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
@@ -201,7 +197,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
             // 1. Parallax Hero
             LuxuryHero(
               imageUrl:
-                  'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=2000&auto=format&fit=crop',
+                  'assets/images/pet.png',
               scrollController: _scrollController,
               searchBar: const GlassSearchBar(hintText: 'חפש שירותים...'),
               profileImageUrl: profile?.photoUrl,
@@ -1055,6 +1051,7 @@ class _ServicesTabState extends ConsumerState<_ServicesTab> {
   final _searchCtrl = TextEditingController();
   String _query = '';
   _FilterState _filter = _FilterState();
+  Timer? _searchDebounce;
 
   static const _typeFilters = ['הכל', 'טיולים', 'שמירה'];
   static const _days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
@@ -1065,6 +1062,7 @@ class _ServicesTabState extends ConsumerState<_ServicesTab> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -1564,7 +1562,13 @@ class _ServicesTabState extends ConsumerState<_ServicesTab> {
                   child: _SearchBar(
                     controller: _searchCtrl,
                     hint: 'חפש/י לפי שם או אזור...',
-                    onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                    onChanged: (v) {
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(
+                        const Duration(milliseconds: 280),
+                        () => setState(() => _query = v.trim().toLowerCase()),
+                      );
+                    },
                   ),
                 ),
               ],

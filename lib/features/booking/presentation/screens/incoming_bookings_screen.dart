@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/theme/app_theme.dart';
@@ -163,7 +164,7 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
                 backgroundColor: AppColors.primaryFaint,
                 backgroundImage:
                     (b.ownerPhotoUrl?.isNotEmpty == true)
-                        ? NetworkImage(b.ownerPhotoUrl!)
+                        ? CachedNetworkImageProvider(b.ownerPhotoUrl!)
                         : null,
                 child: (b.ownerPhotoUrl?.isNotEmpty != true)
                     ? Text(

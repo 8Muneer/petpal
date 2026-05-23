@@ -61,7 +61,9 @@ class LuxuryHero extends StatelessWidget {
                   return Stack(children: [
                     Positioned(
                       top: -offset, left: 0, right: 0, height: 630,
-                      child: Image.network(imageUrl, fit: BoxFit.cover),
+                      child: imageUrl.startsWith('assets/')
+                          ? Image.asset(imageUrl, fit: BoxFit.cover)
+                          : Image.network(imageUrl, fit: BoxFit.cover),
                     ),
                     Positioned.fill(
                       child: DecoratedBox(
