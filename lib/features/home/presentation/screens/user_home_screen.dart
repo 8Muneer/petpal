@@ -1951,7 +1951,21 @@ class _WalkRequestCardState extends State<_WalkRequestCard> {
     super.dispose();
   }
 
-  bool get _isOpen => widget.request.status == WalkStatus.open;
+  String get _statusLabel {
+    switch (widget.request.status) {
+      case WalkStatus.open:   return 'פתוח';
+      case WalkStatus.taken:  return 'נלקח';
+      case WalkStatus.closed: return 'הושלם';
+    }
+  }
+
+  Color get _statusColor {
+    switch (widget.request.status) {
+      case WalkStatus.open:   return AppColors.statusOpen;
+      case WalkStatus.taken:  return AppColors.warning;
+      case WalkStatus.closed: return AppColors.textMuted;
+    }
+  }
 
   String get _petTypeLabel {
     switch (widget.request.petType) {
@@ -2063,13 +2077,11 @@ class _WalkRequestCardState extends State<_WalkRequestCard> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _isOpen
-                              ? AppColors.statusOpen
-                              : AppColors.textMuted,
+                          color: _statusColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _isOpen ? 'פתוח' : 'הושלם',
+                          _statusLabel,
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -2490,7 +2502,21 @@ class _SittingRequestCardState extends State<_SittingRequestCard> {
     super.dispose();
   }
 
-  bool get _isOpen => widget.request.status == SittingStatus.open;
+  String get _statusLabel {
+    switch (widget.request.status) {
+      case SittingStatus.open:   return 'פתוח';
+      case SittingStatus.taken:  return 'נלקח';
+      case SittingStatus.closed: return 'הושלם';
+    }
+  }
+
+  Color get _statusColor {
+    switch (widget.request.status) {
+      case SittingStatus.open:   return purple;
+      case SittingStatus.taken:  return AppColors.warning;
+      case SittingStatus.closed: return AppColors.textMuted;
+    }
+  }
 
   String get _petTypeLabel {
     switch (widget.request.petType) {
@@ -2607,11 +2633,11 @@ class _SittingRequestCardState extends State<_SittingRequestCard> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _isOpen ? purple : AppColors.textMuted,
+                          color: _statusColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _isOpen ? 'פתוח' : 'הושלם',
+                          _statusLabel,
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -4262,61 +4288,218 @@ class _BookingTile extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.pureWhite,
         borderRadius: AppRadius.lgRadius,
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.subtle,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.primaryFaint,
-            backgroundImage: (booking.providerPhotoUrl?.isNotEmpty == true)
-                ? NetworkImage(booking.providerPhotoUrl!)
-                : null,
-            child: (booking.providerPhotoUrl?.isNotEmpty != true)
-                ? Text(
-                    booking.providerName.isNotEmpty
-                        ? booking.providerName.characters.first.toUpperCase()
-                        : '?',
-                    style: AppTextStyles.labelMd.copyWith(
-                        color: AppColors.primary, fontWeight: FontWeight.w700),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // ── Provider row ──────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+            child: Row(
               children: [
-                Text(booking.providerName,
-                    style: AppTextStyles.bodyMd
-                        .copyWith(fontWeight: FontWeight.w700)),
-                Text(
-                  '${isWalk ? 'טיולים' : 'שמירה'} • ${booking.petName}',
-                  style: AppTextStyles.labelMd
-                      .copyWith(color: AppColors.textSecondary),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.primaryFaint,
+                  backgroundImage: (booking.providerPhotoUrl?.isNotEmpty == true)
+                      ? NetworkImage(booking.providerPhotoUrl!)
+                      : null,
+                  child: (booking.providerPhotoUrl?.isNotEmpty != true)
+                      ? Text(
+                          booking.providerName.isNotEmpty
+                              ? booking.providerName.characters.first.toUpperCase()
+                              : '?',
+                          style: AppTextStyles.labelMd.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(booking.providerName,
+                          style: AppTextStyles.bodyMd
+                              .copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        isWalk ? 'טיולי כלבים' : 'שמירה על חיות',
+                        style: AppTextStyles.labelMd
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: color.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(label,
+                      style: AppTextStyles.labelMd
+                          .copyWith(color: color, fontWeight: FontWeight.w700)),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withValues(alpha: 0.4)),
+
+          const Divider(height: 1, color: AppColors.divider),
+
+          // ── Pet + request info ────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Pet image
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: (booking.petImageUrl?.isNotEmpty == true)
+                      ? CachedNetworkImage(
+                          imageUrl: booking.petImageUrl!,
+                          fit: BoxFit.cover,
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.pets_rounded,
+                                size: 22, color: AppColors.textMuted),
+                            const SizedBox(height: 2),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text(
+                                booking.petName,
+                                style: const TextStyle(
+                                    fontSize: 9, color: AppColors.textMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+                const SizedBox(width: 12),
+
+                // Pet name + type + date
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            booking.petName,
+                            style: AppTextStyles.bodyMd
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryFaint,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(booking.petType,
+                                style: AppTextStyles.labelSm.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 13, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _dateText(booking),
+                              style: AppTextStyles.labelMd.copyWith(
+                                  color: AppColors.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            isWalk
+                                ? Icons.directions_walk_rounded
+                                : Icons.home_rounded,
+                            size: 13,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isWalk ? 'טיול' : 'שמירה בבית',
+                            style: AppTextStyles.labelMd.copyWith(
+                                color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            child: Text(label,
-                style: AppTextStyles.labelMd
-                    .copyWith(color: color, fontWeight: FontWeight.w700)),
           ),
+
+          // ── Provider note ─────────────────────────────────────
+          if (booking.providerNote?.isNotEmpty == true) ...[
+            const Divider(height: 1, color: AppColors.divider),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.comment_outlined,
+                      size: 14, color: AppColors.textMuted),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      booking.providerNote!,
+                      style: AppTextStyles.labelMd
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  String _dateText(BookingRequest b) {
+    String fmt(DateTime d) =>
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    if (b.requestedDate != null) return fmt(b.requestedDate!);
+    if (b.startDate != null && b.endDate != null) {
+      return '${fmt(b.startDate!)} – ${fmt(b.endDate!)}';
+    }
+    return 'תאריך לא נקבע';
   }
 }
 

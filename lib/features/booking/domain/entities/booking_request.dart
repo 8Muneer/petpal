@@ -23,6 +23,7 @@ class BookingRequest extends Equatable {
   final String? specialInstructions;
   final BookingStatus status;
   final String? providerNote;
+  final String? sittingType; // 'atOwnerHome' | 'atSitterHome' — only for sitting bookings
   final DateTime? createdAt;
 
   const BookingRequest({
@@ -44,6 +45,7 @@ class BookingRequest extends Equatable {
     this.specialInstructions,
     this.status = BookingStatus.pending,
     this.providerNote,
+    this.sittingType,
     this.createdAt,
   });
 
@@ -67,6 +69,7 @@ class BookingRequest extends Equatable {
         specialInstructions,
         status,
         providerNote,
+        sittingType,
         createdAt,
       ];
 }

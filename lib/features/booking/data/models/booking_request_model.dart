@@ -21,6 +21,7 @@ class BookingRequestModel extends BookingRequest {
     super.specialInstructions,
     super.status,
     super.providerNote,
+    super.sittingType,
     super.createdAt,
   });
 
@@ -70,6 +71,7 @@ class BookingRequestModel extends BookingRequest {
       specialInstructions: data['specialInstructions'] as String?,
       status: status,
       providerNote: data['providerNote'] as String?,
+      sittingType: data['sittingType'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -93,6 +95,7 @@ class BookingRequestModel extends BookingRequest {
       'specialInstructions': specialInstructions,
       'status': status.name,
       'providerNote': providerNote,
+      'sittingType': sittingType,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
