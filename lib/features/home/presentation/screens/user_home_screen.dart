@@ -197,7 +197,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
             // 1. Parallax Hero
             LuxuryHero(
               imageUrl:
-                  'assets/images/pet.png',
+                  'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=2000&auto=format&fit=crop',
               scrollController: _scrollController,
               searchBar: const GlassSearchBar(hintText: 'חפש שירותים...'),
               profileImageUrl: profile?.photoUrl,

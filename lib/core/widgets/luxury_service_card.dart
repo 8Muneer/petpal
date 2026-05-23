@@ -57,22 +57,31 @@ class LuxuryServiceCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(AppRadius.organic),
                   ),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: AppColors.surface,
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: AppColors.surface,
-                      child: const Icon(Icons.error_outline),
-                    ),
-                  ),
+                  child: imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          height: 220,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            height: 220,
+                            color: AppColors.surface,
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            height: 220,
+                            color: AppColors.surface,
+                            child: const Icon(Icons.error_outline),
+                          ),
+                        )
+                      : Container(
+                          height: 220,
+                          color: AppColors.surface,
+                          child: const Icon(Icons.pets,
+                              color: AppColors.border, size: 48),
+                        ),
                 ),
                 
                 // Glass Rating Pill (Top-Left)

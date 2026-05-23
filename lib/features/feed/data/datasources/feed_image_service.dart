@@ -1,6 +1,4 @@
-﻿import 'dart:io';
-
-import 'package:firebase_storage/firebase_storage.dart';
+﻿import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 class FeedImageService {
@@ -24,8 +22,8 @@ class FeedImageService {
 
   Future<String> uploadPostImage(String postId, XFile file) async {
     final ref = _storage.ref().child('post_images/$postId');
-    await ref.putFile(
-      File(file.path),
+    await ref.putData(
+      await file.readAsBytes(),
       SettableMetadata(contentType: 'image/jpeg'),
     );
     return ref.getDownloadURL();
@@ -36,8 +34,8 @@ class FeedImageService {
     final urls = <String>[];
     for (var i = 0; i < files.length; i++) {
       final ref = _storage.ref().child('post_images/${postId}_$i');
-      await ref.putFile(
-        File(files[i].path),
+      await ref.putData(
+        await files[i].readAsBytes(),
         SettableMetadata(contentType: 'image/jpeg'),
       );
       urls.add(await ref.getDownloadURL());

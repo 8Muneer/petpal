@@ -44,6 +44,8 @@ class LostFoundPost extends Equatable {
   final MatchingStatus matchingStatus;
   final DateTime? createdAt;
   final List<LostFoundMatch> matches;
+  final double? latitude;
+  final double? longitude;
 
   const LostFoundPost({
     required this.id,
@@ -64,8 +66,10 @@ class LostFoundPost extends Equatable {
     this.matchingStatus = MatchingStatus.pending,
     this.createdAt,
     this.matches = const [],
+    this.latitude,
+    this.longitude,
   });
 
   @override
-  List<Object?> get props => [id, reporterUid, type, status, matchingStatus, imageUrl, size, gender];
+  List<Object?> get props => [id, reporterUid, type, status, matchingStatus, imageUrl, size, gender, latitude, longitude];
 }

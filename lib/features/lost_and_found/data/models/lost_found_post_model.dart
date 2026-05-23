@@ -49,6 +49,8 @@ class LostFoundPostModel extends LostFoundPost {
     super.matchingStatus,
     super.createdAt,
     super.matches,
+    super.latitude,
+    super.longitude,
   });
 
   factory LostFoundPostModel.fromFirestore(DocumentSnapshot doc) {
@@ -92,6 +94,8 @@ class LostFoundPostModel extends LostFoundPost {
       matchingStatus: matchingStatus,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       matches: matchesList,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -112,6 +116,8 @@ class LostFoundPostModel extends LostFoundPost {
         'status': 'active',
         'matchingStatus': 'pending',
         'matches': [],
+        'latitude': latitude,
+        'longitude': longitude,
         'createdAt': FieldValue.serverTimestamp(),
       };
 }

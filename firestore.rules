@@ -58,6 +58,64 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.reporterUid == request.auth.uid;
     }
 
+    // ── service_requests ─────────────────────────────────────────────────────
+    match /service_requests/{requestId} {
+      allow read: if request.auth != null && (
+        resource.data.isPublic == true ||
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.targetProviderUid == request.auth.uid
+      );
+      allow create: if request.auth != null &&
+        request.resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null &&
+        resource.data.ownerUid == request.auth.uid;
+      allow delete: if request.auth != null &&
+        resource.data.ownerUid == request.auth.uid;
+
+      // ── applications sub-collection ──────────────────────────────────────
+      match /applications/{applicationId} {
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/service_requests/$(requestId)).data.ownerUid == request.auth.uid ||
+          resource.data.providerUid == request.auth.uid
+        );
+        allow create: if request.auth != null &&
+          request.resource.data.providerUid == request.auth.uid;
+        allow update: if request.auth != null &&
+          get(/databases/$(database)/documents/service_requests/$(requestId)).data.ownerUid == request.auth.uid;
+        allow delete: if false;
+      }
+    }
+
+    // ── collection-group rule for applications (required for collectionGroup queries) ──
+    match /{path=**}/applications/{applicationId} {
+      allow read: if request.auth != null &&
+        resource.data.providerUid == request.auth.uid;
+    }
+
+    // ── bookings ─────────────────────────────────────────────────────────────
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.providerUid == request.auth.uid
+      );
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.providerUid == request.auth.uid
+      );
+      allow delete: if false;
+    }
+
+    // ── reviews ──────────────────────────────────────────────────────────────
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.resource.data.reviewerUid == request.auth.uid;
+      allow update: if request.auth != null &&
+        resource.data.reviewerUid == request.auth.uid;
+      allow delete: if false;
+    }
+
     match /conversations/{conversationId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.participants;
       allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;

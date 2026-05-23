@@ -17,10 +17,14 @@ class LocationPickerField extends StatefulWidget {
   /// Called whenever the resolved address changes.
   final ValueChanged<String> onChanged;
 
+  /// Optional callback for the raw GPS coordinates.
+  final void Function(double lat, double lng)? onCoordinatesPicked;
+
   const LocationPickerField({
     super.key,
     this.initialValue = '',
     required this.onChanged,
+    this.onCoordinatesPicked,
   });
 
   @override
@@ -115,6 +119,7 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
       if (mounted) {
         setState(() => _address = resolved);
         widget.onChanged(resolved);
+        widget.onCoordinatesPicked?.call(pos.latitude, pos.longitude);
       }
     } catch (e) {
       _snack('לא ניתן לקבל מיקום. יש לוודא שה-GPS מופעל');

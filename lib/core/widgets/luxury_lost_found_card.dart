@@ -46,23 +46,32 @@ class LuxuryLostFoundCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(AppRadius.organic),
                   ),
-                  child: CachedNetworkImage(
-                    imageUrl: post.imageUrl,
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: AppColors.surface,
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: AppColors.surface,
-                      child: const Icon(Icons.pets,
-                          color: AppColors.border, size: 40),
-                    ),
-                  ),
+                  child: post.imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: post.imageUrl,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            height: 150,
+                            color: AppColors.surface,
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            height: 150,
+                            color: AppColors.surface,
+                            child: const Icon(Icons.pets,
+                                color: AppColors.border, size: 40),
+                          ),
+                        )
+                      : Container(
+                          height: 150,
+                          color: AppColors.surface,
+                          child: const Icon(Icons.pets,
+                              color: AppColors.border, size: 40),
+                        ),
                 ),
 
                 // Status Pill (LOST/FOUND)

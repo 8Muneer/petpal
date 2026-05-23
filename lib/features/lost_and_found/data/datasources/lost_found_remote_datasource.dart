@@ -1,6 +1,4 @@
-﻿import 'dart:io';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/features/lost_and_found/data/models/lost_found_post_model.dart';
@@ -91,9 +89,9 @@ class LostFoundRemoteDatasource {
   }
 
   Future<String> uploadImage(String postId, XFile file) async {
-    final ref = _storage.ref().child('lost_found_images/$postId');
-    await ref.putFile(
-      File(file.path),
+    final ref = _storage.ref().child('lost_found/$postId');
+    await ref.putData(
+      await file.readAsBytes(),
       SettableMetadata(contentType: 'image/jpeg'),
     );
     return ref.getDownloadURL();

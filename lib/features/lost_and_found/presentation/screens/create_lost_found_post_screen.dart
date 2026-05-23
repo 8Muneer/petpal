@@ -29,6 +29,8 @@ class _CreateLostFoundPostScreenState
   final _colorController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _area = '';
+  double? _latitude;
+  double? _longitude;
   bool _isLoading = false;
 
   static const _speciesOptions = ['כלב', 'חתול', 'ציפור', 'ארנב', 'אחר'];
@@ -79,6 +81,8 @@ class _CreateLostFoundPostScreenState
         description: _descriptionController.text.trim(),
         area: _area,
         imageUrl: '',
+        latitude: _latitude,
+        longitude: _longitude,
       );
 
       final createFn = ref.read(createLostFoundPostProvider);
@@ -209,6 +213,10 @@ class _CreateLostFoundPostScreenState
               LocationPickerField(
                 initialValue: _area,
                 onChanged: (val) => setState(() => _area = val),
+                onCoordinatesPicked: (lat, lng) {
+                  _latitude = lat;
+                  _longitude = lng;
+                },
               ),
               const SizedBox(height: 32),
 

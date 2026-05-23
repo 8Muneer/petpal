@@ -1,6 +1,4 @@
-﻿import 'dart:io';
-
-import 'package:firebase_storage/firebase_storage.dart';
+﻿import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileImageService {
@@ -28,8 +26,9 @@ class ProfileImageService {
   /// forcing CachedNetworkImage to bypass its cache on every update.
   Future<String> uploadProfileImage(String uid, XFile file) async {
     final ref = _storage.ref().child('profile_images/$uid');
-    await ref.putFile(
-      File(file.path),
+    final bytes = await file.readAsBytes();
+    await ref.putData(
+      bytes,
       SettableMetadata(contentType: 'image/jpeg'),
     );
     final url = await ref.getDownloadURL();

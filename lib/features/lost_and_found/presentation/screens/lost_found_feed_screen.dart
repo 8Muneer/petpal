@@ -1,6 +1,9 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/luxury_lost_found_card.dart';
@@ -153,15 +156,22 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.map_outlined, color: AppColors.textMuted),
-          tooltip: 'תצוגת מפה',
+          icon: Icon(
+            state.viewType == LostFoundViewType.map
+                ? Icons.grid_view_rounded
+                : Icons.map_outlined,
+            color: state.viewType == LostFoundViewType.map
+                ? AppColors.primary
+                : AppColors.textMuted,
+          ),
+          tooltip: state.viewType == LostFoundViewType.map
+              ? 'תצוגת רשת'
+              : 'תצוגת מפה',
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('תצוגת מפה — בקרוב!'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            final next = state.viewType == LostFoundViewType.map
+                ? LostFoundViewType.grid
+                : LostFoundViewType.map;
+            ref.read(lostFoundControllerProvider.notifier).setViewType(next);
           },
         ),
       ],
@@ -295,53 +305,75 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
   }
 
   Widget _buildMapViewPlaceholder() {
+    final postsAsync = ref.watch(filteredLostFoundPostsProvider);
     return SliverFillRemaining(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      child: postsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('שגיאה בטעינת המפה')),
+        data: (posts) {
+          final geoTagged = posts
+              .where((p) => p.latitude != null && p.longitude != null)
+              .toList();
+
+          final center = geoTagged.isNotEmpty
+              ? LatLng(geoTagged.first.latitude!, geoTagged.first.longitude!)
+              : const LatLng(31.7683, 35.2137);
+
+          return FlutterMap(
+            options: MapOptions(
+              initialCenter: center,
+              initialZoom: geoTagged.isNotEmpty ? 13.0 : 8.0,
+            ),
             children: [
-              Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  color: AppColors.pureWhite,
-                  borderRadius: AppRadius.organicRadius,
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: AppShadows.subtle,
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.map_outlined,
-                          size: 48, color: AppColors.primary),
-                      SizedBox(height: 12),
-                      Text(
-                        'SOON',
-                        style: TextStyle(
-                          letterSpacing: 4,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                          fontSize: 12,
+              TileLayer(
+                urlTemplate:
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.petpal.app',
+              ),
+              MarkerLayer(
+                markers: geoTagged.map((post) {
+                  final isLost = post.type == LostFoundType.lost;
+                  return Marker(
+                    point: LatLng(post.latitude!, post.longitude!),
+                    width: 44,
+                    height: 44,
+                    child: GestureDetector(
+                      onTap: () =>
+                          context.push('/lost-found/detail', extra: post),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isLost ? AppColors.error : AppColors.success,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.white, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: post.imageUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: post.imageUrl,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Icon(
+                                  Icons.pets_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              Text('מפת אבדות ומציאות', style: AppTextStyles.headlineSm),
-              const SizedBox(height: 8),
-              const Text(
-                'תצוגת המפה תהיה זמינה בעדכון הקרוב',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textMuted, height: 1.5),
+                    ),
+                  );
+                }).toList(),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
