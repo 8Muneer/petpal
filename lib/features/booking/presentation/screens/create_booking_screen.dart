@@ -41,6 +41,7 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
   DateTime? _selectedDate;
   DateTime? _startDate;
   DateTime? _endDate;
+  String _sittingType = 'atOwnerHome'; // only used when serviceType == sitting
   bool _isSubmitting = false;
 
   bool get _isWalk => widget.serviceType == 'walk';
@@ -128,6 +129,7 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
         'specialInstructions': _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        'sittingType': !_isWalk ? _sittingType : null,
         'status': BookingStatus.pending.name,
         'createdAt': FieldValue.serverTimestamp(),
       };
@@ -249,6 +251,82 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
                     ],
             ),
             const SizedBox(height: 20),
+
+            // Sitting type selector — only for sitting bookings
+            if (!_isWalk) ...[
+              Text('סוג שמירה', style: AppTextStyles.headlineSm),
+              const SizedBox(height: 12),
+              _Section(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () =>
+                              setState(() => _sittingType = 'atOwnerHome'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _sittingType == 'atOwnerHome'
+                                  ? AppColors.primary
+                                  : AppColors.pureWhite,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _sittingType == 'atOwnerHome'
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: Text(
+                              'בבית הבעלים',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodyMd.copyWith(
+                                color: _sittingType == 'atOwnerHome'
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () =>
+                              setState(() => _sittingType = 'atSitterHome'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _sittingType == 'atSitterHome'
+                                  ? AppColors.primary
+                                  : AppColors.pureWhite,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _sittingType == 'atSitterHome'
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: Text(
+                              'בבית השומר',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodyMd.copyWith(
+                                color: _sittingType == 'atSitterHome'
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // Notes
             Text('הוראות מיוחדות (אופציונלי)',

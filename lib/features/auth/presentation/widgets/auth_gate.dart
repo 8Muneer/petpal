@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -7,8 +7,15 @@ import 'package:petpal/features/auth/presentation/screens/onboarding_screen.dart
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  int _retryCount = 0;
 
   Future<String?> _fetchUserRole(String uid) async {
     final doc = await FirebaseFirestore.instance
@@ -28,7 +35,6 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // While FirebaseAuth is initializing
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -37,9 +43,9 @@ class AuthGate extends StatelessWidget {
 
         final user = snapshot.data;
 
-        // Logged in -> route by role (Firestore)
         if (user != null) {
           return FutureBuilder<String?>(
+            key: ValueKey(_retryCount),
             future: _fetchUserRole(user.uid),
             builder: (context, roleSnap) {
               if (roleSnap.connectionState == ConnectionState.waiting) {
@@ -48,22 +54,42 @@ class AuthGate extends StatelessWidget {
                 );
               }
 
+              if (roleSnap.hasError) {
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.wifi_off_rounded,
+                            size: 48, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        const Text('לא ניתן לטעון את הפרופיל',
+                            style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () =>
+                              setState(() => _retryCount++),
+                          child: const Text('נסה שוב'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               final role = (roleSnap.data ?? '').toLowerCase();
 
-              // Accept a few common spellings
               if (role == 'serviceprovider' ||
                   role == 'service_provider' ||
                   role == 'provider') {
                 return const ServiceProviderHomeScreen();
               }
 
-              // Default: PetOwner
               return const UserHomeScreen();
             },
           );
         }
 
-        // Not logged in -> Onboarding
         return const OnboardingScreen();
       },
     );
