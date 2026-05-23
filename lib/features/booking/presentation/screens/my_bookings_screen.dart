@@ -8,6 +8,7 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
+import 'package:petpal/features/reviews/presentation/providers/review_provider.dart';
 
 class MyBookingsScreen extends ConsumerWidget {
   const MyBookingsScreen({super.key});
@@ -90,7 +91,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('בטל הזמנה',
+              child: const Text('בטל הזמנה',
                   style: TextStyle(color: AppColors.error)),
             ),
           ],
@@ -152,6 +153,10 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
   Widget build(BuildContext context) {
     final isWalk = booking.serviceType == BookingServiceType.walk;
     final statusInfo = _statusInfo(booking.status);
+    final existingReview = booking.status == BookingStatus.accepted
+        ? ref.watch(bookingReviewProvider(booking.id))
+        : null;
+    final hasReview = existingReview?.valueOrNull != null;
 
     return Container(
       decoration: BoxDecoration(
@@ -323,25 +328,81 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
             const Divider(height: 1, color: AppColors.divider),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
+              child: Column(
                 children: [
-                  if (booking.status == BookingStatus.accepted)
-                    Expanded(
+                  Row(
+                    children: [
+                      if (booking.status == BookingStatus.accepted)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isOpeningChat ? null : _openChat,
+                            icon: _isOpeningChat
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.chat_bubble_outline_rounded,
+                                    size: 16),
+                            label: const Text('פתח צ\'אט'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              textStyle: AppTextStyles.labelMd
+                                  .copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      if (booking.status == BookingStatus.accepted)
+                        const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isCancelling ? null : _cancel,
+                          icon: _isCancelling
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.error),
+                                )
+                              : const Icon(Icons.cancel_outlined, size: 16),
+                          label: const Text('בטל הזמנה'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            side: BorderSide(
+                                color: AppColors.error.withValues(alpha: 0.6)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            textStyle: AppTextStyles.labelMd
+                                .copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (booking.status == BookingStatus.accepted && !hasReview) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: _isOpeningChat ? null : _openChat,
-                        icon: _isOpeningChat
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
-                              )
-                            : const Icon(Icons.chat_bubble_outline_rounded,
-                                size: 16),
-                        label: const Text('פתח צ\'אט'),
+                        onPressed: () => context.push('/reviews/leave', extra: {
+                          'bookingId': booking.id,
+                          'providerUid': booking.providerUid,
+                          'providerName': booking.providerName,
+                          'providerPhotoUrl': booking.providerPhotoUrl,
+                        }),
+                        icon: const Icon(Icons.star_border_rounded, size: 16),
+                        label: const Text('השאר ביקורת'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
+                          foregroundColor: AppColors.warning,
+                          side: BorderSide(
+                              color: AppColors.warning.withValues(alpha: 0.6)),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -350,33 +411,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                         ),
                       ),
                     ),
-                  if (booking.status == BookingStatus.accepted)
-                    const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isCancelling ? null : _cancel,
-                      icon: _isCancelling
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.error),
-                            )
-                          : const Icon(Icons.cancel_outlined, size: 16),
-                      label: const Text('בטל הזמנה'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        side: BorderSide(
-                            color: AppColors.error.withValues(alpha: 0.6)),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        textStyle: AppTextStyles.labelMd
-                            .copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),

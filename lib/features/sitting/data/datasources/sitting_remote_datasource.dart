@@ -53,7 +53,6 @@ class SittingRemoteDatasource {
   Stream<List<SittingServiceModel>> watchSittingServices() {
     return _servicesRef
         .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
         .map((snap) => snap.docs

@@ -18,6 +18,17 @@ class AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authStateChangesProvider);
 
+    ref.listen<AsyncValue>(authStateChangesProvider, (previous, next) {
+      final uid = next.valueOrNull?.uid;
+      final prevUid = previous?.valueOrNull?.uid;
+      final notifService = ref.read(notificationServiceProvider);
+      if (uid != null && uid != prevUid) {
+        notifService.registerToken(uid);
+      } else if (uid == null && prevUid != null) {
+        notifService.deregisterToken(prevUid);
+      }
+    });
+
     return authAsync.when(
       loading: () => _loading,
       error: (_, __) => _loading,

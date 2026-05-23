@@ -155,10 +155,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _isUploadingImage = false);
       _showSnack('התמונה עודכנה בהצלחה ✅');
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isUploadingImage = false);
-      _showSnack('שגיאה בהעלאת התמונה', isError: true);
+      _showSnack('שגיאה בהעלאת התמונה: $e', isError: true);
     }
   }
 

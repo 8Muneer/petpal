@@ -48,7 +48,6 @@ class WalkRemoteDatasource {
   Stream<List<WalkServiceModel>> watchWalkServices() {
     return _servicesRef
         .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
         .map((snap) =>

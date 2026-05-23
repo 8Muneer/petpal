@@ -1,11 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/features/reviews/presentation/providers/review_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 
-class ProviderProfileScreen extends StatelessWidget {
+class ProviderProfileScreen extends ConsumerWidget {
   final WalkService? walkService;
   final SittingService? sittingService;
 
@@ -38,14 +40,15 @@ class ProviderProfileScreen extends StatelessWidget {
   bool get _isWalk => walkService != null;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ratingAsync = ref.watch(providerRatingProvider(_providerUid));
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.surface,
         body: CustomScrollView(
           slivers: [
-            _buildAppBar(context),
+            _buildAppBar(context, ratingAsync),
             SliverToBoxAdapter(child: _buildBody(context)),
           ],
         ),
@@ -54,7 +57,7 @@ class ProviderProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, AsyncValue<({double avg, int count})> ratingAsync) {
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
@@ -104,6 +107,26 @@ class ProviderProfileScreen extends StatelessWidget {
                             .copyWith(color: Colors.white70),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 6),
+                  ratingAsync.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (r) => r.count == 0
+                        ? const SizedBox.shrink()
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.star_rounded,
+                                  size: 15, color: Colors.amber),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${r.avg.toStringAsFixed(1)}  (${r.count})',
+                                style: AppTextStyles.labelMd
+                                    .copyWith(color: Colors.white),
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),

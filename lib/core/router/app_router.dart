@@ -41,6 +41,7 @@ import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_b
 import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_screen.dart';
 import 'package:petpal/features/booking/presentation/screens/create_booking_screen.dart';
 import 'package:petpal/features/booking/presentation/screens/provider_profile_screen.dart';
+import 'package:petpal/features/reviews/presentation/screens/leave_review_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -274,6 +275,25 @@ class AppRouter {
       GoRoute(
         path: '/my-pets',
         builder: (context, state) => const MyPetsScreen(),
+      ),
+      GoRoute(
+        path: '/reviews/leave',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! Map<String, dynamic>) return const OnboardingScreen();
+          final bookingId = extra['bookingId'] as String?;
+          final providerUid = extra['providerUid'] as String?;
+          final providerName = extra['providerName'] as String?;
+          if (bookingId == null || providerUid == null || providerName == null) {
+            return const OnboardingScreen();
+          }
+          return LeaveReviewScreen(
+            bookingId: bookingId,
+            providerUid: providerUid,
+            providerName: providerName,
+            providerPhotoUrl: extra['providerPhotoUrl'] as String?,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
