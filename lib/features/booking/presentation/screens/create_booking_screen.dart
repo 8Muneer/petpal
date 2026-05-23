@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
+import 'package:petpal/features/pets/domain/entities/pet.dart';
+import 'package:petpal/features/pets/presentation/providers/pets_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
 class CreateBookingScreen extends ConsumerStatefulWidget {
@@ -33,21 +35,18 @@ class CreateBookingScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
-  final _petNameController = TextEditingController();
   final _notesController = TextEditingController();
 
-  String _petType = 'כלב';
+  Pet? _selectedPet;
   DateTime? _selectedDate;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _isSubmitting = false;
 
-  static const _petTypes = ['כלב', 'חתול', 'אחר'];
   bool get _isWalk => widget.serviceType == 'walk';
 
   @override
   void dispose() {
-    _petNameController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -62,7 +61,7 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
       locale: const Locale('he'),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(
+          colorScheme: const ColorScheme.light(
             primary: AppColors.primary,
             onPrimary: Colors.white,
             surface: AppColors.pureWhite,
@@ -85,9 +84,8 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
   }
 
   Future<void> _submit() async {
-    final petName = _petNameController.text.trim();
-    if (petName.isEmpty) {
-      _snack('יש להזין שם חיית המחמד');
+    if (_selectedPet == null) {
+      _snack('יש לבחור חיית מחמד');
       return;
     }
     if (_isWalk && _selectedDate == null) {
@@ -115,8 +113,9 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
         'providerPhotoUrl': widget.providerPhotoUrl,
         'serviceId': widget.serviceId,
         'serviceType': widget.serviceType,
-        'petName': petName,
-        'petType': _petType,
+        'petName': _selectedPet!.name,
+        'petType': _selectedPet!.type,
+        'petImageUrl': _selectedPet!.imageUrl,
         'requestedDate': _isWalk && _selectedDate != null
             ? Timestamp.fromDate(_selectedDate!)
             : null,
@@ -136,12 +135,14 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
       await ref.read(bookingRepositoryProvider).createBooking(data);
       if (!mounted) return;
       _snack('הבקשה נשלחה בהצלחה!', success: true);
-      context.pop();
-      context.pop();
+      // Pop booking form, then pop provider profile (safe checks)
+      if (context.canPop()) context.pop();
+      if (context.canPop()) context.pop();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _isSubmitting = false);
       _snack('שגיאה בשליחת הבקשה, נסה שוב');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -157,6 +158,8 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final petsAsync = ref.watch(userPetsProvider);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -173,7 +176,6 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Provider summary banner
             _ProviderBanner(
               name: widget.providerName,
               photo: widget.providerPhotoUrl,
@@ -182,56 +184,31 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Pet info section
-            Text('פרטי החיה', style: AppTextStyles.headlineSm),
+            // Pet selection section
+            Text('בחר חיית מחמד', style: AppTextStyles.headlineSm),
+            const SizedBox(height: 4),
+            Text(
+              'בחר את החיה שתשתתף בשירות',
+              style: AppTextStyles.labelMd.copyWith(color: AppColors.textMuted),
+            ),
             const SizedBox(height: 12),
-            _Section(
-              children: [
-                TextField(
-                  controller: _petNameController,
-                  decoration: InputDecoration(
-                    labelText: 'שם החיה',
-                    hintText: 'למשל: רקסי',
-                    prefixIcon: const Icon(Icons.pets_rounded,
-                        color: AppColors.primary),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.border)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: AppColors.primary, width: 2)),
-                    filled: true,
-                    fillColor: AppColors.pureWhite,
-                  ),
+            petsAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(color: AppColors.primary),
                 ),
-                const SizedBox(height: 12),
-                Text('סוג החיה', style: AppTextStyles.labelMd),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: _petTypes.map((type) {
-                    final selected = _petType == type;
-                    return ChoiceChip(
-                      label: Text(type),
-                      selected: selected,
-                      onSelected: (_) => setState(() => _petType = type),
-                      selectedColor: AppColors.primary,
-                      labelStyle: AppTextStyles.labelMd.copyWith(
-                        color: selected ? Colors.white : AppColors.textMuted,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      side: BorderSide(
-                        color: selected ? AppColors.primary : AppColors.border,
-                      ),
-                      backgroundColor: AppColors.pureWhite,
-                    );
-                  }).toList(),
-                ),
-              ],
+              ),
+              error: (e, _) => Center(child: Text('שגיאה: $e')),
+              data: (pets) => _PetSelector(
+                pets: pets,
+                selectedPet: _selectedPet,
+                onSelect: (pet) => setState(() => _selectedPet = pet),
+                onAddNew: () async {
+                  await context.push('/my-pets');
+                  // After returning, stream auto-updates
+                },
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -302,7 +279,6 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Submit
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -331,6 +307,180 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
               ),
             ),
             const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pet Selector ───────────────────────────────────────────────────────────────
+
+class _PetSelector extends StatelessWidget {
+  final List<Pet> pets;
+  final Pet? selectedPet;
+  final ValueChanged<Pet> onSelect;
+  final VoidCallback onAddNew;
+
+  const _PetSelector({
+    required this.pets,
+    required this.selectedPet,
+    required this.onSelect,
+    required this.onAddNew,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: pets.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, i) {
+          if (i == pets.length) {
+            return _AddPetTile(onTap: onAddNew);
+          }
+          final pet = pets[i];
+          final isSelected = selectedPet?.id == pet.id;
+          return _PetTile(
+            pet: pet,
+            isSelected: isSelected,
+            onTap: () => onSelect(pet),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PetTile extends StatelessWidget {
+  final Pet pet;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PetTile({
+    required this.pet,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 88,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryFaint : AppColors.pureWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected ? AppShadows.subtle : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.surface,
+                  backgroundImage: (pet.imageUrl?.isNotEmpty == true)
+                      ? CachedNetworkImageProvider(pet.imageUrl!)
+                      : null,
+                  child: (pet.imageUrl?.isNotEmpty != true)
+                      ? const Icon(Icons.pets_rounded,
+                          size: 26, color: AppColors.textMuted)
+                      : null,
+                ),
+                if (isSelected)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(Icons.check,
+                          size: 11, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                pet.name,
+                style: AppTextStyles.labelMd.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Text(
+              pet.type,
+              style: AppTextStyles.labelSm
+                  .copyWith(color: AppColors.textMuted, fontSize: 10),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddPetTile extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddPetTile({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 88,
+        decoration: BoxDecoration(
+          color: AppColors.pureWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: AppColors.border, style: BorderStyle.solid, width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primaryFaint,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add_rounded,
+                  color: AppColors.primary, size: 26),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'הוסף חיה',
+              style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.primary, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -487,4 +637,3 @@ class _DateTile extends StatelessWidget {
     );
   }
 }
-
