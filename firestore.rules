@@ -5,6 +5,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
+
+      match /pets/{petId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     match /posts/{postId} {
@@ -60,15 +65,18 @@ service cloud.firestore {
 
     // ── service_requests ─────────────────────────────────────────────────────
     match /service_requests/{requestId} {
+      // Open requests are readable by any logged-in user (SP browse feed).
+      // Owners can always read their own requests.
       allow read: if request.auth != null && (
-        resource.data.isPublic == true ||
-        resource.data.ownerUid == request.auth.uid ||
-        resource.data.targetProviderUid == request.auth.uid
+        resource.data.status == 'open' ||
+        resource.data.ownerUid == request.auth.uid
       );
       allow create: if request.auth != null &&
         request.resource.data.ownerUid == request.auth.uid;
-      allow update: if request.auth != null &&
-        resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['applicationCount'])
+      );
       allow delete: if request.auth != null &&
         resource.data.ownerUid == request.auth.uid;
 

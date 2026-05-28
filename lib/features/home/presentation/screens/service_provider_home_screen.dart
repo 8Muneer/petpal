@@ -26,13 +26,17 @@ import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
-    show SittingRequest, PetType, PetGender;
+    show SittingRequest, PetType;
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
+import 'package:petpal/features/service_request/data/models/service_request_model.dart';
+import 'package:petpal/features/service_request/domain/entities/service_request.dart'
+    show ServiceType, PetSpecies;
+import 'package:petpal/features/service_request/presentation/providers/service_request_provider.dart';
 
 enum ProviderServiceType { dogWalk, petSitting }
 
@@ -284,6 +288,13 @@ class _ProviderHomeTab extends ConsumerWidget {
                           onTap: onOpenMyServices,
                         ),
                         ProfileMenuItem(
+                          icon: Icons.assignment_turned_in_rounded,
+                          iconColor: AppColors.primary,
+                          label: 'המועמדויות שלי',
+                          subtitle: 'עקוב אחר בקשות שהגשת',
+                          onTap: () => context.push('/requests/my-applications'),
+                        ),
+                        ProfileMenuItem(
                           icon: Icons.logout_rounded,
                           iconColor: Colors.redAccent,
                           label: 'יציאה',
@@ -485,7 +496,7 @@ class _ProviderAllRequestsTab extends ConsumerStatefulWidget {
 
 class _ProviderAllRequestsTabState
     extends ConsumerState<_ProviderAllRequestsTab> {
-  int _selected = 0; // 0 = walk, 1 = sitting, 2 = bookings
+  int _selected = 0; // 0 = service (new), 1 = walk, 2 = sitting, 3 = bookings
 
   @override
   Widget build(BuildContext context) {
@@ -502,8 +513,8 @@ class _ProviderAllRequestsTabState
                 children: [
                   Expanded(
                     child: _ProviderToggleChip(
-                      label: 'טיולים',
-                      icon: Icons.directions_walk_rounded,
+                      label: 'בקשות',
+                      icon: Icons.campaign_rounded,
                       selected: _selected == 0,
                       onTap: () => setState(() => _selected = 0),
                     ),
@@ -511,8 +522,8 @@ class _ProviderAllRequestsTabState
                   const SizedBox(width: 6),
                   Expanded(
                     child: _ProviderToggleChip(
-                      label: 'שמירה',
-                      icon: Icons.home_work_rounded,
+                      label: 'טיולים',
+                      icon: Icons.directions_walk_rounded,
                       selected: _selected == 1,
                       onTap: () => setState(() => _selected = 1),
                     ),
@@ -520,10 +531,19 @@ class _ProviderAllRequestsTabState
                   const SizedBox(width: 6),
                   Expanded(
                     child: _ProviderToggleChip(
-                      label: 'הזמנות',
-                      icon: Icons.calendar_month_rounded,
+                      label: 'שמירה',
+                      icon: Icons.home_work_rounded,
                       selected: _selected == 2,
                       onTap: () => setState(() => _selected = 2),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _ProviderToggleChip(
+                      label: 'הזמנות',
+                      icon: Icons.calendar_month_rounded,
+                      selected: _selected == 3,
+                      onTap: () => setState(() => _selected = 3),
                     ),
                   ),
                 ],
@@ -534,9 +554,10 @@ class _ProviderAllRequestsTabState
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: switch (_selected) {
-                1 => const _ProviderSittingRequestsView(key: ValueKey('req_sitting')),
-                2 => const _IncomingBookingsView(key: ValueKey('req_bookings')),
-                _ => const _ProviderRequestsView(key: ValueKey('req_walk')),
+                1 => const _ProviderRequestsView(key: ValueKey('req_walk')),
+                2 => const _ProviderSittingRequestsView(key: ValueKey('req_sitting')),
+                3 => const _IncomingBookingsView(key: ValueKey('req_bookings')),
+                _ => const _ProviderBrowseServiceRequestsView(key: ValueKey('req_service')),
               },
             ),
           ),
@@ -545,6 +566,482 @@ class _ProviderAllRequestsTabState
     );
   }
 }
+
+// ── Browse service requests (new unified flow) ───────────────────────────────
+
+class _ProviderBrowseServiceRequestsView extends ConsumerStatefulWidget {
+  const _ProviderBrowseServiceRequestsView({super.key});
+
+  @override
+  ConsumerState<_ProviderBrowseServiceRequestsView> createState() =>
+      _ProviderBrowseServiceRequestsViewState();
+}
+
+class _ProviderBrowseServiceRequestsViewState
+    extends ConsumerState<_ProviderBrowseServiceRequestsView> {
+  // null = all, 'walk' = walk only, 'sitting' = sitting only
+  String? _typeFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    final filterEnum = _typeFilter == 'walk'
+        ? ServiceType.walk
+        : _typeFilter == 'sitting'
+            ? ServiceType.sitting
+            : null;
+
+    final requestsAsync = ref.watch(openRequestsProvider(filterEnum));
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Type filter chips ────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
+            children: [
+              _FilterChip(
+                label: 'הכל',
+                selected: _typeFilter == null,
+                onTap: () => setState(() => _typeFilter = null),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: 'טיול',
+                icon: Icons.directions_walk_rounded,
+                selected: _typeFilter == 'walk',
+                onTap: () => setState(() => _typeFilter = 'walk'),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: 'שמירה',
+                icon: Icons.home_rounded,
+                selected: _typeFilter == 'sitting',
+                onTap: () => setState(() => _typeFilter = 'sitting'),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Feed ──────────────────────────────────────────────────────
+        Expanded(
+          child: requestsAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+            error: (e, _) => Center(child: Text('שגיאה: $e')),
+            data: (requests) {
+              if (requests.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inbox_rounded,
+                          size: 64,
+                          color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'אין בקשות פתוחות כרגע',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'בעלי חיות ממחמד יפרסמו בקשות בקרוב',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                padding: EdgeInsets.fromLTRB(
+                    16, 0, 16,
+                    MediaQuery.of(context).viewPadding.bottom + 84),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisExtent: 248,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: requests.length,
+                itemBuilder: (ctx, i) => _BrowseRequestCard(
+                  request: requests[i],
+                  providerUid: uid,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BrowseRequestCard extends ConsumerWidget {
+  final ServiceRequestModel request;
+  final String providerUid;
+
+  const _BrowseRequestCard({
+    required this.request,
+    required this.providerUid,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isWalk = request.serviceType.name == 'walk';
+    final hasImage = request.petImageUrls.isNotEmpty &&
+        request.petImageUrls.first.isNotEmpty;
+    final bg = isWalk ? AppColors.sapphire : AppColors.regalNavy;
+    final isFemale = request.petGender?.name == 'female';
+    final hasGender = request.petGender != null;
+
+    return GestureDetector(
+      onTap: () => context.push(
+        '/requests/apply',
+        extra: {'request': request, 'providerUid': providerUid},
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Photo area ─────────────────────────────────────────────
+            SizedBox(
+              height: 115,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: bg),
+                    if (hasImage)
+                      CachedNetworkImage(
+                        imageUrl: request.petImageUrls.first,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const SizedBox.shrink(),
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    if (!hasImage)
+                      Center(
+                        child: Icon(
+                          isWalk
+                              ? Icons.directions_walk_rounded
+                              : Icons.home_rounded,
+                          size: 44,
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
+                      ),
+                    // Service type badge — top-left
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isWalk
+                                  ? Icons.directions_walk_rounded
+                                  : Icons.home_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              isWalk ? 'טיול' : 'שמירה',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Budget badge — top-right
+                    if (request.budget != null)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            request.budget!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Info area ───────────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.petName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _SRPill(
+                          label: _speciesLabel(request.petSpecies),
+                          color: _speciesColor(request.petSpecies),
+                        ),
+                        if (hasGender) ...[
+                          const SizedBox(width: 4),
+                          _SRPill(
+                            label: isFemale ? 'נקבה' : 'זכר',
+                            color: isFemale
+                                ? AppColors.error
+                                : AppColors.sapphire,
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded,
+                            size: 11, color: AppColors.textMuted),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            request.area,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isWalk && request.walkDate != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 11, color: AppColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${request.walkDate!.day.toString().padLeft(2, '0')}/${request.walkDate!.month.toString().padLeft(2, '0')}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (!isWalk &&
+                        request.sittingStartDate != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.date_range_rounded,
+                              size: 11, color: AppColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${request.sittingStartDate!.day}/${request.sittingStartDate!.month}–${request.sittingEndDate?.day ?? '?'}/${request.sittingEndDate?.month ?? '?'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const Spacer(),
+                    const Divider(height: 1, color: AppColors.divider),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.people_alt_rounded,
+                            size: 11, color: AppColors.textMuted),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${request.applicationCount}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.statusOpen
+                              ],
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text(
+                            'הגש',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _speciesLabel(PetSpecies s) => switch (s) {
+        PetSpecies.cat => 'חתול',
+        PetSpecies.rabbit => 'ארנב',
+        PetSpecies.bird => 'ציפור',
+        PetSpecies.other => 'אחר',
+        _ => 'כלב',
+      };
+
+  Color _speciesColor(PetSpecies s) => switch (s) {
+        PetSpecies.cat => AppColors.warning,
+        PetSpecies.rabbit => AppColors.statusTaken,
+        PetSpecies.bird => AppColors.success,
+        _ => AppColors.sapphire,
+      };
+}
+
+class _SRPill extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _SRPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      );
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon,
+                  size: 14,
+                  color: selected ? Colors.white : AppColors.textMuted),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: selected ? Colors.white : AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Walk tab (legacy) ─────────────────────────────────────────────────────────
 
 class _ProviderWalksTab extends ConsumerStatefulWidget {
   const _ProviderWalksTab();

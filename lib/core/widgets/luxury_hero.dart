@@ -293,8 +293,11 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
       widget.items.length,
       (i) => CurvedAnimation(
         parent: _enter,
-        curve: Interval(0.40 + i * 0.09, 0.82 + i * 0.09,
-            curve: Curves.easeOutCubic),
+        curve: Interval(
+          (0.40 + i * 0.09).clamp(0.0, 0.95),
+          (0.82 + i * 0.09).clamp(0.0, 1.0),
+          curve: Curves.easeOutCubic,
+        ),
       ),
     );
 

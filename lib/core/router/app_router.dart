@@ -42,6 +42,11 @@ import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_s
 import 'package:petpal/features/booking/presentation/screens/create_booking_screen.dart';
 import 'package:petpal/features/booking/presentation/screens/provider_profile_screen.dart';
 import 'package:petpal/features/reviews/presentation/screens/leave_review_screen.dart';
+import 'package:petpal/features/service_request/data/models/service_request_model.dart';
+import 'package:petpal/features/service_request/presentation/screens/create_service_request_screen.dart';
+import 'package:petpal/features/service_request/presentation/screens/apply_service_request_screen.dart';
+import 'package:petpal/features/service_request/presentation/screens/my_applications_screen.dart';
+import 'package:petpal/features/service_request/presentation/screens/service_request_detail_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -275,6 +280,31 @@ class AppRouter {
       GoRoute(
         path: '/my-pets',
         builder: (context, state) => const MyPetsScreen(),
+      ),
+      GoRoute(
+        path: '/requests/create',
+        builder: (context, state) => const CreateServiceRequestScreen(),
+      ),
+      GoRoute(
+        path: '/requests/my-applications',
+        builder: (context, state) => const MyApplicationsScreen(),
+      ),
+      GoRoute(
+        path: '/requests/apply',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final request = extra?['request'] as ServiceRequestModel?;
+          if (request == null) return const OnboardingScreen();
+          return ApplyServiceRequestScreen(request: request);
+        },
+      ),
+      GoRoute(
+        path: '/requests/detail',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! ServiceRequestModel) return const OnboardingScreen();
+          return ServiceRequestDetailScreen(request: extra);
+        },
       ),
       GoRoute(
         path: '/reviews/leave',

@@ -39,6 +39,10 @@ import 'package:petpal/features/pets/domain/entities/pet.dart';
 import 'package:petpal/features/pets/presentation/providers/pets_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:petpal/features/service_request/data/models/service_request_model.dart';
+import 'package:petpal/features/service_request/domain/entities/service_request.dart'
+    show ServiceRequestStatus, PetSpecies;
+import 'package:petpal/features/service_request/presentation/providers/service_request_provider.dart';
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -621,7 +625,7 @@ class _MyRequestsTab extends ConsumerStatefulWidget {
 class _MyRequestsTabState extends ConsumerState<_MyRequestsTab> {
   int _selected = 0; // 0 = הכל (default)
 
-  static const _filters = ['הכל', 'בקשות טיולים', 'בקשות שמירה', 'הזמנות'];
+  static const _filters = ['הכל', 'בקשות שירות', 'בקשות טיולים', 'בקשות שמירה', 'הזמנות'];
 
   void _showCreateSheet(BuildContext context) {
     showModalBottomSheet(
@@ -655,27 +659,15 @@ class _MyRequestsTabState extends ConsumerState<_MyRequestsTab> {
               Text('בחר את סוג הבקשה שתרצה להגיש',
                   style: AppTextStyles.labelMd),
               const SizedBox(height: 20),
-              // Walks option
+              // Unified service request
               _CreateOptionTile(
-                icon: Icons.directions_walk_rounded,
+                icon: Icons.campaign_rounded,
                 color: AppColors.primary,
-                title: 'בקשת טיולים',
-                subtitle: 'חפש מטייל לכלב שלך',
+                title: 'בקשת שירות',
+                subtitle: 'טיול, שמירה — הכל במקום אחד',
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/walks/create');
-                },
-              ),
-              const SizedBox(height: 12),
-              // Sitting option
-              _CreateOptionTile(
-                icon: Icons.house_rounded,
-                color: AppColors.sitting,
-                title: 'בקשת שמירה',
-                subtitle: 'חפש שומר לחיית המחמד שלך',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.push('/sitting/create');
+                  context.push('/requests/create');
                 },
               ),
             ],
@@ -763,9 +755,10 @@ class _MyRequestsTabState extends ConsumerState<_MyRequestsTab> {
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: switch (_selected) {
-                1 => const _WalkRequestsView(key: ValueKey('walk')),
-                2 => const _SittingRequestsView(key: ValueKey('sitting')),
-                3 => const _MyBookingsView(key: ValueKey('bookings')),
+                1 => _ServiceRequestsView(key: const ValueKey('service')),
+                2 => const _WalkRequestsView(key: ValueKey('walk')),
+                3 => const _SittingRequestsView(key: ValueKey('sitting')),
+                4 => const _MyBookingsView(key: ValueKey('bookings')),
                 _ => const _AllRequestsFeed(key: ValueKey('all')),
               },
             ),
@@ -1885,6 +1878,479 @@ class _ToggleChip extends StatelessWidget {
     );
   }
 }
+
+// ── Service Requests (new unified flow) ──────────────────────────────────────
+
+class _ServiceRequestsView extends ConsumerWidget {
+  const _ServiceRequestsView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    final requestsAsync = ref.watch(myRequestsProvider(uid));
+
+    return requestsAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (requests) {
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.campaign_rounded,
+                    size: 64,
+                    color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                const SizedBox(height: 16),
+                const Text(
+                  'אין בקשות שירות עדיין',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'לחץ/י על הכפתור למעלה כדי לפרסם בקשה',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.list_alt_rounded,
+                      size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'הבקשות שלי (${requests.length})',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: EdgeInsets.fromLTRB(
+                    16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 84),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisExtent: 248,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: requests.length,
+                itemBuilder: (ctx, i) =>
+                    _ServiceRequestCard(request: requests[i]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ServiceRequestCard extends ConsumerWidget {
+  final ServiceRequestModel request;
+  const _ServiceRequestCard({required this.request});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isWalk = request.serviceType.name == 'walk';
+    final hasImage = request.petImageUrls.isNotEmpty &&
+        request.petImageUrls.first.isNotEmpty;
+    final bg = isWalk ? AppColors.sapphire : AppColors.regalNavy;
+    final statusColor = _statusColor(request.status);
+    final isOpen = request.status == ServiceRequestStatus.open;
+    final isFemale = request.petGender?.name == 'female';
+    final hasgender = request.petGender != null;
+
+    return GestureDetector(
+      onTap: () => context.push('/requests/detail', extra: request),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Photo area ─────────────────────────────────────────────
+            SizedBox(
+              height: 115,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: bg),
+                    if (hasImage)
+                      CachedNetworkImage(
+                        imageUrl: request.petImageUrls.first,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const SizedBox.shrink(),
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    if (!hasImage)
+                      Center(
+                        child: Icon(
+                          isWalk
+                              ? Icons.directions_walk_rounded
+                              : Icons.home_rounded,
+                          size: 44,
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
+                      ),
+                    // Service type badge — top-left
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isWalk
+                                  ? Icons.directions_walk_rounded
+                                  : Icons.home_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              isWalk ? 'טיול' : 'שמירה',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Status badge — top-right
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _statusLabel(request.status),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Info area ───────────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.petName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _SRPill(
+                          label: _speciesLabel(request.petSpecies),
+                          color: _speciesColor(request.petSpecies),
+                        ),
+                        if (hasgender) ...[
+                          const SizedBox(width: 4),
+                          _SRPill(
+                            label: isFemale ? 'נקבה' : 'זכר',
+                            color: isFemale
+                                ? AppColors.error
+                                : AppColors.sapphire,
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded,
+                            size: 11, color: AppColors.textMuted),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            request.area,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isWalk && request.walkDate != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 11, color: AppColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${request.walkDate!.day.toString().padLeft(2, '0')}/${request.walkDate!.month.toString().padLeft(2, '0')}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (request.walkTime != null) ...[
+                            const SizedBox(width: 5),
+                            const Icon(Icons.access_time_rounded,
+                                size: 11, color: AppColors.textMuted),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                request.walkTime!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ] else if (!isWalk &&
+                        request.sittingStartDate != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.date_range_rounded,
+                              size: 11, color: AppColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${request.sittingStartDate!.day}/${request.sittingStartDate!.month}–${request.sittingEndDate?.day ?? '?'}/${request.sittingEndDate?.month ?? '?'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const Spacer(),
+                    const Divider(height: 1, color: AppColors.divider),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: request.applicationCount > 0
+                                ? AppColors.primaryFaint
+                                : AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.people_alt_rounded,
+                                size: 11,
+                                color: request.applicationCount > 0
+                                    ? AppColors.primary
+                                    : AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${request.applicationCount}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: request.applicationCount > 0
+                                      ? AppColors.primary
+                                      : AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isOpen)
+                          GestureDetector(
+                            onTap: () => _confirmCancel(context, ref),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'בטל',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _statusColor(ServiceRequestStatus s) => switch (s) {
+        ServiceRequestStatus.open => AppColors.success,
+        ServiceRequestStatus.booked => AppColors.primary,
+        ServiceRequestStatus.completed => AppColors.textMuted,
+        ServiceRequestStatus.cancelled => AppColors.error,
+      };
+
+  String _statusLabel(ServiceRequestStatus s) => switch (s) {
+        ServiceRequestStatus.open => 'פתוח',
+        ServiceRequestStatus.booked => 'הוזמן',
+        ServiceRequestStatus.completed => 'הושלם',
+        ServiceRequestStatus.cancelled => 'בוטל',
+      };
+
+  String _speciesLabel(PetSpecies s) => switch (s) {
+        PetSpecies.cat => 'חתול',
+        PetSpecies.rabbit => 'ארנב',
+        PetSpecies.bird => 'ציפור',
+        PetSpecies.other => 'אחר',
+        _ => 'כלב',
+      };
+
+  Color _speciesColor(PetSpecies s) => switch (s) {
+        PetSpecies.cat => AppColors.warning,
+        PetSpecies.rabbit => AppColors.statusTaken,
+        PetSpecies.bird => AppColors.success,
+        _ => AppColors.sapphire,
+      };
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          title: const Text('ביטול בקשה',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          content:
+              const Text('האם לבטל את הבקשה? פעולה זו לא ניתנת לביטול.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('חזור'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: const Text('בטל בקשה'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    await ref
+        .read(serviceRequestNotifierProvider.notifier)
+        .cancelRequest(request.id);
+  }
+}
+
+class _SRPill extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _SRPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      );
+}
+
+// ── Walk Requests (legacy) ────────────────────────────────────────────────────
 
 class _WalkRequestsView extends ConsumerWidget {
   const _WalkRequestsView({super.key});
