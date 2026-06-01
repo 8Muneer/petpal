@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -639,7 +639,7 @@ class _MatchesList extends StatelessWidget {
   }
 }
 
-class _MatchCard extends StatelessWidget {
+class _MatchCard extends ConsumerWidget {
   final LostFoundMatch match;
   final LostFoundPost post;
   const _MatchCard({required this.match, required this.post});
@@ -651,7 +651,10 @@ class _MatchCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final candidateAsync = ref.watch(singlePostProvider(match.postId));
+    final candidate = candidateAsync.valueOrNull;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -671,7 +674,19 @@ class _MatchCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Navigate to compare screen
+            if (candidate != null) {
+              context.push('/lost-found/compare', extra: {
+                'post1': post,
+                'post2': candidate,
+              });
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('טוען נתוני השוואה...'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(12),

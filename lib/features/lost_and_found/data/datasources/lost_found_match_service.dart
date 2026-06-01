@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:petpal/features/lost_and_found/data/datasources/gemini_matching_service.dart';
 import 'package:petpal/features/lost_and_found/data/datasources/lost_found_remote_datasource.dart';
 import 'package:petpal/features/lost_and_found/data/models/lost_found_post_model.dart';
@@ -25,8 +25,8 @@ class LostFoundMatchService {
       );
       debugPrint('[Match] Found ${candidates.length} candidates');
 
-      for (final candidate in candidates) {
-        if (candidate.imageUrl.isEmpty) continue;
+      final matchFutures = candidates.map((candidate) async {
+        if (candidate.imageUrl.isEmpty) return;
         debugPrint('[Match] Comparing with candidate ${candidate.id}');
 
         final result = await _gemini.compareImages(
@@ -35,8 +35,8 @@ class LostFoundMatchService {
         );
 
         debugPrint('[Match] Result: ${result?.confidence}% match=${result?.isMatch}');
-        if (result == null) continue;
-        if (!result.isMatch || result.confidence < 50) continue;
+        if (result == null) return;
+        if (!result.isMatch || result.confidence < 50) return;
 
         final matchForNew = LostFoundMatchModel(
           postId: candidate.id,
@@ -56,7 +56,9 @@ class LostFoundMatchService {
         );
         await _datasource.addMatch(candidate.id, matchForCandidate.toMap());
         debugPrint('[Match] Saved match between ${post.id} and ${candidate.id}');
-      }
+      });
+
+      await Future.wait(matchFutures);
     } catch (e, st) {
       debugPrint('[Match] ERROR: $e\n$st');
     } finally {

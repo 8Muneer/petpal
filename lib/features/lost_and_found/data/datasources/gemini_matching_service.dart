@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:petpal/core/secrets.dart';
@@ -22,6 +22,10 @@ class GeminiMatchingService {
 
   Future<GeminiMatchResult?> compareImages(
       String imageUrl1, String imageUrl2) async {
+    if (imageUrl1.isEmpty || imageUrl2.isEmpty) {
+      debugPrint('[Gemini] Cannot compare empty image URLs');
+      return null;
+    }
     try {
       final bytes1 = await _downloadImage(imageUrl1);
       final bytes2 = await _downloadImage(imageUrl2);
@@ -143,10 +147,12 @@ OUTPUT: Respond with ONLY this JSON, no markdown, no text before or after:
         return null;
       }
 
-      // Strip markdown code fences if present
+      // Extract JSON block robustly if there's any surrounding text
       text = text.trim();
-      if (text.startsWith('```')) {
-        text = text.replaceAll(RegExp(r'```[a-z]*\n?'), '').trim();
+      final jsonRegex = RegExp(r'\{[\s\S]*\}');
+      final match = jsonRegex.firstMatch(text);
+      if (match != null) {
+        text = match.group(0)!;
       }
 
       final result = jsonDecode(text) as Map<String, dynamic>;
