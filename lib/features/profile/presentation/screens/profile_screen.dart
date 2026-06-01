@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +11,8 @@ import 'package:petpal/core/widgets/tiny_chip.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/profile/domain/entities/user_profile.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
+import 'package:petpal/core/services/seed_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -66,6 +68,41 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  void _confirmAction(BuildContext context, String title, String content, VoidCallback onConfirm) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                onConfirm();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('אישור', style: TextStyle(fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -102,6 +139,36 @@ class ProfileScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
+              tooltip: 'ניקוי נתוני דמו',
+              onPressed: () => _confirmAction(
+                context,
+                'ניקוי נתונים?',
+                'כל נתוני הדמו (משתמשים, חיות, הזמנות) יימחקו לצמיתות.',
+                () async {
+                  final seedService = SeedService(firestore: FirebaseFirestore.instance);
+                  await seedService.clearMockData();
+                  if (!context.mounted) return;
+                  _toast(context, 'נתוני דמו נמחקו בהצלחה');
+                },
+              ),
+              icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.statusClosed),
+            ),
+            IconButton(
+              tooltip: 'יצירת נתוני דמו',
+              onPressed: () => _confirmAction(
+                context,
+                'יצירת נתוני דמו?',
+                'מערכת תיצור נתונים ריאליסטיים להדגמה (ספקי שירות, בעלי חיות, הזמנות וביקורות).',
+                () async {
+                  final seedService = SeedService(firestore: FirebaseFirestore.instance);
+                  await seedService.seedData();
+                  if (!context.mounted) return;
+                  _toast(context, 'נתוני דמו נוצרו בהצלחה');
+                },
+              ),
+              icon: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
+            ),
+            IconButton(
               tooltip: '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
               onPressed: () => _confirmLogout(context),
               icon: const Icon(Icons.logout_rounded, color: AppColors.textPrimary),
@@ -118,8 +185,8 @@ class ProfileScreen extends ConsumerWidget {
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                     colors: [
-                      AppColors.surface,
-                      AppColors.surface,
+                      Color(0xFFECFDF5),
+                      Color(0xFFF6F7FB),
                       Colors.white,
                     ],
                   ),
@@ -138,8 +205,8 @@ class ProfileScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.20),
-                      AppColors.smartBlue.withValues(alpha: 0.12),
+                      const Color(0xFF34D399).withValues(alpha: 0.20),
+                      const Color(0xFF0EA5E9).withValues(alpha: 0.12),
                     ],
                   ),
                 ),
@@ -239,6 +306,8 @@ class _ProfileBody extends StatelessWidget {
         return '\u05d1\u05e2\u05dc \u05d7\u05d9\u05d9\u05ea \u05de\u05d7\u05de\u05d3';
       case UserRole.serviceProvider:
         return '\u05de\u05d8\u05e4\u05dc/\u05ea';
+      case UserRole.admin:
+        return 'מנהל מערכת';
     }
   }
 
@@ -322,7 +391,7 @@ class _ProfileBody extends StatelessWidget {
                 title: '\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea',
                 value: '${profile.totalReviews}',
                 icon: Icons.rate_review_rounded,
-                accent: AppColors.smartBlue,
+                accent: const Color(0xFF0EA5E9),
                 onTap: () => onToast('TODO: My reviews'),
               ),
             ),
@@ -350,7 +419,7 @@ class _ProfileBody extends StatelessWidget {
                 icon: profile.role == UserRole.serviceProvider
                     ? Icons.pets_rounded
                     : Icons.person_rounded,
-                accent: AppColors.error,
+                accent: const Color(0xFFFB7185),
                 onTap: () {},
               ),
             ),
@@ -372,7 +441,7 @@ class _ProfileBody extends StatelessWidget {
               profile.bio!,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary.withValues(alpha: 0.85),
+                color: const Color(0xFF334155).withValues(alpha: 0.85),
                 height: 1.5,
               ),
             ),
@@ -405,7 +474,7 @@ class _ProfileBody extends StatelessWidget {
                     : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                 badgeColor: profile.isVerified
                     ? AppColors.statusOpen
-                    : AppColors.error,
+                    : const Color(0xFFFB7185),
               ),
               if (profile.phone != null && profile.phone!.isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -454,7 +523,7 @@ class _ProfileBody extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(16)),
                               content: const Text(
                                   '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4. \u05e0\u05e1\u05d4/\u05d9 \u05e9\u05d5\u05d1.'),
-                              backgroundColor: AppColors.error,
+                              backgroundColor: const Color(0xFFB91C1C),
                             ),
                           );
                         }
@@ -570,7 +639,7 @@ class _ProfileHeroCard extends StatelessWidget {
                           : '\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea',
                       color: verified
                           ? AppColors.statusOpen
-                          : AppColors.error,
+                          : const Color(0xFFFB7185),
                     ),
                   ],
                 ),
@@ -590,7 +659,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary.withValues(alpha: 0.82),
+                    color: const Color(0xFF334155).withValues(alpha: 0.82),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -671,7 +740,7 @@ class _SettingTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary.withValues(alpha: 0.82),
+                      color: const Color(0xFF334155).withValues(alpha: 0.82),
                     ),
                   ),
                 ],
@@ -766,7 +835,7 @@ class _KeyValueRow extends StatelessWidget {
             k,
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: AppColors.textSecondary.withValues(alpha: 0.9),
+              color: const Color(0xFF334155).withValues(alpha: 0.9),
             ),
           ),
         ),
@@ -822,7 +891,7 @@ class _PrimaryOutlineButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: enabled ? AppColors.borderFaint : AppColors.surface,
+          color: enabled ? AppColors.borderFaint : const Color(0xFFF8FAFC),
           border: Border.all(
             color: enabled
                 ? AppColors.primary.withValues(alpha: 0.22)
@@ -892,9 +961,9 @@ class _DangerButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: AppColors.surface,
+          color: const Color(0xFFFFF1F2),
           border:
-              Border.all(color: AppColors.error.withValues(alpha: 0.35)),
+              Border.all(color: const Color(0xFFFB7185).withValues(alpha: 0.35)),
         ),
         child: const Row(
           children: [
@@ -905,11 +974,11 @@ class _DangerButton extends StatelessWidget {
                 '\u05d4\u05ea\u05e0\u05ea\u05e7\u05d5\u05ea',
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
-                  color: AppColors.error,
+                  color: Color(0xFF9F1239),
                 ),
               ),
             ),
-            Icon(Icons.chevron_left_rounded, color: AppColors.error),
+            Icon(Icons.chevron_left_rounded, color: Color(0xFF9F1239)),
           ],
         ),
       ),
@@ -926,10 +995,10 @@ class _DangerIcon extends StatelessWidget {
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.16),
+        color: const Color(0xFFFB7185).withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Icon(Icons.logout_rounded, color: AppColors.error),
+      child: const Icon(Icons.logout_rounded, color: Color(0xFF9F1239)),
     );
   }
 }
