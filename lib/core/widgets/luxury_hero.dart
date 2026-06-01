@@ -60,7 +60,10 @@ class LuxuryHero extends StatelessWidget {
                   }
                   return Stack(children: [
                     Positioned(
-                      top: -offset, left: 0, right: 0, height: 630,
+                      top: -offset,
+                      left: 0,
+                      right: 0,
+                      height: 630,
                       child: imageUrl.startsWith('assets/')
                           ? Image.asset(imageUrl, fit: BoxFit.cover)
                           : Image.network(imageUrl, fit: BoxFit.cover),
@@ -101,12 +104,14 @@ class LuxuryHero extends StatelessWidget {
                       style: AppTextStyles.headlineLg.copyWith(
                           color: Colors.white, fontStyle: FontStyle.italic)),
                   Container(
-                    width: 40, height: 40,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.30), width: 1),
+                          color: Colors.white.withValues(alpha: 0.30),
+                          width: 1),
                     ),
                     child: const Icon(Icons.notifications_none_rounded,
                         color: Colors.white, size: 20),
@@ -135,7 +140,8 @@ class ProfileAvatarButton extends StatefulWidget {
   final String? imageUrl;
   final String? name;
   final List<ProfileMenuItem> menuItems;
-  const ProfileAvatarButton({super.key, this.imageUrl, this.name, required this.menuItems});
+  const ProfileAvatarButton(
+      {super.key, this.imageUrl, this.name, required this.menuItems});
 
   @override
   State<ProfileAvatarButton> createState() => _ProfileAvatarState();
@@ -166,12 +172,13 @@ class _ProfileAvatarState extends State<ProfileAvatarButton>
   void _open() {
     if (_overlay != null) return;
     HapticFeedback.lightImpact();
-    _overlay = OverlayEntry(builder: (_) => _SideMenu(
-      items: widget.menuItems,
-      imageUrl: widget.imageUrl,
-      name: widget.name,
-      onDismiss: _close,
-    ));
+    _overlay = OverlayEntry(
+        builder: (_) => _SideMenu(
+              items: widget.menuItems,
+              imageUrl: widget.imageUrl,
+              name: widget.name,
+              onDismiss: _close,
+            ));
     Overlay.of(context).insert(_overlay!);
   }
 
@@ -190,23 +197,29 @@ class _ProfileAvatarState extends State<ProfileAvatarButton>
     final hasPhoto = widget.imageUrl?.isNotEmpty == true;
     return GestureDetector(
       onTapDown: (_) => _press.forward(),
-      onTapUp: (_) { _press.reverse(); _open(); },
+      onTapUp: (_) {
+        _press.reverse();
+        _open();
+      },
       onTapCancel: () => _press.reverse(),
       child: AnimatedBuilder(
         animation: _scale,
         builder: (_, child) =>
             Transform.scale(scale: _scale.value, child: child),
         child: Container(
-          width: 44, height: 44,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
                   color: Colors.white.withValues(alpha: 0.55),
-                  blurRadius: 0, spreadRadius: 2),
+                  blurRadius: 0,
+                  spreadRadius: 2),
               BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.50),
-                  blurRadius: 14, offset: const Offset(0, 3)),
+                  blurRadius: 14,
+                  offset: const Offset(0, 3)),
             ],
           ),
           child: ClipOval(
@@ -215,7 +228,8 @@ class _ProfileAvatarState extends State<ProfileAvatarButton>
                     imageUrl: widget.imageUrl!,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => _InitialCircle(initial: _initial),
-                    errorWidget: (_, __, ___) => _InitialCircle(initial: _initial),
+                    errorWidget: (_, __, ___) =>
+                        _InitialCircle(initial: _initial),
                   )
                 : _InitialCircle(initial: _initial),
           ),
@@ -230,14 +244,16 @@ class _InitialCircle extends StatelessWidget {
   const _InitialCircle({required this.initial});
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(gradient: AppColors.velvetGradient),
-    child: Center(
-      child: Text(initial,
-          style: const TextStyle(
-              color: Colors.white, fontSize: 18,
-              fontWeight: FontWeight.w800, height: 1)),
-    ),
-  );
+        decoration: const BoxDecoration(gradient: AppColors.velvetGradient),
+        child: Center(
+          child: Text(initial,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  height: 1)),
+        ),
+      );
 }
 
 // ─── Side Menu ─────────────────────────────────────────────────────────────
@@ -278,8 +294,7 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
         parent: _enter,
         curve: const Interval(0.0, 0.55, curve: Curves.easeOut));
 
-    _panelSlide = Tween<Offset>(
-            begin: const Offset(1.0, 0), end: Offset.zero)
+    _panelSlide = Tween<Offset>(begin: const Offset(1.0, 0), end: Offset.zero)
         .animate(CurvedAnimation(
             parent: _enter,
             curve: const Interval(0.0, 0.78,
@@ -298,8 +313,8 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
       ),
     );
 
-    _pulseAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
-        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+    _pulseAnim = Tween<double>(begin: 0.3, end: 1.0)
+        .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
 
     _enter.forward();
     _pulse.repeat(reverse: true);
@@ -328,85 +343,87 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
     return Material(
       type: MaterialType.transparency,
       child: Directionality(
-      textDirection: TextDirection.rtl,
-      child: Stack(
-        children: [
-          // ── Blurred barrier ─────────────────────────────────────────
-          Positioned.fill(
-            child: FadeTransition(
-              opacity: _barrierFade.drive(Tween(begin: 0.0, end: 1.0)),
-              child: GestureDetector(
-                onTap: _dismiss,
-                behavior: HitTestBehavior.opaque,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                  child: Container(
-                      color: AppColors.prussianBlue3.withValues(alpha: 0.45)),
+        textDirection: TextDirection.rtl,
+        child: Stack(
+          children: [
+            // ── Blurred barrier ─────────────────────────────────────────
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: _barrierFade.drive(Tween(begin: 0.0, end: 1.0)),
+                child: GestureDetector(
+                  onTap: _dismiss,
+                  behavior: HitTestBehavior.opaque,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                    child: Container(
+                        color: AppColors.prussianBlue3.withValues(alpha: 0.45)),
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ── Panel ───────────────────────────────────────────────────
-          Positioned(
-            top: 0, right: 0, bottom: 0,
-            width: panelW,
-            child: FadeTransition(
-              opacity: _panelFade,
-              child: SlideTransition(
-                position: _panelSlide,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(32),
-                    bottomLeft: Radius.circular(32),
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.97),
-                            Colors.white.withValues(alpha: 0.93),
-                            AppColors.surface.withValues(alpha: 0.95),
+            // ── Panel ───────────────────────────────────────────────────
+            Positioned(
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: panelW,
+              child: FadeTransition(
+                opacity: _panelFade,
+                child: SlideTransition(
+                  position: _panelSlide,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(32),
+                      bottomLeft: Radius.circular(32),
+                    ),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.97),
+                              Colors.white.withValues(alpha: 0.93),
+                              AppColors.surface.withValues(alpha: 0.95),
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.prussianBlue3
+                                  .withValues(alpha: 0.30),
+                              blurRadius: 60,
+                              offset: const Offset(-16, 0),
+                              spreadRadius: -4,
+                            ),
+                            BoxShadow(
+                              color: AppColors.prussianBlue3
+                                  .withValues(alpha: 0.12),
+                              blurRadius: 20,
+                              offset: const Offset(-4, 0),
+                            ),
                           ],
-                          stops: const [0.0, 0.5, 1.0],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.prussianBlue3
-                                .withValues(alpha: 0.30),
-                            blurRadius: 60,
-                            offset: const Offset(-16, 0),
-                            spreadRadius: -4,
-                          ),
-                          BoxShadow(
-                            color: AppColors.prussianBlue3
-                                .withValues(alpha: 0.12),
-                            blurRadius: 20,
-                            offset: const Offset(-4, 0),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          _buildHeader(top, panelW),
-                          const SizedBox(height: 8),
-                          Expanded(child: _buildItems()),
-                          _buildFooter(),
-                        ],
+                        child: Column(
+                          children: [
+                            _buildHeader(top, panelW),
+                            const SizedBox(height: 8),
+                            Expanded(child: _buildItems()),
+                            _buildFooter(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -441,9 +458,11 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
 
           // Decorative large circle — top-right
           Positioned(
-            top: -40, right: -40,
+            top: -40,
+            right: -40,
             child: Container(
-              width: 180, height: 180,
+              width: 180,
+              height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.06),
@@ -453,9 +472,11 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
 
           // Decorative smaller circle — bottom-left
           Positioned(
-            bottom: -30, left: -20,
+            bottom: -30,
+            left: -20,
             child: Container(
-              width: 110, height: 110,
+              width: 110,
+              height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.smartBlue.withValues(alpha: 0.18),
@@ -470,8 +491,7 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
 
           // Content
           Padding(
-            padding:
-                EdgeInsets.fromLTRB(22, statusBarH + 14, 22, 28),
+            padding: EdgeInsets.fromLTRB(22, statusBarH + 14, 22, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -483,10 +503,10 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: BackdropFilter(
-                        filter:
-                            ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Container(
-                          width: 36, height: 36,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(12),
@@ -528,16 +548,15 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                         ),
                         // White ring
                         Container(
-                          width: 80, height: 80,
+                          width: 80,
+                          height: 80,
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                Colors.white
-                                    .withValues(alpha: 0.9),
-                                Colors.white
-                                    .withValues(alpha: 0.5),
+                                Colors.white.withValues(alpha: 0.9),
+                                Colors.white.withValues(alpha: 0.5),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -583,20 +602,18 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
 
                 // Tag chip
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        width: 1),
+                        color: Colors.white.withValues(alpha: 0.25), width: 1),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.pets_rounded,
-                          color: Colors.white, size: 11),
+                      Icon(Icons.pets_rounded, color: Colors.white, size: 11),
                       SizedBox(width: 5),
                       Text('PetPal',
                           style: TextStyle(
@@ -649,12 +666,12 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
         child: Row(
           children: [
             Container(
-              width: 26, height: 26,
+              width: 26,
+              height: 26,
               decoration: const BoxDecoration(
-                  gradient: AppColors.velvetGradient,
-                  shape: BoxShape.circle),
-              child: const Icon(Icons.pets_rounded,
-                  color: Colors.white, size: 13),
+                  gradient: AppColors.velvetGradient, shape: BoxShape.circle),
+              child:
+                  const Icon(Icons.pets_rounded, color: Colors.white, size: 13),
             ),
             const SizedBox(width: 8),
             Text('PetPal v1.0',
@@ -712,7 +729,10 @@ class _MenuTileState extends State<_MenuTile>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => _tap.forward(),
-      onTapUp: (_) { _tap.reverse(); widget.onTap(); },
+      onTapUp: (_) {
+        _tap.reverse();
+        widget.onTap();
+      },
       onTapCancel: () => _tap.reverse(),
       child: AnimatedBuilder(
         animation: _tap,
@@ -735,7 +755,7 @@ class _MenuTileState extends State<_MenuTile>
               color: AppColors.border.withValues(alpha: 0.6),
               width: 1,
             ),
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               begin: Alignment.topRight,
               end: Alignment.bottomLeft,
               colors: [
@@ -760,7 +780,8 @@ class _MenuTileState extends State<_MenuTile>
             children: [
               // Gradient icon container
               Container(
-                width: 44, height: 44,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -779,8 +800,7 @@ class _MenuTileState extends State<_MenuTile>
                     ),
                   ],
                 ),
-                child: Icon(widget.item.icon,
-                    color: Colors.white, size: 20),
+                child: Icon(widget.item.icon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -800,8 +820,7 @@ class _MenuTileState extends State<_MenuTile>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textMuted
-                                .withValues(alpha: 0.8),
+                            color: AppColors.textMuted.withValues(alpha: 0.8),
                           )),
                     ],
                   ],
@@ -809,7 +828,8 @@ class _MenuTileState extends State<_MenuTile>
               ),
               // Arrow
               Container(
-                width: 28, height: 28,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(9),
@@ -838,8 +858,7 @@ class _AnimatedItem extends StatelessWidget {
     return FadeTransition(
       opacity: animation,
       child: SlideTransition(
-        position: Tween<Offset>(
-                begin: const Offset(0.08, 0), end: Offset.zero)
+        position: Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero)
             .animate(animation),
         child: child,
       ),
@@ -861,8 +880,10 @@ class _HeaderInitial extends StatelessWidget {
         child: Text(
           name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
           style: const TextStyle(
-              color: Colors.white, fontSize: 26,
-              fontWeight: FontWeight.w900, height: 1),
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1),
         ),
       ),
     );
