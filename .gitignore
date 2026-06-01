@@ -56,3 +56,8 @@ firebase_options_local.dart
 
 # Claude Code
 .claude/settings.local.json
+
+# Local scratch files & logs
+scratch/
+analyze_results.txt
+
