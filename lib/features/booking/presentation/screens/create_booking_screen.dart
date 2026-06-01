@@ -54,10 +54,24 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
 
   Future<void> _pickDate({bool isStart = true}) async {
     final now = DateTime.now();
+    final DateTime firstDate;
+    final DateTime initialDate;
+    if (isStart) {
+      firstDate = now;
+      initialDate = _startDate != null && !_startDate!.isBefore(now)
+          ? _startDate!
+          : now.add(const Duration(days: 1));
+    } else {
+      firstDate = _startDate ?? now;
+      initialDate = _endDate != null && !_endDate!.isBefore(firstDate)
+          ? _endDate!
+          : firstDate;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: now.add(const Duration(days: 1)),
-      firstDate: now,
+      initialDate: initialDate,
+      firstDate: firstDate,
       lastDate: now.add(const Duration(days: 365)),
       locale: const Locale('he'),
       builder: (ctx, child) => Theme(
@@ -85,6 +99,12 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
   }
 
   Future<void> _submit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.uid == widget.providerUid) {
+      _snack('אינך יכול להזמין את השירות של עצמך');
+      return;
+    }
+
     if (_selectedPet == null) {
       _snack('יש לבחור חיית מחמד');
       return;
