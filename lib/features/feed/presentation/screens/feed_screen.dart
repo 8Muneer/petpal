@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,12 +36,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _onScroll() {
-    // Reserved for future pagination
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    const threshold = 200.0;
+    
+    if (maxScroll - currentScroll <= threshold) {
+      ref.read(paginatedFeedProvider.notifier).fetchNextPage();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final postsAsync = ref.watch(feedPostsProvider);
+    final feedStateAsync = ref.watch(paginatedFeedProvider);
     final selectedFilter = ref.watch(feedFilterProvider);
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -50,7 +57,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       child: Scaffold(
         backgroundColor: AppColors.surface,
         body: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(feedPostsProvider),
+          onRefresh: () async => ref.invalidate(paginatedFeedProvider),
           color: AppColors.primary,
           child: CustomScrollView(
             controller: _scrollController,
@@ -150,7 +157,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               ),
 
               // Posts
-              postsAsync.when(
+              feedStateAsync.when(
                 loading: () => const SliverFillRemaining(
                   child: Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
@@ -159,7 +166,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 error: (e, _) => SliverFillRemaining(
                   child: Center(child: Text('שגיאה בטעינת הפיד: $e')),
                 ),
-                data: (posts) {
+                data: (state) {
+                  final posts = state.posts;
                   final filteredPosts = selectedFilter == 'all'
                       ? posts
                       : posts
@@ -186,6 +194,18 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
+                          if (index == filteredPosts.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          }
+
                           final post = filteredPosts[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 14),
@@ -214,7 +234,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             ),
                           );
                         },
-                        childCount: filteredPosts.length,
+                        childCount: filteredPosts.length + (state.isLoadingMore ? 1 : 0),
                       ),
                     ),
                   );
@@ -288,8 +308,7 @@ class _FeedFilterBar extends StatelessWidget {
               selectedColor: AppColors.primary,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : AppColors.textSecondary,
-                fontWeight:
-                    isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 13,
               ),
               shape: RoundedRectangleBorder(
@@ -396,8 +415,7 @@ class _EmptyFeedState extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(18),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 gradient: const LinearGradient(
@@ -489,8 +507,8 @@ class _PostCard extends StatelessWidget {
                 ),
                 if (isTip)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: AppColors.warning.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
@@ -550,13 +568,11 @@ class _PostCard extends StatelessWidget {
                               ),
                               actions: [
                                 TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(ctx, false),
+                                  onPressed: () => Navigator.pop(ctx, false),
                                   child: const Text('ביטול'),
                                 ),
                                 ElevatedButton(
-                                  onPressed: () =>
-                                      Navigator.pop(ctx, true),
+                                  onPressed: () => Navigator.pop(ctx, true),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.error,
                                     foregroundColor: Colors.white,
@@ -693,8 +709,8 @@ class _PostCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   onTap: onLike,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -722,8 +738,8 @@ class _PostCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

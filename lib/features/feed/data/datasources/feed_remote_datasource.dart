@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/feed/data/models/feed_comment_model.dart';
 import 'package:petpal/features/feed/data/models/feed_post_model.dart';
 
@@ -9,6 +9,10 @@ class FeedRemoteDatasource {
       : _firestore = firestore;
 
   CollectionReference get _postsRef => _firestore.collection('posts');
+
+  Query getPostsQuery() {
+    return _postsRef.orderBy('createdAt', descending: true);
+  }
 
   Stream<List<FeedPostModel>> watchPosts() {
     return _postsRef
@@ -46,6 +50,17 @@ class FeedRemoteDatasource {
     await _postsRef.doc(postId).update({
       'commentCount': FieldValue.increment(1),
     });
+  }
+
+  Future<FeedPostModel?> getPost(String postId) async {
+    final doc = await _postsRef.doc(postId).get();
+    if (!doc.exists) return null;
+    return FeedPostModel.fromFirestore(doc);
+  }
+
+  Future<List<FeedPostModel>> getUserPosts(String uid) async {
+    final snap = await _postsRef.where('authorUid', isEqualTo: uid).get();
+    return snap.docs.map((doc) => FeedPostModel.fromFirestore(doc)).toList();
   }
 
   Future<void> deleteAllUserPosts(String uid) async {

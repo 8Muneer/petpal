@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -28,7 +28,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _contentController = TextEditingController();
   PostType _type = PostType.post;
   final List<String> _existingUrls = []; // already-uploaded URLs (edit mode)
-  final List<XFile> _newImages = [];     // freshly picked local files
+  final List<XFile> _newImages = []; // freshly picked local files
   bool _isPublishing = false;
 
   bool get _isEditMode => widget.post != null;
@@ -62,8 +62,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   void _removeExistingUrl(int index) =>
       setState(() => _existingUrls.removeAt(index));
 
-  void _removeNewImage(int index) =>
-      setState(() => _newImages.removeAt(index));
+  void _removeNewImage(int index) => setState(() => _newImages.removeAt(index));
 
   Future<bool> _confirmDiscard() async {
     final hasContent =
@@ -88,8 +87,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(
-                  foregroundColor: AppColors.error),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('בטל פוסט',
                   style: TextStyle(fontWeight: FontWeight.w700)),
             ),
@@ -109,12 +107,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       final repo = ref.read(feedRepositoryProvider);
 
       if (_isEditMode) {
+        // Find URLs that were removed during editing to clean them up from Storage
+        final removedUrls = widget.post!.imageUrls
+            .where((url) => !_existingUrls.contains(url))
+            .toList();
+
         // Upload any newly added images and combine with kept existing URLs
         List<String> updatedUrls = List.from(_existingUrls);
         if (_newImages.isNotEmpty) {
           final imageService = ref.read(feedImageServiceProvider);
-          final newUrls = await imageService.uploadPostImages(
-              widget.post!.id, _newImages);
+          final newUrls =
+              await imageService.uploadPostImages(widget.post!.id, _newImages);
           updatedUrls.addAll(newUrls);
         }
         await repo.updatePost(widget.post!.id, {
@@ -122,6 +125,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           'content': content,
           'imageUrls': updatedUrls,
         });
+
+        // Clean up removed images from Storage after successful Firestore update
+        final imageService = ref.read(feedImageServiceProvider);
+        for (final url in removedUrls) {
+          try {
+            await imageService.deleteImageByUrl(url);
+          } catch (_) {}
+        }
+
         if (!mounted) return;
         context.pop();
         _showSnack('הפוסט עודכן בהצלחה!');
@@ -134,8 +146,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       final profile = ref.read(currentUserProfileProvider).asData?.value;
       final photoUrl = profile?.photoUrl ?? user.photoURL;
 
-      final postId =
-          FirebaseFirestore.instance.collection('posts').doc().id;
+      final postId = FirebaseFirestore.instance.collection('posts').doc().id;
 
       List<String> imageUrls = [];
       if (_type == PostType.post && _newImages.isNotEmpty) {
@@ -161,8 +172,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPublishing = false);
-      _showSnack(
-          _isEditMode ? 'שגיאה בעדכון הפוסט' : 'שגיאה בפרסום הפוסט',
+      _showSnack(_isEditMode ? 'שגיאה בעדכון הפוסט' : 'שגיאה בפרסום הפוסט',
           isError: true);
     }
   }
@@ -172,11 +182,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(14),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
-        backgroundColor:
-            isError ? AppColors.error : AppColors.primary,
+        backgroundColor: isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -225,12 +233,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   : TextButton(
                       onPressed: _isValid ? _publish : null,
                       style: TextButton.styleFrom(
-                        backgroundColor: _isValid
-                            ? AppColors.primary
-                            : AppColors.surface,
-                        foregroundColor: _isValid
-                            ? Colors.white
-                            : AppColors.textMuted,
+                        backgroundColor:
+                            _isValid ? AppColors.primary : AppColors.surface,
+                        foregroundColor:
+                            _isValid ? Colors.white : AppColors.textMuted,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 8),
                         shape: RoundedRectangleBorder(
@@ -238,8 +244,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                       child: Text(
                         _isEditMode ? 'עדכן' : 'פרסם',
-                        style:
-                            const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
             ),
@@ -267,11 +272,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         user?.displayName ??
                             user?.email?.split('@').first ??
                             '',
-                        style:
-                            const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      Text('קהילת PetPal',
-                          style: AppTextStyles.labelSm),
+                      Text('קהילת PetPal', style: AppTextStyles.labelSm),
                     ],
                   ),
                 ],
@@ -511,15 +514,13 @@ class _LocalPreview extends StatelessWidget {
   }
 }
 
-
 // ─── Category / type selector ─────────────────────────────────────────────────
 
 class _CategorySection extends StatelessWidget {
   final PostType selected;
   final void Function(PostType) onChanged;
 
-  const _CategorySection(
-      {required this.selected, required this.onChanged});
+  const _CategorySection({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -554,20 +555,15 @@ class _CategorySection extends StatelessWidget {
                   backgroundColor: AppColors.pureWhite,
                   selectedColor: AppColors.primary,
                   labelStyle: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : AppColors.textSecondary,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
                     fontSize: 13,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                     side: BorderSide(
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.border,
+                      color: isSelected ? AppColors.primary : AppColors.border,
                     ),
                   ),
                   showCheckmark: false,

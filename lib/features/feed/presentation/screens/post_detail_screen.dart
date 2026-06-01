@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,7 +126,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: Row(
             children: [
-              Icon(Icons.delete_outline_rounded,
+              const Icon(Icons.delete_outline_rounded,
                   color: AppColors.error, size: 22),
               const SizedBox(width: 10),
               Text('למחוק את הפוסט?',
