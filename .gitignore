@@ -54,10 +54,14 @@ GoogleService-Info.plist
 # Firebase
 firebase_options_local.dart
 
-# Claude Code
+# Claude Code & Custom Agent Folders
+.claude/
+.agent/
+.agents/
 .claude/settings.local.json
 
 # Local scratch files & logs
 scratch/
 analyze_results.txt
+
 
