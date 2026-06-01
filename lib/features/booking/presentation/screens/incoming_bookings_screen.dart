@@ -30,7 +30,7 @@ class IncomingBookingsScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.inbox_outlined,
+                    const Icon(Icons.inbox_outlined,
                         size: 64, color: AppColors.textMuted),
                     const SizedBox(height: 16),
                     Text('אין הזמנות נכנסות',
@@ -48,8 +48,7 @@ class IncomingBookingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               itemCount: bookings.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) =>
-                  _IncomingBookingCard(booking: bookings[i]),
+              itemBuilder: (_, i) => _IncomingBookingCard(booking: bookings[i]),
             );
           },
         ),
@@ -126,9 +125,8 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
         await ref.read(bookingRepositoryProvider).updateBookingStatus(
               widget.booking.id,
               BookingStatus.declined,
-              providerNote: noteCtrl.text.trim().isEmpty
-                  ? null
-                  : noteCtrl.text.trim(),
+              providerNote:
+                  noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
             );
       } finally {
         if (mounted) setState(() => _loading = false);
@@ -162,10 +160,9 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: AppColors.primaryFaint,
-                backgroundImage:
-                    (b.ownerPhotoUrl?.isNotEmpty == true)
-                        ? CachedNetworkImageProvider(b.ownerPhotoUrl!)
-                        : null,
+                backgroundImage: (b.ownerPhotoUrl?.isNotEmpty == true)
+                    ? CachedNetworkImageProvider(b.ownerPhotoUrl!)
+                    : null,
                 child: (b.ownerPhotoUrl?.isNotEmpty != true)
                     ? Text(
                         b.ownerName.isNotEmpty
@@ -199,12 +196,12 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
           const Divider(height: 20, color: AppColors.divider),
           Row(
             children: [
-              Icon(Icons.pets_rounded, size: 16, color: AppColors.textMuted),
+              const Icon(Icons.pets_rounded,
+                  size: 16, color: AppColors.textMuted),
               const SizedBox(width: 6),
-              Text('${b.petName} (${b.petType})',
-                  style: AppTextStyles.labelMd),
+              Text('${b.petName} (${b.petType})', style: AppTextStyles.labelMd),
               const Spacer(),
-              Icon(Icons.calendar_today_rounded,
+              const Icon(Icons.calendar_today_rounded,
                   size: 16, color: AppColors.textMuted),
               const SizedBox(width: 6),
               Text(_dateText(b), style: AppTextStyles.labelMd),
@@ -222,7 +219,7 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.notes_rounded,
+                  const Icon(Icons.notes_rounded,
                       size: 14, color: AppColors.textMuted),
                   const SizedBox(width: 6),
                   Expanded(

@@ -4,19 +4,30 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        request.auth.uid == userId ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingAverage', 'reviewCount'])
+      );
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     match /posts/{postId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
+      allow update: if request.auth != null && (
+        (request.auth.uid == resource.data.authorUid && request.resource.data.authorUid == resource.data.authorUid) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount'])
+      );
       allow delete: if request.auth != null && request.auth.uid == resource.data.authorUid;
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if request.auth != null;
-        allow delete: if request.auth != null;
+        allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
+        allow delete: if request.auth != null && (
+          request.auth.uid == resource.data.authorUid ||
+          get(/databases/$(database)/documents/posts/$(postId)).data.authorUid == request.auth.uid
+        );
       }
     }
 
@@ -50,11 +61,14 @@ service cloud.firestore {
 
     match /lost_found_posts/{docId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && (
-        resource.data.reporterUid == request.auth.uid ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['matches'])
-      );
+      allow create: if request.auth != null &&
+        request.resource.data.reporterUid == request.auth.uid;
+      allow update: if request.auth != null &&
+        request.resource.data.reporterUid == resource.data.reporterUid &&
+        (
+          resource.data.reporterUid == request.auth.uid ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['matches'])
+        );
       allow delete: if request.auth != null && resource.data.reporterUid == request.auth.uid;
     }
 
@@ -92,17 +106,31 @@ service cloud.firestore {
         resource.data.providerUid == request.auth.uid;
     }
 
-    // ── bookings ─────────────────────────────────────────────────────────────
-    match /bookings/{bookingId} {
+    // ── booking_requests ─────────────────────────────────────────────────────
+    match /booking_requests/{bookingId} {
       allow read: if request.auth != null && (
         resource.data.ownerUid == request.auth.uid ||
         resource.data.providerUid == request.auth.uid
       );
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && (
-        resource.data.ownerUid == request.auth.uid ||
-        resource.data.providerUid == request.auth.uid
-      );
+      allow create: if request.auth != null &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.providerUid != request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if request.auth != null &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.providerUid == resource.data.providerUid &&
+        (
+          // Owner cancels a pending or accepted booking
+          (request.auth.uid == resource.data.ownerUid &&
+           request.resource.data.status == 'cancelled' &&
+           (resource.data.status == 'pending' || resource.data.status == 'accepted') &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+          // Provider accepts or declines a pending booking
+          (request.auth.uid == resource.data.providerUid &&
+           (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined') &&
+           resource.data.status == 'pending' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'providerNote']))
+        );
       allow delete: if false;
     }
 
@@ -110,10 +138,27 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null &&
-        request.resource.data.reviewerUid == request.auth.uid;
+        reviewId == request.resource.data.bookingId &&
+        request.resource.data.reviewerUid == request.auth.uid &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5 &&
+        get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.ownerUid == request.auth.uid &&
+        get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.providerUid == request.resource.data.providerId &&
+        get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.status == 'accepted';
       allow update: if request.auth != null &&
-        resource.data.reviewerUid == request.auth.uid;
+        resource.data.reviewerUid == request.auth.uid &&
+        request.resource.data.reviewerUid == resource.data.reviewerUid &&
+        request.resource.data.providerId == resource.data.providerId &&
+        request.resource.data.bookingId == resource.data.bookingId &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
       allow delete: if false;
+    }
+
+    // ── pois ─────────────────────────────────────────────────────────────────
+    match /pois/{poiId} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
     match /conversations/{conversationId} {

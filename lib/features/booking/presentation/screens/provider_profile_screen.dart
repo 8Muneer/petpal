@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/reviews/presentation/providers/review_provider.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
@@ -42,6 +43,9 @@ class ProviderProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ratingAsync = ref.watch(providerRatingProvider(_providerUid));
+    final currentUserUid = ref.watch(authStateChangesProvider).asData?.value?.uid;
+    final isOwnProfile = currentUserUid == _providerUid;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -52,7 +56,7 @@ class ProviderProfileScreen extends ConsumerWidget {
             SliverToBoxAdapter(child: _buildBody(context)),
           ],
         ),
-        bottomNavigationBar: _buildBookButton(context),
+        bottomNavigationBar: _buildBookButton(context, isOwnProfile: isOwnProfile),
       ),
     );
   }
@@ -241,7 +245,7 @@ class ProviderProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBookButton(BuildContext context) {
+  Widget _buildBookButton(BuildContext context, {required bool isOwnProfile}) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -249,22 +253,28 @@ class ProviderProfileScreen extends ConsumerWidget {
           width: double.infinity,
           height: 56,
           child: ElevatedButton.icon(
-            onPressed: () => context.push(
-              '/bookings/create',
-              extra: {
-                'providerUid': _providerUid,
-                'providerName': _providerName,
-                'providerPhotoUrl': _providerPhoto,
-                'serviceId': _serviceId,
-                'serviceType': _isWalk ? 'walk' : 'sitting',
-                'priceText': _priceText,
-              },
-            ),
-            icon: const Icon(Icons.calendar_month_rounded),
-            label: const Text('הזמן עכשיו'),
+            onPressed: isOwnProfile
+                ? null
+                : () => context.push(
+                      '/bookings/create',
+                      extra: {
+                        'providerUid': _providerUid,
+                        'providerName': _providerName,
+                        'providerPhotoUrl': _providerPhoto,
+                        'serviceId': _serviceId,
+                        'serviceType': _isWalk ? 'walk' : 'sitting',
+                        'priceText': _priceText,
+                      },
+                    ),
+            icon: Icon(isOwnProfile
+                ? Icons.person_rounded
+                : Icons.calendar_month_rounded),
+            label: Text(isOwnProfile ? 'הפרופיל שלך' : 'הזמן עכשיו'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
+              disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+              disabledForegroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               textStyle: AppTextStyles.bodyMd
