@@ -1,6 +1,7 @@
-﻿enum UserRole {
+enum UserRole {
   petOwner,
-  serviceProvider;
+  serviceProvider,
+  admin;
 
   String get firestoreValue {
     switch (this) {
@@ -8,6 +9,8 @@
         return 'petOwner';
       case UserRole.serviceProvider:
         return 'serviceProvider';
+      case UserRole.admin:
+        return 'admin';
     }
   }
 
@@ -22,6 +25,8 @@
       case 'service_provider':
       case 'provider':
         return UserRole.serviceProvider;
+      case 'admin':
+        return UserRole.admin;
       default:
         return null;
     }

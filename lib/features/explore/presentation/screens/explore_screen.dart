@@ -84,44 +84,45 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Left Actions (Filter & Grid)
-              Row(
-                children: [
-                  _buildSquareAction(
-                    Icons.tune,
-                    () {
-                      HapticFeedback.lightImpact();
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => const FilterBottomSheet(),
-                      );
-                    },
-                    hasBadge:
-                        ref.watch(marketplaceFiltersProvider).hasActiveFilters,
-                  ),
-                ],
+          // Centered Header Title with premium styling
+          Center(
+            child: Text(
+              'גלה',
+              style: AppTextStyles.h2.copyWith(
+                fontStyle: FontStyle.italic,
+                color: AppColors.primary,
               ),
-              // Right Title (Explore)
-              Text(
-                'גלה',
-                style: AppTextStyles.h1.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 28,
+            ),
+          ),
+          const SizedBox(height: 18),
+          // Integrated search and filter row
+          Row(
+            children: [
+              Expanded(
+                child: ExploreSearchBar(
+                  onChanged: (value) {
+                    ref.read(marketplaceFiltersProvider.notifier).updateSearch(value);
+                  },
                 ),
               ),
+              const SizedBox(width: 12),
+              _buildSquareAction(
+                Icons.tune,
+                () {
+                  HapticFeedback.lightImpact();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => const FilterBottomSheet(),
+                  );
+                },
+                hasBadge:
+                    ref.watch(marketplaceFiltersProvider).hasActiveFilters,
+              ),
             ],
-          ),
-          const SizedBox(height: 24),
-          ExploreSearchBar(
-            onChanged: (value) {
-              ref.read(marketplaceFiltersProvider.notifier).updateSearch(value);
-            },
           ),
         ],
       ),
@@ -136,14 +137,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: 48,
-            width: 48,
+            height: 54,
+            width: 54,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               border:
-                  Border.all(color: AppColors.border.withValues(alpha: 0.1)),
-              boxShadow: AppShadows.subtle,
+                  Border.all(color: AppColors.border.withValues(alpha: 0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Icon(icon, color: AppColors.onSurface, size: 20),
           ),
@@ -169,7 +176,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget _buildOwnerView(BuildContext context) {
     return Column(
       children: [
-        // Owner sub-tabs
+        // Owner sub-tabs with pill indicator decoration
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: TabBar(
@@ -177,7 +184,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             isScrollable: true,
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textMuted,
-            indicatorColor: AppColors.primary,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicatorPadding: const EdgeInsets.symmetric(vertical: 4),
+            indicator: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
             dividerColor: Colors.transparent,
             tabAlignment: TabAlignment.start,
             tabs: const [
@@ -187,6 +199,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             ],
           ),
         ),
+
         Expanded(
           child: TabBarView(
             controller: _tabController,

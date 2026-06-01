@@ -1,4 +1,4 @@
-﻿import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -10,6 +10,7 @@ import 'package:petpal/features/auth/presentation/widgets/auth_gate.dart';
 import 'package:petpal/features/home/presentation/screens/guest_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
+import 'package:petpal/features/pets/presentation/screens/my_pets_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/profile_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/security_screen.dart';
@@ -42,6 +43,13 @@ import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_s
 import 'package:petpal/features/booking/presentation/screens/create_booking_screen.dart';
 import 'package:petpal/features/booking/presentation/screens/provider_profile_screen.dart';
 import 'package:petpal/features/reviews/presentation/screens/leave_review_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/poi_detail_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/admin_hub_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/sitter_verification_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/poi_management_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/moderation_queue_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/user_directory_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -186,8 +194,11 @@ class AppRouter {
         path: '/chat/:conversationId',
         builder: (context, state) {
           final extra = state.extra;
-          final otherName = extra is Map ? (extra['otherName'] as String? ?? '') : (extra as String? ?? '');
-          final otherPhotoUrl = extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
+          final otherName = extra is Map
+              ? (extra['otherName'] as String? ?? '')
+              : (extra as String? ?? '');
+          final otherPhotoUrl =
+              extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
           final otherUid = extra is Map ? (extra['otherUid'] as String?) : null;
           return ChatScreen(
             conversationId: state.pathParameters['conversationId']!,
@@ -225,7 +236,9 @@ class AppRouter {
         path: '/lost-found/compare',
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is! Map<String, LostFoundPost>) return const OnboardingScreen();
+          if (extra is! Map<String, LostFoundPost>) {
+            return const OnboardingScreen();
+          }
           final post1 = extra['post1'];
           final post2 = extra['post2'];
           if (post1 == null || post2 == null) return const OnboardingScreen();
@@ -242,8 +255,11 @@ class AppRouter {
           final serviceId = extra['serviceId'] as String?;
           final serviceType = extra['serviceType'] as String?;
           final priceText = extra['priceText'] as String?;
-          if (providerUid == null || providerName == null ||
-              serviceId == null || serviceType == null || priceText == null) {
+          if (providerUid == null ||
+              providerName == null ||
+              serviceId == null ||
+              serviceType == null ||
+              priceText == null) {
             return const OnboardingScreen();
           }
           return CreateBookingScreen(
@@ -284,7 +300,9 @@ class AppRouter {
           final bookingId = extra['bookingId'] as String?;
           final providerUid = extra['providerUid'] as String?;
           final providerName = extra['providerName'] as String?;
-          if (bookingId == null || providerUid == null || providerName == null) {
+          if (bookingId == null ||
+              providerUid == null ||
+              providerName == null) {
             return const OnboardingScreen();
           }
           return LeaveReviewScreen(
@@ -294,6 +312,37 @@ class AppRouter {
             providerPhotoUrl: extra['providerPhotoUrl'] as String?,
           );
         },
+      ),
+      GoRoute(
+        path: '/explore',
+        builder: (context, state) => const ExploreScreen(),
+      ),
+      GoRoute(
+        path: '/explore/poi/:poiId',
+        builder: (context, state) {
+          final poiId = state.pathParameters['poiId']!;
+          return POIDetailScreen(poiId: poiId);
+        },
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminHubScreen(),
+      ),
+      GoRoute(
+        path: '/admin/verification',
+        builder: (context, state) => const SitterVerificationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/poi',
+        builder: (context, state) => const POIManagementScreen(),
+      ),
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (context, state) => const ModerationQueueScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const UserDirectoryScreen(),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
@@ -314,7 +363,8 @@ class AppRouter {
       if (publicRoutes.contains(location)) return null;
 
       // Allow guest access to feed post details
-      if (location.startsWith('/feed/') && !location.startsWith('/feed/create')) {
+      if (location.startsWith('/feed/') &&
+          !location.startsWith('/feed/create')) {
         return null;
       }
 

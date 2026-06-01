@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,7 +48,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? AppColors.error : AppColors.primary,
+            isError ? const Color(0xFFB91C1C) : AppColors.primary,
       ),
     );
   }
@@ -100,7 +100,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 _ImagePickerOption(
                   icon: Icons.photo_library_rounded,
                   label: 'בחר/י מהגלריה',
-                  color: AppColors.smartBlue,
+                  color: const Color(0xFF0EA5E9),
                   onTap: () {
                     Navigator.pop(ctx);
                     _pickAndUpload(profile, ImageSource.gallery);
@@ -112,7 +112,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   _ImagePickerOption(
                     icon: Icons.delete_outline_rounded,
                     label: 'הסר תמונה',
-                    color: AppColors.error,
+                    color: const Color(0xFF9F1239),
                     onTap: () {
                       Navigator.pop(ctx);
                       _removePhoto(profile);
@@ -155,10 +155,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _isUploadingImage = false);
       _showSnack('התמונה עודכנה בהצלחה ✅');
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() => _isUploadingImage = false);
-      _showSnack('שגיאה בהעלאת התמונה: $e', isError: true);
+      _showSnack('שגיאה בהעלאת התמונה', isError: true);
     }
   }
 
@@ -247,6 +247,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return 'בעל חיית מחמד';
       case UserRole.serviceProvider:
         return 'מטפל/ת';
+      case UserRole.admin:
+        return 'מנהל מערכת';
     }
   }
 
@@ -423,7 +425,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             profile.email,
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondary
+                              color: const Color(0xFF334155)
                                   .withValues(alpha: 0.82),
                             ),
                           ),
@@ -477,7 +479,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             readOnly: true,
                             textDirection: TextDirection.ltr,
                             style: TextStyle(
-                              color: AppColors.textSecondary
+                              color: const Color(0xFF334155)
                                   .withValues(alpha: 0.6),
                             ),
                             decoration: InputDecoration(

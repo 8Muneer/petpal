@@ -1,4 +1,4 @@
-﻿import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/core/constants/app_constants.dart';
 import 'package:petpal/features/auth/data/models/user_model.dart';
@@ -41,8 +41,16 @@ class AuthRemoteDatasource {
   }
 
   Future<void> createUserDocument(UserModel user) async {
+    final userData = user.toCreateFirestore();
+
+    // Automatically make admin@gmail.com an admin
+    if (user.email == 'admin@gmail.com') {
+      userData['role'] = 'admin';
+      userData['userType'] = 'admin';
+    }
+
     await _usersRef.doc(user.uid).set(
-          user.toCreateFirestore(),
+          userData,
           SetOptions(merge: true),
         );
   }
