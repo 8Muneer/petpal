@@ -23,6 +23,13 @@ class ContentReport {
   final String? resolvedBy;
   final DateTime? resolvedAt;
 
+  // ── AI triage (cached once per report) ──
+  /// 1 (trivial) – 5 (critical), null until analyzed.
+  final int? aiSeverity;
+  final String? aiCategory;
+  final String? aiAction; // delete | dismiss | escalate
+  final String? aiRationale;
+
   ContentReport({
     required this.id,
     required this.targetId,
@@ -33,7 +40,13 @@ class ContentReport {
     required this.createdAt,
     this.resolvedBy,
     this.resolvedAt,
+    this.aiSeverity,
+    this.aiCategory,
+    this.aiAction,
+    this.aiRationale,
   });
+
+  bool get isAnalyzed => aiSeverity != null;
 
   factory ContentReport.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -52,9 +65,13 @@ class ContentReport {
       ),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       resolvedBy: data['resolvedBy'],
-      resolvedAt: data['resolvedAt'] != null 
-          ? (data['resolvedAt'] as Timestamp).toDate() 
+      resolvedAt: data['resolvedAt'] != null
+          ? (data['resolvedAt'] as Timestamp).toDate()
           : null,
+      aiSeverity: (data['aiSeverity'] as num?)?.toInt(),
+      aiCategory: data['aiCategory'] as String?,
+      aiAction: data['aiAction'] as String?,
+      aiRationale: data['aiRationale'] as String?,
     );
   }
 
@@ -68,6 +85,10 @@ class ContentReport {
       'createdAt': Timestamp.fromDate(createdAt),
       'resolvedBy': resolvedBy,
       'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
+      'aiSeverity': aiSeverity,
+      'aiCategory': aiCategory,
+      'aiAction': aiAction,
+      'aiRationale': aiRationale,
     };
   }
 }
