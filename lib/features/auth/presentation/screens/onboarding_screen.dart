@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -129,7 +128,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
             children: List.generate(3, (col) {
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ListView.builder(
                     controller: _controllers[col],
                     physics: const NeverScrollableScrollPhysics(),
@@ -138,7 +137,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                       final imgIdx = (col + index * 3) % _petImages.length;
                       final h = 110.0 + Random(imgIdx).nextDouble() * 80;
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: Image.network(
@@ -197,17 +196,23 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
             top: 16,
             right: 16,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.88),
+                color: Colors.white.withValues(alpha: 0.92),
                 borderRadius: AppRadius.fullRadius,
-                boxShadow: AppShadows.subtle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.pets_rounded,
-                      size: 16, color: AppColors.primary),
+                      size: 18, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Text(
                     'PetPal',
@@ -237,70 +242,173 @@ class _BottomContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Headline
-          RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: AppTextStyles.h1.copyWith(fontSize: 26),
-              children: const [
-                TextSpan(text: 'ברוכים הבאים ל-'),
-                TextSpan(
-                  text: 'PetPal',
-                  style: TextStyle(color: AppColors.primary),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.05),
+            AppColors.surfaceCard,
+          ],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 18, 28, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Paw watermark + headline
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.pets_rounded,
+                  size: 100,
+                  color: AppColors.primary.withValues(alpha: 0.04),
+                ),
+                Column(
+                  children: [
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: AppTextStyles.h1.copyWith(
+                            fontSize: 26, color: AppColors.textPrimary),
+                        children: [
+                          const TextSpan(text: 'ברוכים הבאים ל-'),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: ShaderMask(
+                              blendMode: BlendMode.srcIn,
+                              shaderCallback: (bounds) =>
+                                  const LinearGradient(
+                                colors: [
+                                  AppColors.primary,
+                                  AppColors.regalNavy,
+                                ],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ).createShader(bounds),
+                              child: Text(
+                                'PetPal',
+                                style: AppTextStyles.h1.copyWith(
+                                  fontSize: 26,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'מצא/י מטפל/ת אמין/ה או פרסם/י מודעות אבוד/נמצא בקלות.\nהכל במקום אחד — שירותים, צ׳אט והתראות.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.copyWith(height: 1.7),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 12),
+            const Spacer(),
 
-          Text(
-            'מצא/י מטפל/ת אמין/ה או פרסם/י מודעות אבוד/נמצא בקלות.\nהכל במקום אחד — שירותים, צ׳אט והתראות.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.caption.copyWith(height: 1.7),
-          ),
+            // Feature pills — each with its own accent colour
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                _FeaturePill(
+                  icon: Icons.directions_walk_rounded,
+                  label: 'טיולים',
+                  color: AppColors.sapphire,
+                ),
+                SizedBox(width: 10),
+                _FeaturePill(
+                  icon: Icons.home_work_rounded,
+                  label: 'שמירה',
+                  color: AppColors.success,
+                ),
+                SizedBox(width: 10),
+                _FeaturePill(
+                  icon: Icons.pets_rounded,
+                  label: 'אבודים',
+                  color: AppColors.warning,
+                ),
+              ],
+            ),
 
-          const Spacer(),
+            const SizedBox(height: 24),
 
-          // Feature pills row
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _FeaturePill(
-                  icon: Icons.directions_walk_rounded, label: 'טיולים'),
-              SizedBox(width: 10),
-              _FeaturePill(icon: Icons.home_work_rounded, label: 'שמירה'),
-              SizedBox(width: 10),
-              _FeaturePill(icon: Icons.pets_rounded, label: 'אבודים'),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          AppButton(
-            label: 'בואו נתחיל',
-            leadingIcon: Icons.rocket_launch_rounded,
-            onTap: onStartPressed,
-          ),
-
-          const SizedBox(height: 12),
-
-          TextButton(
-            onPressed: onGuestPressed,
-            child: Text(
-              'המשך/י כאורח/ת',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+            // Gradient CTA button
+            Container(
+              height: 54,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.regalNavy],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: onStartPressed,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.rocket_launch_rounded,
+                          color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'בואו נתחיל',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 16),
+
+            // Divider-style guest link
+            Row(
+              children: [
+                const Expanded(
+                    child: Divider(color: AppColors.divider, thickness: 1)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: GestureDetector(
+                    onTap: onGuestPressed,
+                    child: Text(
+                      'המשך/י כאורח/ת',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const Expanded(
+                    child: Divider(color: AppColors.divider, thickness: 1)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -309,24 +417,28 @@ class _BottomContent extends StatelessWidget {
 class _FeaturePill extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _FeaturePill({required this.icon, required this.label});
+  final Color color;
+  const _FeaturePill({required this.icon, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.primaryFaint,
+        color: color.withValues(alpha: 0.10),
         borderRadius: AppRadius.fullRadius,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.primary),
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: 5),
           Text(
             label,
-            style: AppTextStyles.label.copyWith(color: AppColors.primary),
+            style: AppTextStyles.label.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
