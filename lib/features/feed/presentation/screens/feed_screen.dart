@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/time_ago_text.dart';
@@ -40,7 +41,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
     const threshold = 200.0;
-    
+
     if (maxScroll - currentScroll <= threshold) {
       ref.read(paginatedFeedProvider.notifier).fetchNextPage();
     }
@@ -65,33 +66,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               parent: BouncingScrollPhysics(),
             ),
             slivers: [
-              // Floating header
-              SliverAppBar(
-                floating: true,
-                backgroundColor: Colors.white.withValues(alpha: 0.9),
-                surfaceTintColor: Colors.transparent,
-                elevation: 0,
-                centerTitle: false,
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'פיד חדשות',
-                      style: AppTextStyles.h2.copyWith(
-                        fontStyle: FontStyle.italic,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    Text(
-                      'קהילת PetPal',
-                      style: AppTextStyles.labelSm.copyWith(
-                        letterSpacing: 2.0,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Shared app header (avatar · title · bell)
+              AppHeaderBar.sliver(title: 'פיד', subtitle: 'קהילת PetPal'),
 
               // Sticky filter bar
               SliverPersistentHeader(
@@ -234,7 +210,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             ),
                           );
                         },
-                        childCount: filteredPosts.length + (state.isLoadingMore ? 1 : 0),
+                        childCount: filteredPosts.length +
+                            (state.isLoadingMore ? 1 : 0),
                       ),
                     ),
                   );

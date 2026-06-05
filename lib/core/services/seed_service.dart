@@ -131,15 +131,17 @@ class SeedService {
   // ─── PUBLIC METHODS ───
 
   /// Seeds a full demo environment
-  Future<void> seedData() async {
+  Future<void> seedData({String? currentUserId}) async {
     final batch = _firestore.batch();
     
     // 1. Create Providers
     final List<String> providerIds = [];
+    final Map<String, String> providerNames = {};
     for (int i = 0; i < 8; i++) {
       final pid = 'seed_provider_$i';
       providerIds.add(pid);
       final name = '${_hebrewFirstNames[_random.nextInt(_hebrewFirstNames.length)]} ${_hebrewLastNames[_random.nextInt(_hebrewLastNames.length)]}';
+      providerNames[pid] = name;
       
       // User Doc
       batch.set(_firestore.collection('users').doc(pid), {
@@ -158,7 +160,7 @@ class SeedService {
         'providerName': name,
         'providerPhotoUrl': _providerPhotos[_random.nextInt(_providerPhotos.length)],
         'area': _areas[_random.nextInt(_areas.length)],
-        'priceText': '${50 + _random.nextInt(100)}₪',
+        'priceText': '${50 + _random.nextInt(100)}',
         'priceType': 'ללילה',
         'bio': _providerBios[_random.nextInt(_providerBios.length)],
         'petTypes': ['dog', 'cat'],
@@ -193,7 +195,7 @@ class SeedService {
       // Pets for this owner
       for (int j = 0; j < 1 + _random.nextInt(2); j++) {
         final petId = 'pet_${oid}_$j';
-        batch.set(_firestore.collection('pets').doc(petId), {
+        batch.set(_firestore.collection('users').doc(oid).collection('pets').doc(petId), {
           'ownerUid': oid,
           'name': _petNames[_random.nextInt(_petNames.length)],
           'type': _random.nextBool() ? 'dog' : 'cat',
@@ -227,24 +229,61 @@ class SeedService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 4. Create Reviews for Closed Bookings
+      // 4. Create Reviews for Closed Bookings (Write to 'reviews' collection)
       if (status == 'closed') {
-        final rid = 'review_$bid';
-        batch.set(_firestore.collection('sitter_reviews').doc(rid), {
+        batch.set(_firestore.collection('reviews').doc(bid), {
           'bookingId': bid,
-          'sitterId': providerId,
-          'ownerId': ownerId,
-          'rating': 4.0 + (_random.nextDouble() * 1.0),
+          'reviewerUid': ownerId,
+          'reviewerName': 'משתמש דמו',
+          'reviewerPhotoUrl': null,
+          'providerId': providerId,
+          'rating': 4 + _random.nextInt(2), // 4 or 5 stars
           'comment': _reviews[_random.nextInt(_reviews.length)],
-          'vibeTags': [_vibeTags[_random.nextInt(_vibeTags.length)], _vibeTags[_random.nextInt(_vibeTags.length)]],
-          'imageUrls': [_petPhotos[_random.nextInt(_petPhotos.length)]],
           'isMock': true,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
     }
 
-    // 5. Seed POIs
+    // 5. Seed Direct Bookings for Current Logged-in User
+    if (currentUserId != null && currentUserId.isNotEmpty) {
+      // Ensure current user has a seeded pet
+      final userPetId = 'pet_${currentUserId}_0';
+      batch.set(_firestore.collection('users').doc(currentUserId).collection('pets').doc(userPetId), {
+        'ownerUid': currentUserId,
+        'name': 'רוקי',
+        'type': 'dog',
+        'imageUrl': _petPhotos[0],
+        'isMock': true,
+      });
+
+      // Create 2 accepted bookings (1 walk, 1 sitting)
+      for (int i = 0; i < 2; i++) {
+        final bid = 'mock_direct_booking_${currentUserId}_$i';
+        final providerId = providerIds[i % providerIds.length];
+        final providerName = providerNames[providerId] ?? 'נותן שירות דמו';
+        final isWalk = i == 0;
+
+        batch.set(_firestore.collection('booking_requests').doc(bid), {
+          'ownerUid': currentUserId,
+          'ownerName': 'בעלים נוכחי',
+          'ownerPhotoUrl': null,
+          'providerUid': providerId,
+          'providerName': providerName,
+          'providerPhotoUrl': _providerPhotos[i % _providerPhotos.length],
+          'serviceId': isWalk ? 'walk_service_$providerId' : 'service_$providerId',
+          'serviceType': isWalk ? 'walk' : 'sitting',
+          'petName': 'רוקי',
+          'petType': 'כלב',
+          'petImageUrl': _petPhotos[0],
+          'status': 'accepted',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isMock': true,
+        });
+      }
+    }
+
+    // 6. Seed POIs
     for (int i = 0; i < _pois.length; i++) {
       final poiData = _pois[i];
       batch.set(_firestore.collection('pois').doc('seed_poi_$i'), {
@@ -264,15 +303,23 @@ class SeedService {
       'pets',
       'sitting_services',
       'sitting_requests',
-      'sitter_reviews',
+      'walk_services',
+      'walk_requests',
+      'reviews',
+      'booking_requests',
       'pois',
     ];
 
     for (final collection in collections) {
-      final snapshot = await _firestore
-          .collection(collection)
-          .where('isMock', isEqualTo: true)
-          .get();
+      final snapshot = collection == 'pets'
+          ? await _firestore
+              .collectionGroup('pets')
+              .where('isMock', isEqualTo: true)
+              .get()
+          : await _firestore
+              .collection(collection)
+              .where('isMock', isEqualTo: true)
+              .get();
 
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {
