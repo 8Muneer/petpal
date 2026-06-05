@@ -31,7 +31,22 @@ mixin _$POI {
   String? get imageUrl => throw _privateConstructorUsedError;
   String? get address => throw _privateConstructorUsedError;
   String? get phoneNumber => throw _privateConstructorUsedError;
-  List<String> get tags => throw _privateConstructorUsedError;
+  List<String> get tags =>
+      throw _privateConstructorUsedError; // ── Extended metadata ──
+  String? get description => throw _privateConstructorUsedError;
+  String? get website => throw _privateConstructorUsedError;
+  String? get email => throw _privateConstructorUsedError;
+
+  /// True for places open around the clock (e.g. emergency vets, parks).
+  bool get open24h => throw _privateConstructorUsedError;
+
+  /// Weekly opening hours keyed by day (sun..sat). Value is "HH:MM-HH:MM",
+  /// or absent/empty when the place is closed that day.
+  Map<String, String> get openingHours => throw _privateConstructorUsedError;
+
+  /// Type-specific services / amenities (vet services, store categories,
+  /// park amenities).
+  List<String> get services => throw _privateConstructorUsedError;
 
   /// Serializes this POI to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -59,7 +74,13 @@ abstract class $POICopyWith<$Res> {
       String? imageUrl,
       String? address,
       String? phoneNumber,
-      List<String> tags});
+      List<String> tags,
+      String? description,
+      String? website,
+      String? email,
+      bool open24h,
+      Map<String, String> openingHours,
+      List<String> services});
 }
 
 /// @nodoc
@@ -88,6 +109,12 @@ class _$POICopyWithImpl<$Res, $Val extends POI> implements $POICopyWith<$Res> {
     Object? address = freezed,
     Object? phoneNumber = freezed,
     Object? tags = null,
+    Object? description = freezed,
+    Object? website = freezed,
+    Object? email = freezed,
+    Object? open24h = null,
+    Object? openingHours = null,
+    Object? services = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -138,6 +165,30 @@ class _$POICopyWithImpl<$Res, $Val extends POI> implements $POICopyWith<$Res> {
           ? _value.tags
           : tags // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
+      website: freezed == website
+          ? _value.website
+          : website // ignore: cast_nullable_to_non_nullable
+              as String?,
+      email: freezed == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String?,
+      open24h: null == open24h
+          ? _value.open24h
+          : open24h // ignore: cast_nullable_to_non_nullable
+              as bool,
+      openingHours: null == openingHours
+          ? _value.openingHours
+          : openingHours // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
+      services: null == services
+          ? _value.services
+          : services // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ) as $Val);
   }
 }
@@ -160,7 +211,13 @@ abstract class _$$POIImplCopyWith<$Res> implements $POICopyWith<$Res> {
       String? imageUrl,
       String? address,
       String? phoneNumber,
-      List<String> tags});
+      List<String> tags,
+      String? description,
+      String? website,
+      String? email,
+      bool open24h,
+      Map<String, String> openingHours,
+      List<String> services});
 }
 
 /// @nodoc
@@ -186,6 +243,12 @@ class __$$POIImplCopyWithImpl<$Res> extends _$POICopyWithImpl<$Res, _$POIImpl>
     Object? address = freezed,
     Object? phoneNumber = freezed,
     Object? tags = null,
+    Object? description = freezed,
+    Object? website = freezed,
+    Object? email = freezed,
+    Object? open24h = null,
+    Object? openingHours = null,
+    Object? services = null,
   }) {
     return _then(_$POIImpl(
       id: null == id
@@ -236,6 +299,30 @@ class __$$POIImplCopyWithImpl<$Res> extends _$POICopyWithImpl<$Res, _$POIImpl>
           ? _value._tags
           : tags // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
+      website: freezed == website
+          ? _value.website
+          : website // ignore: cast_nullable_to_non_nullable
+              as String?,
+      email: freezed == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String?,
+      open24h: null == open24h
+          ? _value.open24h
+          : open24h // ignore: cast_nullable_to_non_nullable
+              as bool,
+      openingHours: null == openingHours
+          ? _value._openingHours
+          : openingHours // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
+      services: null == services
+          ? _value._services
+          : services // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
@@ -255,8 +342,16 @@ class _$POIImpl implements _POI {
       this.imageUrl,
       this.address,
       this.phoneNumber,
-      final List<String> tags = const []})
-      : _tags = tags;
+      final List<String> tags = const [],
+      this.description,
+      this.website,
+      this.email,
+      this.open24h = false,
+      final Map<String, String> openingHours = const {},
+      final List<String> services = const []})
+      : _tags = tags,
+        _openingHours = openingHours,
+        _services = services;
 
   factory _$POIImpl.fromJson(Map<String, dynamic> json) =>
       _$$POIImplFromJson(json);
@@ -295,9 +390,50 @@ class _$POIImpl implements _POI {
     return EqualUnmodifiableListView(_tags);
   }
 
+// ── Extended metadata ──
+  @override
+  final String? description;
+  @override
+  final String? website;
+  @override
+  final String? email;
+
+  /// True for places open around the clock (e.g. emergency vets, parks).
+  @override
+  @JsonKey()
+  final bool open24h;
+
+  /// Weekly opening hours keyed by day (sun..sat). Value is "HH:MM-HH:MM",
+  /// or absent/empty when the place is closed that day.
+  final Map<String, String> _openingHours;
+
+  /// Weekly opening hours keyed by day (sun..sat). Value is "HH:MM-HH:MM",
+  /// or absent/empty when the place is closed that day.
+  @override
+  @JsonKey()
+  Map<String, String> get openingHours {
+    if (_openingHours is EqualUnmodifiableMapView) return _openingHours;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_openingHours);
+  }
+
+  /// Type-specific services / amenities (vet services, store categories,
+  /// park amenities).
+  final List<String> _services;
+
+  /// Type-specific services / amenities (vet services, store categories,
+  /// park amenities).
+  @override
+  @JsonKey()
+  List<String> get services {
+    if (_services is EqualUnmodifiableListView) return _services;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_services);
+  }
+
   @override
   String toString() {
-    return 'POI(id: $id, name: $name, type: $type, isEmergency: $isEmergency, latitude: $latitude, longitude: $longitude, rating: $rating, reviewCount: $reviewCount, imageUrl: $imageUrl, address: $address, phoneNumber: $phoneNumber, tags: $tags)';
+    return 'POI(id: $id, name: $name, type: $type, isEmergency: $isEmergency, latitude: $latitude, longitude: $longitude, rating: $rating, reviewCount: $reviewCount, imageUrl: $imageUrl, address: $address, phoneNumber: $phoneNumber, tags: $tags, description: $description, website: $website, email: $email, open24h: $open24h, openingHours: $openingHours, services: $services)';
   }
 
   @override
@@ -322,7 +458,15 @@ class _$POIImpl implements _POI {
             (identical(other.address, address) || other.address == address) &&
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
-            const DeepCollectionEquality().equals(other._tags, _tags));
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
+            (identical(other.website, website) || other.website == website) &&
+            (identical(other.email, email) || other.email == email) &&
+            (identical(other.open24h, open24h) || other.open24h == open24h) &&
+            const DeepCollectionEquality()
+                .equals(other._openingHours, _openingHours) &&
+            const DeepCollectionEquality().equals(other._services, _services));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -340,7 +484,13 @@ class _$POIImpl implements _POI {
       imageUrl,
       address,
       phoneNumber,
-      const DeepCollectionEquality().hash(_tags));
+      const DeepCollectionEquality().hash(_tags),
+      description,
+      website,
+      email,
+      open24h,
+      const DeepCollectionEquality().hash(_openingHours),
+      const DeepCollectionEquality().hash(_services));
 
   /// Create a copy of POI
   /// with the given fields replaced by the non-null parameter values.
@@ -371,7 +521,13 @@ abstract class _POI implements POI {
       final String? imageUrl,
       final String? address,
       final String? phoneNumber,
-      final List<String> tags}) = _$POIImpl;
+      final List<String> tags,
+      final String? description,
+      final String? website,
+      final String? email,
+      final bool open24h,
+      final Map<String, String> openingHours,
+      final List<String> services}) = _$POIImpl;
 
   factory _POI.fromJson(Map<String, dynamic> json) = _$POIImpl.fromJson;
 
@@ -398,7 +554,27 @@ abstract class _POI implements POI {
   @override
   String? get phoneNumber;
   @override
-  List<String> get tags;
+  List<String> get tags; // ── Extended metadata ──
+  @override
+  String? get description;
+  @override
+  String? get website;
+  @override
+  String? get email;
+
+  /// True for places open around the clock (e.g. emergency vets, parks).
+  @override
+  bool get open24h;
+
+  /// Weekly opening hours keyed by day (sun..sat). Value is "HH:MM-HH:MM",
+  /// or absent/empty when the place is closed that day.
+  @override
+  Map<String, String> get openingHours;
+
+  /// Type-specific services / amenities (vet services, store categories,
+  /// park amenities).
+  @override
+  List<String> get services;
 
   /// Create a copy of POI
   /// with the given fields replaced by the non-null parameter values.

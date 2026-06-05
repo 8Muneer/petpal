@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
+import 'package:petpal/core/widgets/app_search_bar.dart';
+import 'package:petpal/core/widgets/filter_button.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
-import 'package:petpal/features/explore/presentation/widgets/explore_search_bar.dart';
+import 'package:petpal/features/explore/presentation/providers/poi_filters_provider.dart';
 import 'package:petpal/features/explore/presentation/widgets/filter_bottom_sheet.dart';
 import 'package:petpal/features/sitting/presentation/providers/marketplace_provider.dart';
 import 'package:petpal/core/widgets/boutique_property_card.dart';
@@ -53,7 +56,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
     return AppScaffold(
       body: ColoredBox(
-        color: const Color(0xFFF8F9FA), // Off-white background
+        color: AppColors.surface,
         child: profileAsync.when(
           data: (profile) {
             if (profile == null) {
@@ -64,7 +67,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
             return Column(
               children: [
-                _buildHeader(context),
+                const AppHeaderBar(title: 'גלה'),
+                _buildHeader(context, isOwner: isOwner),
                 Expanded(
                   child: isOwner
                       ? _buildOwnerView(context)
@@ -80,94 +84,43 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, {required bool isOwner}) {
+    final filterActiveCount = isOwner
+        ? ref.watch(poiFiltersProvider).activeCount
+        : (ref.watch(marketplaceFiltersProvider).hasActiveFilters ? 1 : 0);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Centered Header Title with premium styling
-          Center(
-            child: Text(
-              'גלה',
-              style: AppTextStyles.h2.copyWith(
-                fontStyle: FontStyle.italic,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          // Integrated search and filter row
           Row(
             children: [
-              Expanded(
-                child: ExploreSearchBar(
-                  onChanged: (value) {
-                    ref.read(marketplaceFiltersProvider.notifier).updateSearch(value);
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              _buildSquareAction(
-                Icons.tune,
-                () {
+              FilterButton(
+                activeCount: filterActiveCount,
+                onTap: () {
                   HapticFeedback.lightImpact();
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    builder: (context) => const FilterBottomSheet(),
+                    builder: (_) => FilterBottomSheet(isOwner: isOwner),
                   );
                 },
-                hasBadge:
-                    ref.watch(marketplaceFiltersProvider).hasActiveFilters,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppSearchBar(
+                  hint: 'חפש...',
+                  onChanged: (value) {
+                    ref
+                        .read(marketplaceFiltersProvider.notifier)
+                        .updateSearch(value);
+                  },
+                ),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSquareAction(IconData icon, VoidCallback onTap,
-      {bool hasBadge = false}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            height: 54,
-            width: 54,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border:
-                  Border.all(color: AppColors.border.withValues(alpha: 0.08)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: AppColors.onSurface, size: 20),
-          ),
-          if (hasBadge)
-            Positioned(
-              top: -2,
-              right: -2,
-              child: Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -216,13 +169,25 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   Widget _buildPOIList(POIType type) {
     final poisAsync = ref.watch(nearbyPOIsProvider(type: type));
+    final poiFilters = ref.watch(poiFiltersProvider);
 
     return poisAsync.when(
-      data: (pois) {
+      data: (allPois) {
+        final pois = allPois.where((poi) {
+          if (poiFilters.minRating != null &&
+              poi.rating < poiFilters.minRating!) {
+            return false;
+          }
+          if (poiFilters.hasReviewsOnly && poi.reviewCount == 0) {
+            return false;
+          }
+          return true;
+        }).toList();
+
         if (pois.isEmpty) {
           return const EmptyStateWidget(
             title: 'לא נמצאו תוצאות',
-            subtitle: 'נסה לחפש באזור אחר',
+            subtitle: 'נסה לשנות את הסינון',
             icon: Icons.map_outlined,
           );
         }
@@ -230,7 +195,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           count: pois.length,
           itemBuilder: (context, index) {
             final poi = pois[index];
-            
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: POICard(

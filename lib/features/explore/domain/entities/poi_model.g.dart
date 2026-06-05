@@ -21,6 +21,18 @@ _$POIImpl _$$POIImplFromJson(Map<String, dynamic> json) => _$POIImpl(
       tags:
           (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
+      description: json['description'] as String?,
+      website: json['website'] as String?,
+      email: json['email'] as String?,
+      open24h: json['open24h'] as bool? ?? false,
+      openingHours: (json['openingHours'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, e as String),
+          ) ??
+          const {},
+      services: (json['services'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$$POIImplToJson(_$POIImpl instance) => <String, dynamic>{
@@ -36,6 +48,12 @@ Map<String, dynamic> _$$POIImplToJson(_$POIImpl instance) => <String, dynamic>{
       'address': instance.address,
       'phoneNumber': instance.phoneNumber,
       'tags': instance.tags,
+      'description': instance.description,
+      'website': instance.website,
+      'email': instance.email,
+      'open24h': instance.open24h,
+      'openingHours': instance.openingHours,
+      'services': instance.services,
     };
 
 const _$POITypeEnumMap = {
