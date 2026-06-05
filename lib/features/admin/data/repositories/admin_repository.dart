@@ -33,7 +33,8 @@ class AdminRepository {
 
   // --- POI Management ---
   Future<void> savePOI(POI poi) async {
-    final docRef = _firestore.collection('pois').doc(poi.id.isEmpty ? null : poi.id);
+    final docRef =
+        _firestore.collection('pois').doc(poi.id.isEmpty ? null : poi.id);
     await docRef.set({
       'name': poi.name,
       'type': poi.type.name,
@@ -46,6 +47,12 @@ class AdminRepository {
       'phoneNumber': poi.phoneNumber,
       'isEmergency': poi.isEmergency,
       'tags': poi.tags,
+      'description': poi.description,
+      'website': poi.website,
+      'email': poi.email,
+      'open24h': poi.open24h,
+      'openingHours': poi.openingHours,
+      'services': poi.services,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -65,11 +72,10 @@ class AdminRepository {
 
   // --- User Oversight ---
   Stream<List<Map<String, dynamic>>> watchAllUsers() {
-    return _firestore
-        .collection('users')
-        .orderBy('name')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => {...doc.data(), 'uid': doc.id}).toList());
+    return _firestore.collection('users').orderBy('name').snapshots().map(
+        (snapshot) => snapshot.docs
+            .map((doc) => {...doc.data(), 'uid': doc.id})
+            .toList());
   }
 
   Future<void> updateUserStatus(String userId, bool isActive) async {
@@ -106,7 +112,8 @@ class AdminRepository {
     final batch = _firestore.batch();
 
     // Update the request
-    batch.update(_firestore.collection('verification_requests').doc(requestId), {
+    batch
+        .update(_firestore.collection('verification_requests').doc(requestId), {
       'status': status,
       'notes': notes,
       'reviewedBy': adminId,
