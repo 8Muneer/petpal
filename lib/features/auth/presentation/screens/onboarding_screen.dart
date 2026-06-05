@@ -177,7 +177,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
             bottom: 0,
             left: 0,
             right: 0,
-            height: 80,
+            height: 110,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -238,7 +238,7 @@ class _BottomContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -246,9 +246,9 @@ class _BottomContent extends StatelessWidget {
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: AppTextStyles.h1.copyWith(fontSize: 24),
+              style: AppTextStyles.h1.copyWith(fontSize: 26),
               children: const [
-                TextSpan(text: 'ברוכים הבאים ל'),
+                TextSpan(text: 'ברוכים הבאים ל-'),
                 TextSpan(
                   text: 'PetPal',
                   style: TextStyle(color: AppColors.primary),
@@ -257,12 +257,12 @@ class _BottomContent extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           Text(
             'מצא/י מטפל/ת אמין/ה או פרסם/י מודעות אבוד/נמצא בקלות.\nהכל במקום אחד — שירותים, צ׳אט והתראות.',
             textAlign: TextAlign.center,
-            style: AppTextStyles.caption.copyWith(height: 1.6),
+            style: AppTextStyles.caption.copyWith(height: 1.7),
           ),
 
           const Spacer(),
@@ -273,14 +273,14 @@ class _BottomContent extends StatelessWidget {
             children: [
               _FeaturePill(
                   icon: Icons.directions_walk_rounded, label: 'טיולים'),
-              SizedBox(width: 8),
+              SizedBox(width: 10),
               _FeaturePill(icon: Icons.home_work_rounded, label: 'שמירה'),
-              SizedBox(width: 8),
+              SizedBox(width: 10),
               _FeaturePill(icon: Icons.pets_rounded, label: 'אבודים'),
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           AppButton(
             label: 'בואו נתחיל',
@@ -288,7 +288,7 @@ class _BottomContent extends StatelessWidget {
             onTap: onStartPressed,
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           TextButton(
             onPressed: onGuestPressed,
