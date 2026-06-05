@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
@@ -164,157 +164,237 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surfaceCard,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 16),
-
-                // Back button
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _BackButton(onTap: () => context.pop()),
-                ),
-
-                const SizedBox(height: 20),
-
-                Text('יצירת חשבון', style: AppTextStyles.h1),
-                const SizedBox(height: 4),
-                Text('הצטרף/י לקהילת PetPal', style: AppTextStyles.caption),
-
-                const SizedBox(height: 28),
-
-                // Role selector
-                _RoleSelector(
-                  isPetOwner: _isPetOwner,
-                  onChanged: (v) => setState(() => _isPetOwner = v),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Form fields
-                AppInput(
-                  controller: _nameCtrl,
-                  label: 'שם מלא',
-                  hint: 'הזן/י שם',
-                  icon: Icons.badge_outlined,
-                  textInputAction: TextInputAction.next,
-                  errorText: _nameError,
-                  onChanged: _validateName,
-                ),
-                const SizedBox(height: 14),
-                AppInput(
-                  controller: _emailCtrl,
-                  label: 'אימייל',
-                  hint: 'name@example.com',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  textDirection: TextDirection.ltr,
-                  errorText: _emailError,
-                  onChanged: _validateEmail,
-                ),
-                const SizedBox(height: 14),
-                AppInput(
-                  controller: _passwordCtrl,
-                  label: 'סיסמה',
-                  icon: Icons.lock_outline_rounded,
-                  isPassword: true,
-                  textInputAction: TextInputAction.next,
-                  textDirection: TextDirection.ltr,
-                  errorText: _passwordError,
-                  onChanged: _validatePassword,
-                ),
-                const SizedBox(height: 14),
-                AppInput(
-                  controller: _confirmCtrl,
-                  label: 'אימות סיסמה',
-                  icon: Icons.lock_reset_outlined,
-                  isPassword: true,
-                  textInputAction: TextInputAction.done,
-                  textDirection: TextDirection.ltr,
-                  errorText: _confirmError,
-                  onChanged: _validateConfirm,
-                  onEditingComplete: _isLoading ? null : _handleSignup,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Terms checkbox
-                GestureDetector(
-                  onTap: () =>
-                      setState(() => _acceptTerms = !_acceptTerms),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: _acceptTerms,
-                          onChanged: (v) =>
-                              setState(() => _acceptTerms = v ?? false),
-                          activeColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppRadius.smRadius,
-                          ),
-                          side: const BorderSide(
-                              color: AppColors.border, width: 1.5),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'אני מאשר/ת את תנאי השימוש והמדיניות',
-                          style: AppTextStyles.caption,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                AppButton(
-                  label: 'צור חשבון',
-                  onTap: _isLoading ? null : _handleSignup,
-                  isLoading: _isLoading,
-                  leadingIcon: Icons.check_rounded,
-                ),
-
-                const SizedBox(height: 20),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        body: Container(
+          width: size.width,
+          height: size.height,
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: const NetworkImage(
+                'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2000',
+              ),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Colors.black.withValues(alpha: 0.3),
+                BlendMode.darken,
+              ),
+            ),
+          ),
+          child: Stack(
+            children: [
+              // --- HEADER SECTION ---
+              Positioned(
+                top: topPadding + 20,
+                left: 0,
+                right: 0,
+                child: Column(
                   children: [
-                    Text('כבר יש לך חשבון?', style: AppTextStyles.caption),
-                    TextButton(
-                      onPressed:
-                          _isLoading ? null : () => context.push('/login'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    // Back button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: _BackButton(
+                          onTap: () => context.pop(),
+                          color: Colors.white.withValues(alpha: 0.2),
+                          iconColor: Colors.white,
+                        ),
                       ),
-                      child: Text(
-                        'התחבר/י',
-                        style: AppTextStyles.bodyBold
-                            .copyWith(color: AppColors.primary),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'יצירת חשבון',
+                      style: AppTextStyles.h1.copyWith(
+                        color: Colors.white,
+                        fontSize: 28,
+                        letterSpacing: -0.5,
                       ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'הצטרף/י לקהילת PetPal',
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
+              ),
 
-                const SizedBox(height: 16),
-              ],
-            ),
+              // --- FLOATING FORM CARD ---
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: size.height * 0.75,
+                  decoration: BoxDecoration(
+                    color: AppColors.pureWhite,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(40),
+                      topRight: Radius.circular(40),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 40,
+                        offset: const Offset(0, -10),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Role selector
+                        _RoleSelector(
+                          isPetOwner: _isPetOwner,
+                          onChanged: (v) => setState(() => _isPetOwner = v),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Form fields
+                        AppInput(
+                          controller: _nameCtrl,
+                          label: 'שם מלא',
+                          hint: 'הזן/י שם',
+                          icon: Icons.badge_outlined,
+                          textInputAction: TextInputAction.next,
+                          errorText: _nameError,
+                          onChanged: _validateName,
+                        ),
+                        const SizedBox(height: 16),
+                        AppInput(
+                          controller: _emailCtrl,
+                          label: 'אימייל',
+                          hint: 'name@example.com',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          textDirection: TextDirection.ltr,
+                          errorText: _emailError,
+                          onChanged: _validateEmail,
+                        ),
+                        const SizedBox(height: 16),
+                        AppInput(
+                          controller: _passwordCtrl,
+                          label: 'סיסמה',
+                          icon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          textInputAction: TextInputAction.next,
+                          textDirection: TextDirection.ltr,
+                          errorText: _passwordError,
+                          onChanged: _validatePassword,
+                        ),
+                        const SizedBox(height: 16),
+                        AppInput(
+                          controller: _confirmCtrl,
+                          label: 'אימות סיסמה',
+                          icon: Icons.lock_reset_outlined,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          textDirection: TextDirection.ltr,
+                          errorText: _confirmError,
+                          onChanged: _validateConfirm,
+                          onEditingComplete: _isLoading ? null : _handleSignup,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Terms checkbox
+                        GestureDetector(
+                          onTap: () =>
+                              setState(() => _acceptTerms = !_acceptTerms),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Checkbox(
+                                  value: _acceptTerms,
+                                  onChanged: (v) =>
+                                      setState(() => _acceptTerms = v ?? false),
+                                  activeColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppRadius.smRadius,
+                                  ),
+                                  side: const BorderSide(
+                                      color: AppColors.border, width: 1.5),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  'אני מאשר/ת את תנאי השימוש והמדיניות',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        AppButton(
+                          label: 'צור חשבון',
+                          onTap: _isLoading ? null : _handleSignup,
+                          isLoading: _isLoading,
+                          leadingIcon: Icons.check_rounded,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'כבר יש לך חשבון?',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => context.push('/login'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'התחבר/י',
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: AppColors.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -324,23 +404,30 @@ class _SignupScreenState extends State<SignupScreen> {
 
 class _BackButton extends StatelessWidget {
   final VoidCallback onTap;
-  const _BackButton({required this.onTap});
+  final Color? color;
+  final Color? iconColor;
+
+  const _BackButton({
+    required this.onTap,
+    this.color,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          color: AppColors.surfaceBase,
+          color: color ?? AppColors.surfaceBase,
           borderRadius: AppRadius.mdRadius,
         ),
-        child: const Icon(
+        child: Icon(
           Icons.arrow_forward_rounded,
-          size: 20,
-          color: AppColors.textSecondary,
+          size: 22,
+          color: iconColor ?? AppColors.textSecondary,
         ),
       ),
     );

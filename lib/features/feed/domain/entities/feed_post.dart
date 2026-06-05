@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+﻿import 'package:equatable/equatable.dart';
 
 enum PostType { post, tip }
 
@@ -9,7 +9,7 @@ class FeedPost extends Equatable {
   final String? authorPhotoUrl;
   final PostType type;
   final String content;
-  final String? imageUrl;
+  final List<String> imageUrls;
   final List<String> likes;
   final int commentCount;
   final DateTime? createdAt;
@@ -21,11 +21,14 @@ class FeedPost extends Equatable {
     this.authorPhotoUrl,
     required this.type,
     required this.content,
-    this.imageUrl,
+    this.imageUrls = const [],
     this.likes = const [],
     this.commentCount = 0,
     this.createdAt,
   });
+
+  // Backward-compat getter used by post_detail_screen and feed_screen
+  String? get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : null;
 
   bool isLikedBy(String uid) => likes.contains(uid);
 
@@ -37,7 +40,7 @@ class FeedPost extends Equatable {
         authorPhotoUrl,
         type,
         content,
-        imageUrl,
+        imageUrls,
         likes,
         commentCount,
         createdAt,

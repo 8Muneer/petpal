@@ -53,13 +53,17 @@ final createLostFoundPostProvider =
     final datasource = ref.read(lostFoundDatasourceProvider);
     final matchService = ref.read(lostFoundMatchServiceProvider);
 
-    final docId = await datasource.createPost(post.toFirestore());
+    // Generate a client-side document reference to get a secure ID first
+    final docRef = FirebaseFirestore.instance.collection('lost_found_posts').doc();
+    final docId = docRef.id;
+
+    // Upload image first
     final imageUrl = await datasource.uploadImage(docId, imageFile);
 
-    await FirebaseFirestore.instance
-        .collection('lost_found_posts')
-        .doc(docId)
-        .update({'imageUrl': imageUrl});
+    // Write full document atomically
+    final firestoreData = post.toFirestore();
+    firestoreData['imageUrl'] = imageUrl;
+    await docRef.set(firestoreData);
 
     final finalPost = LostFoundPostModel(
       id: docId,
@@ -84,11 +88,16 @@ final createLostFoundPostProvider =
 final rerunMatchingProvider =
     Provider<Future<void> Function(LostFoundPost)>((ref) {
   return (post) async {
-    final datasource = ref.read(lostFoundDatasourceProvider);
     final matchService = ref.read(lostFoundMatchServiceProvider);
 
-    // Reset status to pending so UI reflects fresh start
-    await datasource.updateMatchingStatus(post.id, MatchingStatus.pending);
+    // Reset status to pending and clear old matches to prevent duplicate appends on rerun
+    await FirebaseFirestore.instance
+        .collection('lost_found_posts')
+        .doc(post.id)
+        .update({
+      'matchingStatus': 'pending',
+      'matches': [],
+    });
 
     final model = LostFoundPostModel(
       id: post.id,

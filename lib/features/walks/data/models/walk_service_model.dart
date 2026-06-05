@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 
 class WalkServiceModel extends WalkService {

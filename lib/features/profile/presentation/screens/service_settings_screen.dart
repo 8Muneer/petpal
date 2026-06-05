@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -80,8 +80,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
     if (mounted) {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('השירותים עודכנו בהצלחה'),
+        const SnackBar(
+          content: Text('השירותים עודכנו בהצלחה'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -173,7 +173,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
                                 value: _offersWalks,
                                 onChanged: (v) =>
                                     setState(() => _offersWalks = v),
-                                activeColor: AppColors.walks,
+                                activeThumbColor: AppColors.walks,
+                                activeTrackColor: AppColors.walks.withValues(alpha: 0.35),
                               ),
                             ],
                           ),
@@ -235,7 +236,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
                                 value: _offersSitting,
                                 onChanged: (v) =>
                                     setState(() => _offersSitting = v),
-                                activeColor: AppColors.sitting,
+                                activeThumbColor: AppColors.sitting,
+                                activeTrackColor: AppColors.sitting.withValues(alpha: 0.35),
                               ),
                             ],
                           ),

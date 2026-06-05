@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/walks/data/models/walk_request_model.dart';
 import 'package:petpal/features/walks/data/models/walk_service_model.dart';
 
@@ -48,6 +48,7 @@ class WalkRemoteDatasource {
   Stream<List<WalkServiceModel>> watchWalkServices() {
     return _servicesRef
         .where('isActive', isEqualTo: true)
+        .limit(50)
         .snapshots()
         .map((snap) =>
             snap.docs.map((doc) => WalkServiceModel.fromFirestore(doc)).toList());

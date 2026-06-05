@@ -1,14 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
 class PrivacyScreen extends ConsumerStatefulWidget {
@@ -33,7 +29,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFB91C1C) : AppColors.primary,
+            isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -123,7 +119,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
-                              color: AppColors.primary.withOpacity(0.12),
+                              color: AppColors.primary.withValues(alpha: 0.12),
                             ),
                             child: const Icon(Icons.privacy_tip_rounded,
                                 color: AppColors.primary),
@@ -135,7 +131,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color:
-                                    const Color(0xFF334155).withOpacity(0.85),
+                                    AppColors.textSecondary.withValues(alpha: 0.85),
                               ),
                             ),
                           ),
@@ -161,7 +157,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           Divider(
                             height: 1,
                             thickness: 1,
-                            color: AppColors.border.withOpacity(0.7),
+                            color: AppColors.border.withValues(alpha: 0.7),
                           ),
                           _PrivacyToggle(
                             icon: Icons.email_rounded,
@@ -174,7 +170,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           Divider(
                             height: 1,
                             thickness: 1,
-                            color: AppColors.border.withOpacity(0.7),
+                            color: AppColors.border.withValues(alpha: 0.7),
                           ),
                           _PrivacyToggle(
                             icon: Icons.location_on_rounded,
@@ -285,7 +281,7 @@ class _PrivacyToggle extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF334155).withOpacity(0.82),
+                    color: AppColors.textSecondary.withValues(alpha: 0.82),
                   ),
                 ),
               ],
@@ -294,7 +290,7 @@ class _PrivacyToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),

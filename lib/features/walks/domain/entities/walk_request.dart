@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+﻿import 'package:equatable/equatable.dart';
 
 enum PetType { dog, cat, other }
 
@@ -18,6 +18,7 @@ class WalkRequest extends Equatable {
   final String duration;
   final String area;
   final String? petImageUrl;
+  final List<String> petImageUrls;
   final PetGender? petGender;
   final String? specialInstructions;
   final String? budget;
@@ -36,12 +37,19 @@ class WalkRequest extends Equatable {
     required this.duration,
     required this.area,
     this.petImageUrl,
+    this.petImageUrls = const [],
     this.petGender,
     this.specialInstructions,
     this.budget,
     this.status = WalkStatus.open,
     this.createdAt,
   });
+
+  List<String> get allImages {
+    if (petImageUrls.isNotEmpty) return petImageUrls;
+    if (petImageUrl != null && petImageUrl!.isNotEmpty) return [petImageUrl!];
+    return [];
+  }
 
   @override
   List<Object?> get props => [
@@ -56,6 +64,7 @@ class WalkRequest extends Equatable {
         duration,
         area,
         petImageUrl,
+        petImageUrls,
         petGender,
         specialInstructions,
         budget,

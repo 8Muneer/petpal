@@ -4,14 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/time_ago_text.dart';
 import 'package:petpal/features/feed/domain/entities/feed_comment.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
@@ -50,12 +47,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       await repo.addComment(widget.postId, {
         'authorUid': user.uid,
         'authorName': user.displayName ?? user.email?.split('@').first ?? '',
-        'authorPhotoUrl': ref.read(currentUserProfileProvider).asData?.value?.photoUrl ?? user.photoURL,
+        'authorPhotoUrl':
+            ref.read(currentUserProfileProvider).asData?.value?.photoUrl ??
+                user.photoURL,
         'content': text,
       });
 
       _commentController.clear();
-      FocusScope.of(context).unfocus();
+      if (mounted) FocusScope.of(context).unfocus();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +64,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           content: const Text('שגיאה בשליחת התגובה'),
-          backgroundColor: const Color(0xFFFB7185),
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -73,7 +72,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
   }
 
-  void _showLoginDialog(BuildContext context) {
+  void _showLoginDialog() {
     showDialog<void>(
       context: context,
       builder: (ctx) => Directionality(
@@ -83,17 +82,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           surfaceTintColor: Colors.transparent,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text(
-            'צריך להתחבר כדי להמשיך',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: const Text(
-            'התחבר/י כדי לתת לייק, להגיב ולפרסם פוסטים.',
-          ),
+          title: Text('צריך להתחבר כדי להמשיך',
+              style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w900)),
+          content: Text('התחבר/י כדי לתת לייק, להגיב ולפרסם פוסטים.',
+              style: AppTextStyles.bodyMd),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('ביטול'),
+              child: Text('ביטול',
+                  style: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.textMuted)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -105,8 +103,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                    borderRadius: BorderRadius.circular(14)),
               ),
               child: const Text('התחבר/י',
                   style: TextStyle(fontWeight: FontWeight.w900)),
@@ -127,15 +124,23 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           surfaceTintColor: Colors.transparent,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text(
-            'למחוק את הפוסט?',
-            style: TextStyle(fontWeight: FontWeight.w900),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.error, size: 22),
+              const SizedBox(width: 10),
+              Text('למחוק את הפוסט?',
+                  style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w900)),
+            ],
           ),
-          content: const Text('הפעולה הזו לא ניתנת לביטול.'),
+          content: Text('הפעולה הזו לא ניתנת לביטול.',
+              style: AppTextStyles.bodyMd),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('ביטול'),
+              child: Text('ביטול',
+                  style:
+                      AppTextStyles.bodyMd.copyWith(color: AppColors.textMuted)),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -145,14 +150,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 context.pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFB7185),
+                backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                    borderRadius: BorderRadius.circular(14)),
               ),
               child: const Text('מחיקה',
                   style: TextStyle(fontWeight: FontWeight.w900)),
@@ -172,255 +176,192 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AppScaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Content
-              Expanded(
-                child: postsAsync.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.primary),
+        extendBody: false,
+        body: Column(
+          children: [
+            // ── Header ──────────────────────────────────────
+            Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  height: 60,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(
+                          color: AppColors.border.withValues(alpha: 0.5),
+                          width: 0.8),
+                    ),
                   ),
-                  error: (e, _) => Center(child: Text('שגיאה: $e')),
-                  data: (posts) {
-                    final post = posts
-                        .where((p) => p.id == widget.postId)
-                        .firstOrNull;
-                    if (post == null) {
-                      return const Center(
-                        child: Text('הפוסט לא נמצא'),
-                      );
-                    }
-
-                    final isAuthor = post.authorUid == uid;
-
-                    return Column(
-                      children: [
-                        // Top bar
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                onPressed: () => context.pop(),
-                                icon: const Icon(Icons.arrow_forward_rounded),
-                                color: AppColors.textPrimary,
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  'פוסט',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              if (isAuthor)
-                                IconButton(
-                                  onPressed: () => _confirmDelete(post),
-                                  icon: const Icon(
-                                      Icons.delete_outline_rounded),
-                                  color: const Color(0xFFFB7185),
-                                  tooltip: 'מחק פוסט',
-                                ),
-                            ],
-                          ),
-                        ),
-
-                        // Scrollable content
-                        Expanded(
-                          child: ListView(
-                            padding:
-                                const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                            children: [
-                              _FullPostCard(
-                                post: post,
-                                currentUid: uid,
-                                onLike: () {
-                                  if (uid.isEmpty) {
-                                    _showLoginDialog(context);
-                                    return;
-                                  }
-                                  ref
-                                      .read(feedRepositoryProvider)
-                                      .toggleLike(post.id, uid);
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              Text(
-                                'תגובות (${post.commentCount})',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              commentsAsync.when(
-                                loading: () => const Padding(
-                                  padding: EdgeInsets.all(20),
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                                error: (e, _) =>
-                                    Text('שגיאה בטעינת תגובות: $e'),
-                                data: (comments) {
-                                  if (comments.isEmpty) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 20),
-                                      child: Center(
-                                        child: Text(
-                                          'אין תגובות עדיין. היה/י הראשון/ה!',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.textSecondary
-                                                .withOpacity(0.7),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return Column(
-                                    children: comments
-                                        .map((c) => Padding(
-                                              padding:
-                                                  const EdgeInsets.only(
-                                                      bottom: 10),
-                                              child:
-                                                  _CommentCard(comment: c),
-                                            ))
-                                        .toList(),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                  child: postsAsync.when(
+                    loading: () => _headerRow(context, null, uid),
+                    error: (_, __) => _headerRow(context, null, uid),
+                    data: (posts) {
+                      final post =
+                          posts.where((p) => p.id == widget.postId).firstOrNull;
+                      return _headerRow(context, post, uid);
+                    },
+                  ),
                 ),
               ),
+            ),
 
-              // Comment input (or login prompt for guests)
-              if (uid.isEmpty)
-                InkWell(
-                  onTap: () => _showLoginDialog(context),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      border: Border(
-                        top: BorderSide(
-                          color: AppColors.border.withOpacity(0.6),
-                        ),
+            // ── Body ────────────────────────────────────────
+            Expanded(
+              child: postsAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.primary, strokeWidth: 2),
+                ),
+                error: (e, _) => Center(
+                  child: Text('שגיאה: $e',
+                      style: AppTextStyles.bodyMd
+                          .copyWith(color: AppColors.error)),
+                ),
+                data: (posts) {
+                  final post =
+                      posts.where((p) => p.id == widget.postId).firstOrNull;
+                  if (post == null) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.search_off_rounded,
+                              size: 52,
+                              color: AppColors.textMuted
+                                  .withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          Text('הפוסט לא נמצא',
+                              style: AppTextStyles.h3
+                                  .copyWith(color: AppColors.textMuted)),
+                        ],
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.lock_outline_rounded,
-                            size: 18, color: AppColors.textMuted),
-                        const SizedBox(width: 10),
-                        Text(
-                          'התחבר/י כדי להגיב...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    border: Border(
-                      top: BorderSide(
-                        color: AppColors.border.withOpacity(0.6),
-                      ),
-                    ),
-                  ),
-                  child: Row(
+                    );
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _commentController,
-                          textDirection: TextDirection.rtl,
-                          decoration: InputDecoration(
-                            hintText: 'כתוב/י תגובה...',
-                            hintStyle: TextStyle(
-                              color:
-                                  AppColors.textSecondary.withOpacity(0.6),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: AppColors.borderFaint,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                          ),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
+                      // Post card
+                      _FullPostCard(
+                        post: post,
+                        currentUid: uid,
+                        onLike: () {
+                          if (uid.isEmpty) {
+                            _showLoginDialog();
+                            return;
+                          }
+                          ref
+                              .read(feedRepositoryProvider)
+                              .toggleLike(post.id, uid);
+                        },
                       ),
-                      const SizedBox(width: 10),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: _isSending ? null : _sendComment,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: const LinearGradient(
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                              colors: [AppColors.primary, AppColors.statusOpen],
-                            ),
+                      const SizedBox(height: 24),
+
+                      // Comments header
+                      _CommentsHeader(count: post.commentCount),
+                      const SizedBox(height: 12),
+
+                      // Comments list
+                      commentsAsync.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary, strokeWidth: 2),
                           ),
-                          child: _isSending
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.send_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
                         ),
+                        error: (e, _) => Text('שגיאה בטעינת תגובות: $e',
+                            style: AppTextStyles.bodySm
+                                .copyWith(color: AppColors.error)),
+                        data: (comments) {
+                          if (comments.isEmpty) {
+                            return _EmptyComments();
+                          }
+                          return Column(
+                            children: comments
+                                .map((c) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
+                                      child: _CommentCard(comment: c),
+                                    ))
+                                .toList(),
+                          );
+                        },
                       ),
                     ],
-                  ),
-                ),
-            ],
-          ),
+                  );
+                },
+              ),
+            ),
+
+            // ── Comment input bar ────────────────────────────
+            _CommentInputBar(
+              uid: uid,
+              controller: _commentController,
+              isSending: _isSending,
+              onSend: _isSending ? null : _sendComment,
+              onTapWhenGuest: _showLoginDialog,
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _headerRow(BuildContext context, FeedPost? post, String uid) {
+    final isTip = post?.type == PostType.tip;
+    final isAuthor = post != null && post.authorUid == uid;
+
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_forward_rounded),
+          color: AppColors.textPrimary,
+          tooltip: 'חזור',
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                isTip ? 'טיפ' : 'פוסט',
+                style: AppTextStyles.h3
+                    .copyWith(color: AppColors.primary, fontStyle: FontStyle.italic),
+              ),
+              Text(
+                'פיד חדשות · קהילת PetPal',
+                style: AppTextStyles.labelSm
+                    .copyWith(letterSpacing: 1.2, color: AppColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        if (isAuthor) ...[
+          IconButton(
+            onPressed: () => context.push('/feed/edit', extra: post),
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            color: AppColors.primary,
+            tooltip: 'ערוך פוסט',
+          ),
+          IconButton(
+            onPressed: () => _confirmDelete(post),
+            icon: const Icon(Icons.delete_outline_rounded, size: 20),
+            color: AppColors.error,
+            tooltip: 'מחק פוסט',
+          ),
+        ],
+      ],
+    );
+  }
 }
+
+// ─── Full post card ───────────────────────────────────────────────────────────
 
 class _FullPostCard extends StatelessWidget {
   final FeedPost post;
@@ -433,162 +374,95 @@ class _FullPostCard extends StatelessWidget {
     required this.onLike,
   });
 
-  String get _timeAgo {
-    if (post.createdAt == null) return '';
-    final diff = DateTime.now().difference(post.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLiked = post.isLikedBy(currentUid);
+    final isTip = post.type == PostType.tip;
 
     return AppCard(
-      
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Author row
           Row(
             children: [
               LiveUserAvatar(
                 uid: post.authorUid,
                 fallbackName: post.authorName,
                 fallbackPhotoUrl: post.authorPhotoUrl,
-                size: 44,
+                size: 46,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      post.authorName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      _timeAgo,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary.withOpacity(0.8),
-                      ),
-                    ),
+                    Text(post.authorName,
+                        style: AppTextStyles.bodyMd
+                            .copyWith(fontWeight: FontWeight.w900,
+                                color: AppColors.textPrimary)),
+                    TimeAgoText(
+                        createdAt: post.createdAt,
+                        style: AppTextStyles.labelSm
+                            .copyWith(color: AppColors.textMuted)),
                   ],
                 ),
               ),
-              if (post.type == PostType.tip)
+              if (isTip)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.12),
+                    color: AppColors.warning.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.lightbulb_outline_rounded,
+                      const Icon(Icons.lightbulb_outline_rounded,
                           size: 14, color: AppColors.warning),
-                      SizedBox(width: 4),
-                      Text(
-                        'טיפ',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.warning,
-                        ),
-                      ),
+                      const SizedBox(width: 4),
+                      Text('טיפ',
+                          style: AppTextStyles.labelSm.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.warning)),
                     ],
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+
+          const SizedBox(height: 16),
+
+          // Content
           Text(
             post.content,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+            style: AppTextStyles.bodyLg.copyWith(
               color: AppColors.textPrimary,
-              height: 1.6,
+              height: 1.7,
             ),
           ),
-          if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+
+          // Images
+          if (post.imageUrls.isNotEmpty) ...[
             const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: CachedNetworkImage(
-                imageUrl: post.imageUrl!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  height: 220,
-                  color: AppColors.borderFaint,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  height: 220,
-                  color: AppColors.borderFaint,
-                  child: const Icon(Icons.broken_image_rounded,
-                      color: AppColors.textMuted),
-                ),
-              ),
-            ),
+            _PostImageGallery(imageUrls: post.imageUrls),
           ],
-          const SizedBox(height: 14),
+
+          const SizedBox(height: 16),
+
+          // Divider
+          Divider(color: AppColors.border.withValues(alpha: 0.6), height: 1),
+          const SizedBox(height: 12),
+
+          // Like row
           Row(
             children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
+              _LikeButton(
+                isLiked: isLiked,
+                count: post.likes.length,
                 onTap: onLike,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: isLiked
-                        ? const Color(0xFFFB7185).withOpacity(0.12)
-                        : AppColors.borderFaint,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isLiked
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        size: 20,
-                        color: isLiked
-                            ? const Color(0xFFFB7185)
-                            : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${post.likes.length} לייקים',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: isLiked
-                              ? const Color(0xFFFB7185)
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
@@ -598,24 +472,233 @@ class _FullPostCard extends StatelessWidget {
   }
 }
 
+// ─── Like button ──────────────────────────────────────────────────────────────
+
+class _LikeButton extends StatelessWidget {
+  final bool isLiked;
+  final int count;
+  final VoidCallback onTap;
+
+  const _LikeButton(
+      {required this.isLiked, required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isLiked
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isLiked
+                ? AppColors.primary.withValues(alpha: 0.35)
+                : AppColors.border.withValues(alpha: 0.6),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isLiked ? Icons.pets_rounded : Icons.pets_outlined,
+              size: 20,
+              color: isLiked ? AppColors.primary : AppColors.textMuted,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              '$count',
+              style: AppTextStyles.bodyMd.copyWith(
+                fontWeight: FontWeight.w900,
+                color: isLiked ? AppColors.primary : AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'לייקים',
+              style: AppTextStyles.labelSm.copyWith(
+                color: isLiked ? AppColors.primary : AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Image gallery ────────────────────────────────────────────────────────────
+
+class _PostImageGallery extends StatefulWidget {
+  final List<String> imageUrls;
+
+  const _PostImageGallery({required this.imageUrls});
+
+  @override
+  State<_PostImageGallery> createState() => _PostImageGalleryState();
+}
+
+class _PostImageGalleryState extends State<_PostImageGallery> {
+  int _current = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final single = widget.imageUrls.length == 1;
+
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: single
+              ? CachedNetworkImage(
+                  imageUrl: widget.imageUrls.first,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => _placeholder(),
+                  errorWidget: (_, __, ___) => _error(),
+                )
+              : SizedBox(
+                  height: 280,
+                  child: PageView.builder(
+                    itemCount: widget.imageUrls.length,
+                    onPageChanged: (i) => setState(() => _current = i),
+                    itemBuilder: (_, i) => CachedNetworkImage(
+                      imageUrl: widget.imageUrls[i],
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => _placeholder(),
+                      errorWidget: (_, __, ___) => _error(),
+                    ),
+                  ),
+                ),
+        ),
+        if (!single) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              widget.imageUrls.length,
+              (i) => AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: _current == i ? 20 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: _current == i
+                      ? AppColors.primary
+                      : AppColors.primary.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _placeholder() => Container(
+        height: 220,
+        color: AppColors.surface,
+        child: const Center(
+          child: CircularProgressIndicator(
+              color: AppColors.primary, strokeWidth: 2),
+        ),
+      );
+
+  Widget _error() => Container(
+        height: 220,
+        color: AppColors.surface,
+        child:
+            const Icon(Icons.broken_image_rounded, color: AppColors.textMuted),
+      );
+}
+
+// ─── Comments header ──────────────────────────────────────────────────────────
+
+class _CommentsHeader extends StatelessWidget {
+  final int count;
+  const _CommentsHeader({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 22,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          'תגובות',
+          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.primary, fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Empty comments ───────────────────────────────────────────────────────────
+
+class _EmptyComments extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline_rounded,
+                size: 40,
+                color: AppColors.textMuted.withValues(alpha: 0.4)),
+            const SizedBox(height: 10),
+            Text(
+              'אין תגובות עדיין.',
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.textMuted),
+            ),
+            Text(
+              'היה/י הראשון/ה להגיב!',
+              style: AppTextStyles.labelSm,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Comment card ─────────────────────────────────────────────────────────────
+
 class _CommentCard extends StatelessWidget {
   final FeedComment comment;
 
   const _CommentCard({required this.comment});
 
-  String get _timeAgo {
-    if (comment.createdAt == null) return '';
-    final diff = DateTime.now().difference(comment.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    return 'לפני ${diff.inDays} ימים';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      
+    return AppCard.outline(
       padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,7 +707,7 @@ class _CommentCard extends StatelessWidget {
             uid: comment.authorUid,
             fallbackName: comment.authorName,
             fallbackPhotoUrl: comment.authorPhotoUrl,
-            size: 32,
+            size: 34,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -635,38 +718,184 @@ class _CommentCard extends StatelessWidget {
                   children: [
                     Text(
                       comment.authorName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: AppTextStyles.bodyMd.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      _timeAgo,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary.withOpacity(0.7),
-                      ),
-                    ),
+                    TimeAgoText(createdAt: comment.createdAt, style: AppTextStyles.labelSm),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 Text(
                   comment.content,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF334155),
-                    height: 1.4,
-                  ),
+                  style: AppTextStyles.bodySm
+                      .copyWith(color: AppColors.textPrimary, height: 1.5),
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Comment input bar ────────────────────────────────────────────────────────
+
+class _CommentInputBar extends StatelessWidget {
+  final String uid;
+  final TextEditingController controller;
+  final bool isSending;
+  final VoidCallback? onSend;
+  final VoidCallback onTapWhenGuest;
+
+  const _CommentInputBar({
+    required this.uid,
+    required this.controller,
+    required this.isSending,
+    required this.onSend,
+    required this.onTapWhenGuest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+              color: AppColors.border.withValues(alpha: 0.5), width: 0.8),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: uid.isEmpty
+              ? _GuestInputHint(onTap: onTapWhenGuest)
+              : _AuthInputRow(
+                  uid: uid,
+                  controller: controller,
+                  isSending: isSending,
+                  onSend: onSend,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestInputHint extends StatelessWidget {
+  final VoidCallback onTap;
+  const _GuestInputHint({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.lock_outline_rounded,
+                size: 18, color: AppColors.textMuted),
+            const SizedBox(width: 10),
+            Text('התחבר/י כדי להגיב...',
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthInputRow extends StatelessWidget {
+  final String uid;
+  final TextEditingController controller;
+  final bool isSending;
+  final VoidCallback? onSend;
+
+  const _AuthInputRow({
+    required this.uid,
+    required this.controller,
+    required this.isSending,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        LiveUserAvatar(uid: uid, fallbackName: '', size: 34),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: TextField(
+              controller: controller,
+              textDirection: TextDirection.rtl,
+              minLines: 1,
+              maxLines: 4,
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'כתוב/י תגובה...',
+                hintStyle:
+                    AppTextStyles.bodyMd.copyWith(color: AppColors.textMuted),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: onSend,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: isSending
+                  ? null
+                  : const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [AppColors.primary, AppColors.statusOpen],
+                    ),
+              color: isSending ? AppColors.border : null,
+            ),
+            child: isSending
+                ? const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: CircularProgressIndicator(
+                        color: AppColors.primary, strokeWidth: 2),
+                  )
+                : const Icon(Icons.send_rounded,
+                    color: Colors.white, size: 19),
+          ),
+        ),
+      ],
     );
   }
 }

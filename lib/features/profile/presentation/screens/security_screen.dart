@@ -1,18 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/core/constants/app_constants.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
@@ -39,7 +35,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFB91C1C) : AppColors.primary,
+            isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -129,7 +125,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             'מחיקת חשבון',
             style: TextStyle(
               fontWeight: FontWeight.w900,
-              color: Color(0xFF9F1239),
+              color: AppColors.error,
             ),
           ),
           content: const Text(
@@ -146,7 +142,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                 _deleteAccount();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9F1239),
+                backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
@@ -252,7 +248,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
-                              color: AppColors.primary.withOpacity(0.12),
+                              color: AppColors.primary.withValues(alpha: 0.12),
                             ),
                             child: const Icon(Icons.lock_outline_rounded,
                                 color: AppColors.primary),
@@ -326,10 +322,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
-                              color: const Color(0xFFFB7185).withOpacity(0.16),
+                              color: AppColors.error.withValues(alpha: 0.16),
                             ),
                             child: const Icon(Icons.delete_forever_rounded,
-                                color: Color(0xFF9F1239)),
+                                color: AppColors.error),
                           ),
                           const SizedBox(width: 12),
                           const Text(
@@ -337,7 +333,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF9F1239),
+                              color: AppColors.error,
                             ),
                           ),
                         ],
@@ -347,7 +343,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                         'מחיקת החשבון תסיר את כל המידע שלך לצמיתות.',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF334155).withOpacity(0.82),
+                          color: AppColors.textSecondary.withValues(alpha: 0.82),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -358,22 +354,22 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                           height: 48,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
-                            color: const Color(0xFFFFF1F2),
+                            color: AppColors.surface,
                             border: Border.all(
                                 color:
-                                    const Color(0xFFFB7185).withOpacity(0.35)),
+                                    AppColors.error.withValues(alpha: 0.35)),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.delete_forever_rounded,
-                                  color: Color(0xFF9F1239), size: 20),
+                                  color: AppColors.error, size: 20),
                               SizedBox(width: 8),
                               Text(
                                 'מחק/י את החשבון',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF9F1239),
+                                  color: AppColors.error,
                                 ),
                               ),
                             ],
@@ -425,15 +421,15 @@ class _PasswordField extends StatelessWidget {
           onPressed: onToggle,
         ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.65),
+        fillColor: Colors.white.withValues(alpha: 0.65),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.6)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide:
-              BorderSide(color: AppColors.border.withOpacity(0.9)),
+              BorderSide(color: AppColors.border.withValues(alpha: 0.9)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

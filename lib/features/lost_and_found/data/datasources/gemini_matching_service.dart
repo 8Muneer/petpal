@@ -3,15 +3,45 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:petpal/core/secrets.dart';
 
+class GeminiMatchFeature {
+  final String featureName;
+  final String pet1Value;
+  final String pet2Value;
+  final String status;
+
+  const GeminiMatchFeature({
+    required this.featureName,
+    required this.pet1Value,
+    required this.pet2Value,
+    required this.status,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'featureName': featureName,
+        'pet1Value': pet1Value,
+        'pet2Value': pet2Value,
+        'status': status,
+      };
+
+  factory GeminiMatchFeature.fromMap(Map<String, dynamic> map) => GeminiMatchFeature(
+        featureName: map['featureName'] as String? ?? '',
+        pet1Value: map['pet1Value'] as String? ?? '',
+        pet2Value: map['pet2Value'] as String? ?? '',
+        status: map['status'] as String? ?? 'CANNOT_DETERMINE',
+      );
+}
+
 class GeminiMatchResult {
   final bool isMatch;
   final int confidence;
   final String reason;
+  final List<GeminiMatchFeature> comparisonTable;
 
   const GeminiMatchResult({
     required this.isMatch,
     required this.confidence,
     required this.reason,
+    required this.comparisonTable,
   });
 }
 
@@ -22,6 +52,10 @@ class GeminiMatchingService {
 
   Future<GeminiMatchResult?> compareImages(
       String imageUrl1, String imageUrl2) async {
+    if (imageUrl1.isEmpty || imageUrl2.isEmpty) {
+      debugPrint('[Gemini] Cannot compare empty image URLs');
+      return null;
+    }
     try {
       final bytes1 = await _downloadImage(imageUrl1);
       final bytes2 = await _downloadImage(imageUrl2);
@@ -97,9 +131,18 @@ RULES:
 - A unique marking present in Photo 1 but ABSENT in Photo 2 (and would be visible at that angle) = strong mismatch signal.
 - set match=true only if confidence >= 50.
 - The "reason" must be in Hebrew and must name the SPECIFIC features that drove the score up or down.
+- Additionally, you MUST construct a side-by-side comparison table for key characteristics of both animals. For each category, state the value observed in Photo 1 (pet1Value), the value observed in Photo 2 (pet2Value), and the matching status ('MATCH', 'MISMATCH', or 'CANNOT_DETERMINE').
+The categories to compare are:
+1. סוג וגזע (Species & Breed)
+2. צבע ודוגמת פרווה (Color & Coat Patterns)
+3. מבנה פנים וראש (Face & Head Details - eyes, ears, markings)
+4. סימנים מיוחדים וצלקות (Special Markings, scars, unique patches)
+5. אביזרים (Accessories - collars, harness, tags)
+
+Note: All text fields in the JSON (reason, featureName, pet1Value, pet2Value) MUST be in Hebrew. The "status" must be strictly one of: 'MATCH', 'MISMATCH', 'CANNOT_DETERMINE'.
 
 OUTPUT: Respond with ONLY this JSON, no markdown, no text before or after:
-{"match": false, "confidence": 30, "reason": "תיאור מפורט בעברית של המאפיינים הספציפיים שהתאימו ושלא התאימו"}'''
+{"match": false, "confidence": 30, "reason": "תיאור מפורט בעברית...", "comparisonTable": [{"featureName": "סוג וגזע", "pet1Value": "...", "pet2Value": "...", "status": "MATCH"}]}'''
               },
               {
                 'inline_data': {
@@ -143,17 +186,36 @@ OUTPUT: Respond with ONLY this JSON, no markdown, no text before or after:
         return null;
       }
 
-      // Strip markdown code fences if present
+      // Extract JSON block robustly if there's any surrounding text
       text = text.trim();
-      if (text.startsWith('```')) {
-        text = text.replaceAll(RegExp(r'```[a-z]*\n?'), '').trim();
+      final jsonRegex = RegExp(r'\{[\s\S]*\}');
+      final match = jsonRegex.firstMatch(text);
+      if (match != null) {
+        text = match.group(0)!;
       }
 
       final result = jsonDecode(text) as Map<String, dynamic>;
+      
+      final rawFeatures = result['comparisonTable'] as List<dynamic>? ?? [];
+      final features = rawFeatures.map((f) {
+        if (f is Map<String, dynamic>) {
+          return GeminiMatchFeature.fromMap(f);
+        } else if (f is Map) {
+          return GeminiMatchFeature.fromMap(Map<String, dynamic>.from(f));
+        }
+        return const GeminiMatchFeature(
+          featureName: 'אחר',
+          pet1Value: 'לא ידוע',
+          pet2Value: 'לא ידוע',
+          status: 'CANNOT_DETERMINE',
+        );
+      }).toList();
+
       return GeminiMatchResult(
         isMatch: result['match'] as bool? ?? false,
         confidence: (result['confidence'] as num?)?.toInt() ?? 0,
         reason: result['reason'] as String? ?? '',
+        comparisonTable: features,
       );
     } catch (e, st) {
       debugPrint('[Gemini] Exception: $e\n$st');

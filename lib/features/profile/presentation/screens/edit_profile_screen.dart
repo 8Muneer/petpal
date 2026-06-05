@@ -5,15 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:petpal/core/widgets/glass_card.dart';
-import 'package:petpal/core/widgets/input_field.dart';
-import 'package:petpal/core/widgets/primary_gradient_button.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/profile/domain/entities/user_profile.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
@@ -251,6 +247,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return 'בעל חיית מחמד';
       case UserRole.serviceProvider:
         return 'מטפל/ת';
+      case UserRole.admin:
+        return 'מנהל מערכת';
     }
   }
 
@@ -333,7 +331,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     boxShadow: [
                                       BoxShadow(
                                         color: AppColors.primary
-                                            .withOpacity(0.25),
+                                            .withValues(alpha: 0.25),
                                         blurRadius: 20,
                                         offset: const Offset(0, 8),
                                       ),
@@ -367,7 +365,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     height: 90,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(32),
-                                      color: Colors.black.withOpacity(0.45),
+                                      color: Colors.black.withValues(alpha: 0.45),
                                     ),
                                     child: const Center(
                                       child: SizedBox(
@@ -395,7 +393,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                         boxShadow: [
                                           BoxShadow(
                                             color:
-                                                Colors.black.withOpacity(0.12),
+                                                Colors.black.withValues(alpha: 0.12),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -418,7 +416,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color:
-                                  AppColors.textSecondary.withOpacity(0.85),
+                                  AppColors.textSecondary.withValues(alpha: 0.85),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -428,7 +426,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF334155)
-                                  .withOpacity(0.82),
+                                  .withValues(alpha: 0.82),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -438,7 +436,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
                               color: AppColors.primary
-                                  .withOpacity(0.10),
+                                  .withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -482,7 +480,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             textDirection: TextDirection.ltr,
                             style: TextStyle(
                               color: const Color(0xFF334155)
-                                  .withOpacity(0.6),
+                                  .withValues(alpha: 0.6),
                             ),
                             decoration: InputDecoration(
                               labelText: 'אימייל',
@@ -500,7 +498,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide(
                                     color: AppColors.border
-                                        .withOpacity(0.9)),
+                                        .withValues(alpha: 0.9)),
                               ),
                             ),
                           ),
@@ -559,17 +557,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.65),
+                          fillColor: Colors.white.withValues(alpha: 0.65),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                                color: Colors.white.withOpacity(0.6)),
+                                color: Colors.white.withValues(alpha: 0.6)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
                                 color: AppColors.border
-                                    .withOpacity(0.9)),
+                                    .withValues(alpha: 0.9)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -657,8 +655,8 @@ class _ImagePickerOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: color.withOpacity(0.08),
-          border: Border.all(color: color.withOpacity(0.18)),
+          color: color.withValues(alpha: 0.08),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
         ),
         child: Row(
           children: [
@@ -667,7 +665,7 @@ class _ImagePickerOption extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                color: color.withOpacity(0.14),
+                color: color.withValues(alpha: 0.14),
               ),
               child: Icon(icon, color: color, size: 22),
             ),
@@ -703,7 +701,7 @@ class _SectionLabel extends StatelessWidget {
           height: 32,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            color: AppColors.primary.withOpacity(0.10),
+            color: AppColors.primary.withValues(alpha: 0.10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 18),
         ),

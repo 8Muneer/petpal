@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 
 class SittingServiceModel extends SittingService {

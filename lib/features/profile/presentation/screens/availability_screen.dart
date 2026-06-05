@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -51,7 +51,9 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       setState(() {
         _isAvailable = data['isAvailable'] as bool? ?? true;
         if (savedDays.length == 7) {
-          for (int i = 0; i < 7; i++) _days[i] = savedDays[i];
+          for (int i = 0; i < 7; i++) {
+            _days[i] = savedDays[i];
+          }
         }
         _loading = false;
       });
@@ -74,8 +76,8 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     if (mounted) {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('הזמינות עודכנה בהצלחה'),
+        const SnackBar(
+          content: Text('הזמינות עודכנה בהצלחה'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -105,14 +107,11 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                             height: 40,
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.7),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                               border: Border.all(color: AppColors.border),
                             ),
-                            child: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                size: 18,
-                                color: AppColors.textPrimary),
+                            child: const Icon(Icons.arrow_back_ios_new_rounded,
+                                size: 18, color: AppColors.textPrimary),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -132,8 +131,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                               color: _isAvailable
                                   ? AppColors.successLight
                                   : AppColors.borderFaint,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             child: Icon(
                               Icons.event_available_rounded,
@@ -154,17 +152,18 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                                   _isAvailable
                                       ? 'מופיע/ת בחיפוש ומקבל/ת בקשות'
                                       : 'לא מופיע/ת בחיפוש כרגע',
-                                  style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.textSecondary),
+                                  style: AppTextStyles.caption
+                                      .copyWith(color: AppColors.textSecondary),
                                 ),
                               ],
                             ),
                           ),
                           Switch.adaptive(
                             value: _isAvailable,
-                            onChanged: (v) =>
-                                setState(() => _isAvailable = v),
-                            activeColor: AppColors.primary,
+                            onChanged: (v) => setState(() => _isAvailable = v),
+                            activeThumbColor: AppColors.primary,
+                            activeTrackColor:
+                                AppColors.primary.withValues(alpha: 0.35),
                           ),
                         ],
                       ),
@@ -181,8 +180,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                       children: List.generate(7, (i) {
                         final selected = _days[i];
                         return GestureDetector(
-                          onTap: () =>
-                              setState(() => _days[i] = !_days[i]),
+                          onTap: () => setState(() => _days[i] = !_days[i]),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 40,
@@ -191,8 +189,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                               color: selected
                                   ? AppColors.primary
                                   : Colors.white.withValues(alpha: 0.7),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                               border: Border.all(
                                 color: selected
                                     ? AppColors.primary

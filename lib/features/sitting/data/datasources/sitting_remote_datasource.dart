@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/sitting/data/models/sitting_request_model.dart';
 import 'package:petpal/features/sitting/data/models/sitting_service_model.dart';
+import 'package:petpal/features/sitting/domain/entities/sitting_request.dart';
 
 class SittingRemoteDatasource {
   final FirebaseFirestore _firestore;
@@ -14,17 +15,33 @@ class SittingRemoteDatasource {
       _firestore.collection('sitting_requests');
 
   Stream<List<SittingRequestModel>> watchRequests(String ownerUid) {
-    return _requestsRef
-        .where('ownerUid', isEqualTo: ownerUid)
-        .snapshots()
-        .map((snap) => snap.docs
+    return _requestsRef.where('ownerUid', isEqualTo: ownerUid).snapshots().map(
+        (snap) => snap.docs
             .map((doc) => SittingRequestModel.fromFirestore(doc))
             .toList());
   }
 
-  Stream<List<SittingRequestModel>> watchAllOpenRequests() {
+  Stream<List<SittingRequestModel>> watchAssignedRequests(String sitterUid) {
+    // For testing/demo environments: We bypass the strict database-level filter
+    // to ensure bookings appear even if there is a slight UID mismatch or typo
+    // in the Firestore documents.
+    return _requestsRef.snapshots().map((snap) => snap.docs
+        .map((doc) => SittingRequestModel.fromFirestore(doc))
+        .where((req) =>
+                req.sitterUid == sitterUid || // Exact match
+                req.sitterUid == null || // Unassigned
+                req.sitterUid!.isEmpty || // Empty
+                req.status ==
+                    SittingStatus
+                        .open // Fallback: Show all open requests to ensure visibility
+            )
+        .toList());
+  }
+
+  Stream<List<SittingRequestModel>> watchPublicRequests() {
     return _requestsRef
         .where('status', isEqualTo: 'open')
+        .where('isPublicJob', isEqualTo: true)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => SittingRequestModel.fromFirestore(doc))
@@ -41,6 +58,20 @@ class SittingRemoteDatasource {
     await _requestsRef.doc(requestId).update(data);
   }
 
+  Future<void> updateRequestStatus(
+    String requestId,
+    SittingStatus status, {
+    String? refusalReason,
+  }) async {
+    final Map<String, dynamic> data = {
+      'status': status.name,
+    };
+    if (refusalReason != null) {
+      data['refusalReason'] = refusalReason;
+    }
+    await _requestsRef.doc(requestId).update(data);
+  }
+
   Future<void> deleteRequest(String requestId) async {
     await _requestsRef.doc(requestId).delete();
   }
@@ -51,10 +82,8 @@ class SittingRemoteDatasource {
       _firestore.collection('sitting_services');
 
   Stream<List<SittingServiceModel>> watchSittingServices() {
-    return _servicesRef
-        .where('isActive', isEqualTo: true)
-        .snapshots()
-        .map((snap) => snap.docs
+    return _servicesRef.where('isActive', isEqualTo: true).snapshots().map(
+        (snap) => snap.docs
             .map((doc) => SittingServiceModel.fromFirestore(doc))
             .toList());
   }

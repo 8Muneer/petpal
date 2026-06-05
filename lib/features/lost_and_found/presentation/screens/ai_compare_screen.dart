@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +54,26 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
       parent: _resultController,
       curve: Curves.easeOut,
     );
+
+    // Pre-populate with cached match result if it exists in post1's matches list
+    final cachedMatch = widget.post1.matches.firstWhereOrNull((m) => m.postId == widget.post2.id);
+    if (cachedMatch != null) {
+      _result = GeminiMatchResult(
+        isMatch: cachedMatch.confidence >= 50,
+        confidence: cachedMatch.confidence,
+        reason: cachedMatch.reason,
+        comparisonTable: cachedMatch.features.map((f) => GeminiMatchFeature(
+          featureName: f.featureName,
+          pet1Value: f.pet1Value,
+          pet2Value: f.pet2Value,
+          status: f.status,
+        )).toList(),
+      );
+      _state = _CompareState.result;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resultController.forward(from: 0);
+      });
+    }
   }
 
   @override
@@ -84,9 +105,9 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
 
   Color get _confidenceColor {
     final c = _result?.confidence ?? 0;
-    if (c >= 80) return const Color(0xFF10B981);
-    if (c >= 60) return const Color(0xFFF59E0B);
-    return const Color(0xFFFB7185);
+    if (c >= 80) return AppColors.success;
+    if (c >= 60) return AppColors.warning;
+    return AppColors.error;
   }
 
   @override
@@ -94,7 +115,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: AppColors.surface,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -135,11 +156,11 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+              color: AppColors.smartBlue.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.compare_arrows_rounded,
-                color: Color(0xFF8B5CF6), size: 20),
+                color: AppColors.smartBlue, size: 20),
           ),
         ),
         Expanded(child: _PetImageCard(post: widget.post2, label: 'דיווח שני')),
@@ -169,7 +190,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                 height: 64,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                    colors: [AppColors.smartBlue, AppColors.regalNavy],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -184,7 +205,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                 style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
-                    color: Color(0xFF1A1A2E)),
+                    color: AppColors.onSurface),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -207,7 +228,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B5CF6),
+              backgroundColor: AppColors.smartBlue,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -244,9 +265,9 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF8B5CF6)
+                      AppColors.smartBlue
                           .withValues(alpha: 0.7 + _pulseController.value * 0.3),
-                      const Color(0xFF6366F1),
+                      AppColors.regalNavy,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -254,7 +275,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF8B5CF6).withValues(
+                      color: AppColors.smartBlue.withValues(
                           alpha: 0.3 + _pulseController.value * 0.25),
                       blurRadius: 20,
                       spreadRadius: 2,
@@ -272,7 +293,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
             style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
-                color: Color(0xFF1A1A2E)),
+                color: AppColors.onSurface),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -324,8 +345,8 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                       height: 72,
                       decoration: BoxDecoration(
                         color: isMatch
-                            ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                            : const Color(0xFFFB7185).withValues(alpha: 0.12),
+                            ? AppColors.success.withValues(alpha: 0.12)
+                            : AppColors.error.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -333,8 +354,8 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                             ? Icons.check_circle_rounded
                             : Icons.cancel_rounded,
                         color: isMatch
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFFB7185),
+                            ? AppColors.success
+                            : AppColors.error,
                         size: 42,
                       ),
                     ),
@@ -347,8 +368,8 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                       fontWeight: FontWeight.w900,
                       fontSize: 20,
                       color: isMatch
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFFB7185)),
+                          ? AppColors.success
+                          : AppColors.error),
                 ),
                 const SizedBox(height: 20),
 
@@ -359,7 +380,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                   animation: _confidenceAnim,
                   color: _confidenceColor,
                 ),
-                const SizedBox(height: 20),
+                _buildComparisonTable(_result!.comparisonTable),
 
                 // Reason
                 if (_result!.reason.isNotEmpty) ...[
@@ -367,7 +388,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F7FA),
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
@@ -398,14 +419,140 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
               label: const Text('השווה שוב',
                   style: TextStyle(fontWeight: FontWeight.w800)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF8B5CF6),
-                side: const BorderSide(color: Color(0xFF8B5CF6)),
+                foregroundColor: AppColors.smartBlue,
+                side: const BorderSide(color: AppColors.smartBlue),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonTable(List<GeminiMatchFeature> features) {
+    if (features.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            Icon(Icons.list_alt_rounded, color: AppColors.smartBlue, size: 18),
+            SizedBox(width: 8),
+            Text(
+              'השוואת מאפיינים',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                color: AppColors.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1.2), // Feature Name
+                1: FlexColumnWidth(1.4), // Pet 1
+                2: FlexColumnWidth(1.4), // Pet 2
+                3: FixedColumnWidth(48),  // Status Badge
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                // Header
+                TableRow(
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                  ),
+                  children: [
+                    _tableHeaderCell('מאפיין'),
+                    _tableHeaderCell('דיווח א׳'),
+                    _tableHeaderCell('דיווח ב׳'),
+                    _tableHeaderCell('התאמה'),
+                  ],
+                ),
+                // Rows
+                ...features.map((f) {
+                  return TableRow(
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                    ),
+                    children: [
+                      _tableBodyCell(f.featureName, isBold: true),
+                      _tableBodyCell(f.pet1Value),
+                      _tableBodyCell(f.pet2Value),
+                      _tableStatusCell(f.status),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _tableHeaderCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+          color: AppColors.textMuted,
+        ),
+      ),
+    );
+  }
+
+  Widget _tableBodyCell(String text, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
+          fontSize: 12,
+          color: isBold ? AppColors.onSurface : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _tableStatusCell(String status) {
+    IconData icon;
+    Color color;
+    switch (status) {
+      case 'MATCH':
+        icon = Icons.check_circle_rounded;
+        color = AppColors.success;
+        break;
+      case 'MISMATCH':
+        icon = Icons.cancel_rounded;
+        color = AppColors.error;
+        break;
+      default:
+        icon = Icons.remove_circle_rounded;
+        color = Colors.grey;
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Icon(icon, color: color, size: 18),
       ),
     );
   }
@@ -420,7 +567,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
       child: Column(
         children: [
           const Icon(Icons.error_outline_rounded,
-              color: Color(0xFFFB7185), size: 48),
+              color: AppColors.error, size: 48),
           const SizedBox(height: 12),
           const Text(
             'שגיאה בהשוואה',
@@ -452,7 +599,7 @@ class _PetImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLost = post.type == LostFoundType.lost;
     final accent =
-        isLost ? const Color(0xFFFB7185) : const Color(0xFF60A5FA);
+        isLost ? AppColors.error : AppColors.blueSlate;
 
     return Column(
       children: [
@@ -465,13 +612,13 @@ class _PetImageCard extends StatelessWidget {
             fit: BoxFit.cover,
             placeholder: (_, __) => Container(
               height: 150,
-              color: const Color(0xFFF0F2F5),
+              color: AppColors.surface,
               child: const Icon(Icons.pets_rounded,
                   color: Colors.grey, size: 36),
             ),
             errorWidget: (_, __, ___) => Container(
               height: 150,
-              color: const Color(0xFFF0F2F5),
+              color: AppColors.surface,
               child: const Icon(Icons.pets_rounded,
                   color: Colors.grey, size: 36),
             ),
@@ -498,7 +645,7 @@ class _PetImageCard extends StatelessWidget {
           style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E)),
+              color: AppColors.onSurface),
         ),
       ],
     );
@@ -565,7 +712,7 @@ class _ConfidenceMeter extends StatelessWidget {
             builder: (_, __) => LinearProgressIndicator(
               value: (displayValue / 100) * animation.value,
               minHeight: 8,
-              backgroundColor: const Color(0xFFF0F2F5),
+              backgroundColor: AppColors.surface,
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -620,8 +767,8 @@ class _AnimatedDotsState extends State<_AnimatedDots>
             height: 8 + _controllers[i].value * 6,
             decoration: BoxDecoration(
               color: Color.lerp(
-                const Color(0xFF8B5CF6).withValues(alpha: 0.3),
-                const Color(0xFF8B5CF6),
+                AppColors.smartBlue.withValues(alpha: 0.3),
+                AppColors.smartBlue,
                 _controllers[i].value,
               ),
               borderRadius: BorderRadius.circular(4),

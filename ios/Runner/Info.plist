@@ -49,6 +49,10 @@
 	<string>PetPal needs camera access to take a profile photo</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PetPal needs photo library access to choose a profile photo</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PetPal needs microphone access so you can dictate your review by voice</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>PetPal uses speech recognition to convert your spoken review into text</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

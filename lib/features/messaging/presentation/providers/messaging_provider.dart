@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
 
 /// Legacy wrapper — delegates to [AppBottomNav].

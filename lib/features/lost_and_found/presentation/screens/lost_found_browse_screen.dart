@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,12 +22,12 @@ class LostFoundBrowseScreen extends ConsumerWidget {
         .where((p) => p.id != anchorPost.id)
         .toList();
 
-    final accent = isLost ? const Color(0xFFFB7185) : const Color(0xFF60A5FA);
+    final accent = isLost ? AppColors.error : AppColors.blueSlate;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: AppColors.surface,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -92,11 +92,11 @@ class _AnchorBanner extends StatelessWidget {
               height: 56,
               fit: BoxFit.cover,
               placeholder: (_, __) => Container(
-                  color: const Color(0xFFF0F2F5),
+                  color: AppColors.surface,
                   child:
                       const Icon(Icons.pets_rounded, color: Colors.grey, size: 22)),
               errorWidget: (_, __, ___) => Container(
-                  color: const Color(0xFFF0F2F5),
+                  color: AppColors.surface,
                   child:
                       const Icon(Icons.pets_rounded, color: Colors.grey, size: 22)),
             ),
@@ -111,7 +111,7 @@ class _AnchorBanner extends StatelessWidget {
                   style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 14,
-                      color: Color(0xFF1A1A2E)),
+                      color: AppColors.onSurface),
                 ),
                 const SizedBox(height: 2),
                 const Text('בחר דיווח מהרשימה להפעלת השוואת AI',
@@ -154,7 +154,7 @@ class _BrowseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLost = post.type == LostFoundType.lost;
-    final accent = isLost ? const Color(0xFFFB7185) : const Color(0xFF60A5FA);
+    final accent = isLost ? AppColors.error : AppColors.blueSlate;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -186,11 +186,11 @@ class _BrowseCard extends StatelessWidget {
                     height: 80,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                        color: const Color(0xFFF0F2F5),
+                        color: AppColors.surface,
                         child: const Icon(Icons.pets_rounded,
                             color: Colors.grey, size: 30)),
                     errorWidget: (_, __, ___) => Container(
-                        color: const Color(0xFFF0F2F5),
+                        color: AppColors.surface,
                         child: const Icon(Icons.pets_rounded,
                             color: Colors.grey, size: 30)),
                   ),
@@ -228,7 +228,7 @@ class _BrowseCard extends StatelessWidget {
                               style: const TextStyle(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 15,
-                                  color: Color(0xFF1A1A2E)),
+                                  color: AppColors.onSurface),
                             ),
                           ),
                         ],
@@ -264,11 +264,11 @@ class _BrowseCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                    color: AppColors.smartBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.auto_awesome_rounded,
-                      size: 18, color: Color(0xFF8B5CF6)),
+                      size: 18, color: AppColors.smartBlue),
                 ),
               ],
             ),
@@ -301,7 +301,7 @@ class _EmptyState extends StatelessWidget {
               style: const TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
-                  color: Color(0xFF1A1A2E)),
+                  color: AppColors.onSurface),
             ),
             const SizedBox(height: 8),
             Text(

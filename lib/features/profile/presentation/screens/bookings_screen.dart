@@ -259,6 +259,10 @@ class _SittingTile extends StatelessWidget {
         statusColor = AppColors.statusClosed;
         statusLabel = 'סגור';
         break;
+      case SittingStatus.declined:
+        statusColor = const Color(0xFFFB7185); // rose/red
+        statusLabel = 'נדחה';
+        break;
     }
 
     final nights = request.numberOfNights;

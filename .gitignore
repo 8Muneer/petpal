@@ -27,6 +27,7 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
@@ -53,6 +54,24 @@ GoogleService-Info.plist
 
 # Firebase
 firebase_options_local.dart
+.firebase/
 
-# Claude Code
+# Node / Functions dependencies
+node_modules/
+functions/node_modules/
+
+# Claude Code & Custom Agent Folders
+.claude/
+.agent/
+.agents/
 .claude/settings.local.json
+
+# Local scratch files & logs
+scratch/
+analyze_results.txt
+
+# Product Strategy & Design Guidelines
+PRODUCT.md
+design.md
+
+
