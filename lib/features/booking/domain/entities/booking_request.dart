@@ -49,6 +49,17 @@ class BookingRequest extends Equatable {
     this.createdAt,
   });
 
+  String get formattedDateRange {
+    String fmt(DateTime d) =>
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+    if (requestedDate != null) return fmt(requestedDate!);
+    if (startDate != null && endDate != null) {
+      return '${fmt(startDate!)} - ${fmt(endDate!)}';
+    }
+    return 'תאריך לא נקבע';
+  }
+
   @override
   List<Object?> get props => [
         id,

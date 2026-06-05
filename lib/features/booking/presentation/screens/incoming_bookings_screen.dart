@@ -5,6 +5,233 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
 
+// ─── Detail bottom sheet ──────────────────────────────────────────────────────
+
+void _showBookingDetail(BuildContext context, BookingRequest b) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _BookingDetailSheet(booking: b),
+  );
+}
+
+class _BookingDetailSheet extends StatelessWidget {
+  final BookingRequest b;
+  const _BookingDetailSheet({required BookingRequest booking}) : b = booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWalk = b.serviceType == BookingServiceType.walk;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, ctrl) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.pureWhite,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: ListView(
+            controller: ctrl,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            children: [
+              // Visual drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+                    // ── Pet section ────────────────────────────────────────
+                    Center(
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 48,
+                            backgroundColor: AppColors.primaryFaint,
+                            backgroundImage:
+                                (b.petImageUrl?.isNotEmpty == true)
+                                    ? CachedNetworkImageProvider(b.petImageUrl!)
+                                    : null,
+                            child: b.petImageUrl?.isNotEmpty != true
+                                ? const Icon(Icons.pets_rounded,
+                                    size: 36, color: AppColors.primary)
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(b.petName,
+                              style: AppTextStyles.h2
+                                  .copyWith(fontSize: 20)),
+                          Text(b.petType,
+                              style: AppTextStyles.labelMd
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(color: AppColors.divider),
+                    const SizedBox(height: 16),
+
+                    // ── Owner section ──────────────────────────────────────
+                    const _SectionLabel('בעל החיה'),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.primaryFaint,
+                          backgroundImage:
+                              (b.ownerPhotoUrl?.isNotEmpty == true)
+                                  ? CachedNetworkImageProvider(b.ownerPhotoUrl!)
+                                  : null,
+                          child: b.ownerPhotoUrl?.isNotEmpty != true
+                              ? Text(
+                                  b.ownerName.isNotEmpty
+                                      ? b.ownerName.characters.first
+                                          .toUpperCase()
+                                      : '?',
+                                  style: AppTextStyles.bodyMd.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w700),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            b.ownerName,
+                            style: AppTextStyles.bodyMd
+                                .copyWith(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Service section ────────────────────────────────────
+                    const _SectionLabel('פרטי השירות'),
+                    const SizedBox(height: 10),
+                    _DetailRow(
+                      icon: isWalk
+                          ? Icons.directions_walk_rounded
+                          : Icons.home_rounded,
+                      label: isWalk ? 'טיול כלבים' : 'שמירה על חיות',
+                    ),
+                    if (b.sittingType != null) ...[
+                      const SizedBox(height: 8),
+                      _DetailRow(
+                        icon: Icons.location_on_rounded,
+                        label: b.sittingType == 'atOwnerHome'
+                            ? 'בית בעל החיה'
+                            : 'בית המטפל',
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    _DetailRow(
+                      icon: Icons.calendar_today_rounded,
+                      label: b.formattedDateRange,
+                    ),
+                    if (b.createdAt != null) ...[
+                      const SizedBox(height: 8),
+                      _DetailRow(
+                        icon: Icons.access_time_rounded,
+                        label:
+                            'נשלח ב‑${b.createdAt!.day.toString().padLeft(2, '0')}/${b.createdAt!.month.toString().padLeft(2, '0')}/${b.createdAt!.year}',
+                        muted: true,
+                      ),
+                    ],
+
+                    // ── Instructions ───────────────────────────────────────
+                    if (b.specialInstructions?.isNotEmpty == true) ...[
+                      const SizedBox(height: 20),
+                      const _SectionLabel('הוראות מיוחדות'),
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(b.specialInstructions!,
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: AppColors.textSecondary)),
+                      ),
+                    ],
+
+                    // ── Provider note ──────────────────────────────────────
+                    if (b.providerNote?.isNotEmpty == true) ...[
+                      const SizedBox(height: 20),
+                      const _SectionLabel('הערת הנותן שירות'),
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color:
+                                  AppColors.warning.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(b.providerNote!,
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: AppColors.textSecondary)),
+                      ),
+                    ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: AppTextStyles.labelMd.copyWith(
+            color: AppColors.textMuted, fontWeight: FontWeight.w700),
+      );
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool muted;
+  const _DetailRow(
+      {required this.icon, required this.label, this.muted = false});
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Icon(icon,
+              size: 18,
+              color: muted ? AppColors.textMuted : AppColors.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label,
+                style: AppTextStyles.bodyMd.copyWith(
+                    color: muted
+                        ? AppColors.textMuted
+                        : AppColors.textPrimary)),
+          ),
+        ],
+      );
+}
+
 class IncomingBookingsScreen extends ConsumerWidget {
   const IncomingBookingsScreen({super.key});
 
@@ -75,6 +302,16 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
       await ref
           .read(bookingRepositoryProvider)
           .updateBookingStatus(widget.booking.id, status);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה בעדכון הבקשה, נסה שוב'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -82,55 +319,69 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
 
   Future<void> _showDeclineDialog() async {
     final noteCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('דחיית הזמנה'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('האם לדחות את הבקשה?'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'הסבר (אופציונלי)',
-                  border: OutlineInputBorder(),
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('דחיית הזמנה'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('האם לדחות את הבקשה?'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'הסבר (אופציונלי)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
                 ),
-                maxLines: 2,
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    foregroundColor: Colors.white),
+                child: const Text('דחה'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('ביטול'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.error,
-                  foregroundColor: Colors.white),
-              child: const Text('דחה'),
-            ),
-          ],
         ),
-      ),
-    );
-    if (confirmed == true && mounted) {
-      setState(() => _loading = true);
-      try {
-        await ref.read(bookingRepositoryProvider).updateBookingStatus(
-              widget.booking.id,
-              BookingStatus.declined,
-              providerNote:
-                  noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+      );
+      if (confirmed == true && mounted) {
+        setState(() => _loading = true);
+        try {
+          await ref.read(bookingRepositoryProvider).updateBookingStatus(
+                widget.booking.id,
+                BookingStatus.declined,
+                providerNote:
+                    noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+              );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('שגיאה בדחיית הבקשה, נסה שוב'),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
             );
-      } finally {
-        if (mounted) setState(() => _loading = false);
+          }
+        } finally {
+          if (mounted) setState(() => _loading = false);
+        }
       }
+    } finally {
+      noteCtrl.dispose();
     }
   }
 
@@ -140,7 +391,9 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
     final isWalk = b.serviceType == BookingServiceType.walk;
     final isPending = b.status == BookingStatus.pending;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showBookingDetail(context, b),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.pureWhite,
@@ -204,7 +457,7 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
               const Icon(Icons.calendar_today_rounded,
                   size: 16, color: AppColors.textMuted),
               const SizedBox(width: 6),
-              Text(_dateText(b), style: AppTextStyles.labelMd),
+              Text(b.formattedDateRange, style: AppTextStyles.labelMd),
             ],
           ),
           if (b.specialInstructions != null &&
@@ -277,19 +530,9 @@ class _IncomingBookingCardState extends ConsumerState<_IncomingBookingCard> {
           ],
         ],
       ),
+    ),
     );
   }
-
-  String _dateText(BookingRequest b) {
-    if (b.requestedDate != null) return _fmt(b.requestedDate!);
-    if (b.startDate != null && b.endDate != null) {
-      return '${_fmt(b.startDate!)} - ${_fmt(b.endDate!)}';
-    }
-    return 'תאריך לא נקבע';
-  }
-
-  String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   Widget _statusBadge(BookingStatus status) {
     final (label, color) = switch (status) {
