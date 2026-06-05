@@ -1,5 +1,39 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
+
+class MatchFeatureModel extends MatchFeature {
+  const MatchFeatureModel({
+    required super.featureName,
+    required super.pet1Value,
+    required super.pet2Value,
+    required super.status,
+  });
+
+  factory MatchFeatureModel.fromMap(Map<String, dynamic> map) {
+    return MatchFeatureModel(
+      featureName: map['featureName'] as String? ?? '',
+      pet1Value: map['pet1Value'] as String? ?? '',
+      pet2Value: map['pet2Value'] as String? ?? '',
+      status: map['status'] as String? ?? 'CANNOT_DETERMINE',
+    );
+  }
+
+  factory MatchFeatureModel.fromMatchFeature(MatchFeature feature) {
+    return MatchFeatureModel(
+      featureName: feature.featureName,
+      pet1Value: feature.pet1Value,
+      pet2Value: feature.pet2Value,
+      status: feature.status,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'featureName': featureName,
+        'pet1Value': pet1Value,
+        'pet2Value': pet2Value,
+        'status': status,
+      };
+}
 
 class LostFoundMatchModel extends LostFoundMatch {
   const LostFoundMatchModel({
@@ -8,15 +42,22 @@ class LostFoundMatchModel extends LostFoundMatch {
     required super.reporterName,
     required super.confidence,
     required super.reason,
+    super.features,
   });
 
   factory LostFoundMatchModel.fromMap(Map<String, dynamic> map) {
+    final rawFeatures = map['features'] as List<dynamic>? ?? [];
+    final features = rawFeatures
+        .map((f) => MatchFeatureModel.fromMap(Map<String, dynamic>.from(f as Map)))
+        .toList();
+
     return LostFoundMatchModel(
       postId: map['postId'] as String? ?? '',
       imageUrl: map['imageUrl'] as String? ?? '',
       reporterName: map['reporterName'] as String? ?? '',
       confidence: map['confidence'] as int? ?? 0,
       reason: map['reason'] as String? ?? '',
+      features: features,
     );
   }
 
@@ -26,6 +67,9 @@ class LostFoundMatchModel extends LostFoundMatch {
         'reporterName': reporterName,
         'confidence': confidence,
         'reason': reason,
+        'features': features
+            .map((f) => MatchFeatureModel.fromMatchFeature(f).toMap())
+            .toList(),
       };
 }
 

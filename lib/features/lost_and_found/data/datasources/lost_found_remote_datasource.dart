@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/features/lost_and_found/data/models/lost_found_post_model.dart';
@@ -42,7 +42,7 @@ class LostFoundRemoteDatasource {
         .where('species', isEqualTo: species)
         .where('status', isEqualTo: 'active')
         .where('createdAt', isGreaterThan: Timestamp.fromDate(cutoff))
-        .limit(10)
+        .limit(20)
         .get();
     return snap.docs
         .map((doc) => LostFoundPostModel.fromFirestore(doc))
@@ -57,7 +57,7 @@ class LostFoundRemoteDatasource {
         .where('type', isEqualTo: oppositeType)
         .where('status', isEqualTo: 'active')
         .where('createdAt', isGreaterThan: Timestamp.fromDate(cutoff))
-        .limit(20)
+        .limit(30)
         .get();
     return snap.docs
         .map((doc) => LostFoundPostModel.fromFirestore(doc))
@@ -79,8 +79,21 @@ class LostFoundRemoteDatasource {
   }
 
   Future<void> addMatch(String postId, Map<String, dynamic> match) async {
-    await _col.doc(postId).update({
-      'matches': FieldValue.arrayUnion([match]),
+    final docRef = _col.doc(postId);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data() as Map<String, dynamic>? ?? {};
+      final matchesList = List<dynamic>.from(data['matches'] ?? []);
+
+      // Remove any existing match targeting the same postId to avoid duplicates
+      matchesList.removeWhere((m) => m is Map && m['postId'] == match['postId']);
+
+      // Add the new match details
+      matchesList.add(match);
+
+      transaction.update(docRef, {'matches': matchesList});
     });
   }
 
