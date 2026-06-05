@@ -3,6 +3,9 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 
+// Notifications are written client-side (Spark free tier — no Cloud Functions
+// for notification triggers). See notification_writer.dart in the Flutter app.
+
 /**
  * Triggered when a post document is deleted.
  * Cleans up all comments in the nested subcollection in chunks of 100 docs.
