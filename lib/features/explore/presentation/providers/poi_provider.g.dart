@@ -173,7 +173,7 @@ final allPOIsProvider = AutoDisposeStreamProvider<List<POI>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AllPOIsRef = AutoDisposeStreamProviderRef<List<POI>>;
-String _$poiByIdHash() => r'90e99ba9e938e1c517cc27e6ecd4b51e6fd4cf25';
+String _$poiByIdHash() => r'54335341440dc1e6470b6ac9c4681196226b1ef9';
 
 /// See also [poiById].
 @ProviderFor(poiById)

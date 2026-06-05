@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
 import 'package:petpal/features/explore/presentation/widgets/poi_map_placeholder.dart';
@@ -45,7 +46,8 @@ class POIDetailScreen extends ConsumerWidget {
               fit: StackFit.expand,
               children: [
                 CachedNetworkImage(
-                  imageUrl: poi.imageUrl ?? 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
+                  imageUrl: poi.imageUrl ??
+                      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
                   fit: BoxFit.cover,
                 ),
                 // Gradient overlay for text legibility
@@ -54,7 +56,11 @@ class POIDetailScreen extends ConsumerWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.black26, Colors.transparent, Colors.black45],
+                      colors: [
+                        Colors.black26,
+                        Colors.transparent,
+                        Colors.black45
+                      ],
                     ),
                   ),
                 ),
@@ -78,7 +84,8 @@ class POIDetailScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           poi.name,
-                          style: AppTextStyles.headlineLg.copyWith(fontSize: 28),
+                          style:
+                              AppTextStyles.headlineLg.copyWith(fontSize: 28),
                         ),
                       ),
                       if (poi.isEmergency) _buildEmergencyBadge(),
@@ -93,36 +100,65 @@ class POIDetailScreen extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Rating & Reviews
                   _buildStats(poi),
-                  
+
                   const SizedBox(height: 32),
-                  
-                  // Description / Info Section
-                  Text('אודות המקום', style: AppTextStyles.headlineSm),
-                  const SizedBox(height: 12),
-                  Text(
-                    'חווה טיפול פרימיום ומתקנים מודרניים ב-${poi.name}. ממוקם בלב העיר, אנו מספקים שירותים ברמה הגבוהה ביותר עבור בני הלוויה האהובים שלך.',
-                    style: AppTextStyles.bodyLg.copyWith(color: AppColors.textSecondary),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
+
+                  // Description
+                  if ((poi.description ?? '').trim().isNotEmpty) ...[
+                    _buildSectionHeader('אודות המקום'),
+                    const SizedBox(height: 12),
+                    AppCard(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        poi.description!.trim(),
+                        style: AppTextStyles.bodyLg.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+
+                  // Opening hours
+                  if (poi.open24h || poi.openingHours.isNotEmpty) ...[
+                    _buildSectionHeader('שעות פעילות'),
+                    const SizedBox(height: 12),
+                    _buildHoursSection(poi),
+                    const SizedBox(height: 32),
+                  ],
+
+                  // Services / amenities
+                  if (poi.services.isNotEmpty) ...[
+                    _buildSectionHeader(_servicesHeader(poi.type)),
+                    const SizedBox(height: 12),
+                    _buildServicesSection(poi),
+                    const SizedBox(height: 32),
+                  ],
+
                   // Contact Actions
-                  _buildContactSection(poi),
-                  
+                  _buildContactSection(context, poi),
+
                   const SizedBox(height: 40),
-                  
+
                   // Map Integration
-                  Text('מיקום', style: AppTextStyles.headlineSm),
+                  _buildSectionHeader('מיקום'),
                   const SizedBox(height: 16),
-                  POIMapPlaceholder(
-                    latitude: poi.latitude,
-                    longitude: poi.longitude,
-                    address: poi.address,
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: ClipRRect(
+                      borderRadius: AppRadius.organicRadius,
+                      child: POIMapPlaceholder(
+                        latitude: poi.latitude,
+                        longitude: poi.longitude,
+                        address: poi.address,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -135,9 +171,12 @@ class POIDetailScreen extends ConsumerWidget {
 
   String _getTypeName(POIType type) {
     switch (type) {
-      case POIType.park: return 'גינה';
-      case POIType.vet: return 'וטרינר';
-      case POIType.store: return 'חנות';
+      case POIType.park:
+        return 'גינה';
+      case POIType.vet:
+        return 'וטרינר';
+      case POIType.store:
+        return 'חנות';
     }
   }
 
@@ -147,7 +186,8 @@ class POIDetailScreen extends ConsumerWidget {
       child: CircleAvatar(
         backgroundColor: Colors.white.withValues(alpha: 0.9),
         child: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -163,25 +203,49 @@ class POIDetailScreen extends ConsumerWidget {
       ),
       child: const Text(
         'חירום 24/7',
-        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+            color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const p = 0.017453292519943295;
-    final a = 0.5 - math.cos((lat2 - lat1) * p) / 2 +
-        math.cos(lat1 * p) * math.cos(lat2 * p) *
-        (1 - math.cos((lon2 - lon1) * p)) / 2;
+    final a = 0.5 -
+        math.cos((lat2 - lat1) * p) / 2 +
+        math.cos(lat1 * p) *
+            math.cos(lat2 * p) *
+            (1 - math.cos((lon2 - lon1) * p)) /
+            2;
     return 12742 * math.asin(math.sqrt(a.clamp(0.0, 1.0))); // Distance in km
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(title, style: AppTextStyles.headlineSm),
+      ],
+    );
   }
 
   Widget _buildStats(POI poi) {
     // Default location (Tel Aviv) for demonstration
     const double userLat = 32.0853;
     const double userLng = 34.7818;
-    final distanceKm = _calculateDistance(userLat, userLng, poi.latitude, poi.longitude);
-    
+    final distanceKm =
+        _calculateDistance(userLat, userLng, poi.latitude, poi.longitude);
+
     final String distanceText;
     if (distanceKm < 1.0) {
       final meters = (distanceKm * 1000).round();
@@ -190,66 +254,190 @@ class POIDetailScreen extends ConsumerWidget {
       distanceText = "${distanceKm.toStringAsFixed(1)} ק\"מ ממך";
     }
 
-    return Row(
-      children: [
-        const Icon(Icons.star_rounded, color: AppColors.warning, size: 24),
-        const SizedBox(width: 4),
-        Text(
-          poi.rating.toStringAsFixed(1),
-          style: AppTextStyles.headlineSm.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '(${poi.reviewCount} חוות דעת)',
-          style: AppTextStyles.labelMd,
-        ),
-        const Spacer(),
-        const Icon(Icons.directions_walk, color: AppColors.textMuted, size: 18),
-        const SizedBox(width: 4),
-        Text(distanceText, style: AppTextStyles.labelMd),
-      ],
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          const Icon(Icons.star_rounded, color: AppColors.warning, size: 24),
+          const SizedBox(width: 4),
+          Text(
+            poi.rating.toStringAsFixed(1),
+            style:
+                AppTextStyles.headlineSm.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '(${poi.reviewCount} חוות דעת)',
+            style: AppTextStyles.labelMd,
+          ),
+          const Spacer(),
+          const Icon(Icons.directions_walk,
+              color: AppColors.textMuted, size: 18),
+          const SizedBox(width: 4),
+          Text(distanceText, style: AppTextStyles.labelMd),
+        ],
+      ),
     );
   }
 
-  Widget _buildContactSection(POI poi) {
-    return Row(
-      children: [
-        if (poi.phoneNumber != null)
-          Expanded(
-            child: _buildActionBtn(
-              icon: Icons.phone_outlined,
-              label: 'התקשר עכשיו',
-              onTap: () => launchUrl(Uri.parse('tel:${poi.phoneNumber}')),
-            ),
-          ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionBtn(
-            icon: Icons.share_outlined,
-            label: 'שתף',
-            onTap: () {},
-          ),
-        ),
-      ],
-    );
+  static const List<(String, String)> _days = [
+    ('sun', 'ראשון'),
+    ('mon', 'שני'),
+    ('tue', 'שלישי'),
+    ('wed', 'רביעי'),
+    ('thu', 'חמישי'),
+    ('fri', 'שישי'),
+    ('sat', 'שבת'),
+  ];
+
+  String _servicesHeader(POIType type) {
+    switch (type) {
+      case POIType.vet:
+        return 'שירותים';
+      case POIType.store:
+        return 'קטגוריות';
+      case POIType.park:
+        return 'מתקנים';
+    }
   }
 
-  Widget _buildActionBtn({required IconData icon, required String label, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadius.lgRadius,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: AppRadius.lgRadius,
-        ),
-        child: Column(
+  Widget _buildHoursSection(POI poi) {
+    if (poi.open24h) {
+      return AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
           children: [
-            Icon(icon, color: AppColors.primary),
-            const SizedBox(height: 8),
-            Text(label, style: AppTextStyles.labelSm.copyWith(fontWeight: FontWeight.bold)),
+            const Icon(Icons.schedule_rounded, color: AppColors.success),
+            const SizedBox(width: 10),
+            Text('פתוח 24 שעות ביממה',
+                style:
+                    AppTextStyles.bodyLg.copyWith(fontWeight: FontWeight.bold)),
           ],
+        ),
+      );
+    }
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        children: [
+          for (final (key, label) in _days)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Text(label,
+                        style: AppTextStyles.bodyMd
+                            .copyWith(fontWeight: FontWeight.w700)),
+                  ),
+                  const Spacer(),
+                  Text(
+                    (poi.openingHours[key]?.isNotEmpty ?? false)
+                        ? poi.openingHours[key]!
+                        : 'סגור',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: (poi.openingHours[key]?.isNotEmpty ?? false)
+                          ? AppColors.textPrimary
+                          : AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServicesSection(POI poi) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: poi.services
+          .map((s) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: AppRadius.fullRadius,
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  s,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildContactSection(BuildContext context, POI poi) {
+    final half =
+        (MediaQuery.of(context).size.width - 48 - 12) / 2; // 24px page padding
+    final actions = <Widget>[
+      if ((poi.phoneNumber ?? '').isNotEmpty)
+        _buildActionBtn(
+          icon: Icons.phone_outlined,
+          label: 'התקשר',
+          onTap: () => launchUrl(Uri.parse('tel:${poi.phoneNumber}')),
+        ),
+      if ((poi.website ?? '').isNotEmpty)
+        _buildActionBtn(
+          icon: Icons.language_outlined,
+          label: 'אתר',
+          onTap: () => launchUrl(
+            Uri.parse(poi.website!),
+            mode: LaunchMode.externalApplication,
+          ),
+        ),
+      if ((poi.email ?? '').isNotEmpty)
+        _buildActionBtn(
+          icon: Icons.email_outlined,
+          label: 'אימייל',
+          onTap: () => launchUrl(Uri.parse('mailto:${poi.email}')),
+        ),
+      _buildActionBtn(
+        icon: Icons.share_outlined,
+        label: 'שתף',
+        onTap: () {},
+      ),
+    ];
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (final a in actions) SizedBox(width: half, child: a),
+      ],
+    );
+  }
+
+  Widget _buildActionBtn(
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.organicRadius,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(icon, color: AppColors.primary),
+              const SizedBox(height: 8),
+              Text(label,
+                  style: AppTextStyles.labelSm
+                      .copyWith(fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
       ),
     );
