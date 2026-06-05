@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/hero_decorations.dart';
+import 'package:petpal/core/widgets/notification_bell_button.dart';
 
 // ─── Data ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,7 @@ class LuxuryHero extends StatelessWidget {
   final String? profileImageUrl;
   final String? userName;
   final List<ProfileMenuItem> profileMenuItems;
+  final VoidCallback? onNotificationTap;
 
   const LuxuryHero({
     super.key,
@@ -40,6 +43,7 @@ class LuxuryHero extends StatelessWidget {
     this.profileImageUrl,
     this.userName,
     this.profileMenuItems = const [],
+    this.onNotificationTap,
   });
 
   @override
@@ -103,19 +107,7 @@ class LuxuryHero extends StatelessWidget {
                   Text('PetPal',
                       style: AppTextStyles.headlineLg.copyWith(
                           color: Colors.white, fontStyle: FontStyle.italic)),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.30),
-                          width: 1),
-                    ),
-                    child: const Icon(Icons.notifications_none_rounded,
-                        color: Colors.white, size: 20),
-                  ),
+                  NotificationBellButton(onTap: onNotificationTap),
                 ],
               ),
             ),
@@ -131,6 +123,7 @@ class LuxuryHero extends StatelessWidget {
     );
   }
 }
+
 
 // ─── Profile Avatar ─────────────────────────────────────────────────────────
 
@@ -485,8 +478,8 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
           ),
 
           // Fine grid shimmer
-          Positioned.fill(
-            child: CustomPaint(painter: _DotGridPainter()),
+          const Positioned.fill(
+            child: CustomPaint(painter: DotGridPainter()),
           ),
 
           // Content
@@ -890,23 +883,3 @@ class _HeaderInitial extends StatelessWidget {
   }
 }
 
-// ─── Dot Grid Painter ────────────────────────────────────────────────────────
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..style = PaintingStyle.fill;
-    const spacing = 18.0;
-    const r = 1.2;
-    for (double x = spacing; x < size.width; x += spacing) {
-      for (double y = spacing; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), r, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotGridPainter old) => false;
-}

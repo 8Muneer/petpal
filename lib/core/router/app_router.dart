@@ -29,7 +29,7 @@ import 'package:petpal/features/walks/presentation/screens/walk_request_detail_s
 import 'package:petpal/features/walks/presentation/screens/create_walk_service_screen.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/screens/create_sitting_service_screen.dart';
-import 'package:petpal/features/profile/presentation/screens/bookings_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/my_bookings_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/availability_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/service_settings_screen.dart';
 import 'package:petpal/features/messaging/presentation/screens/chat_list_screen.dart';
@@ -50,6 +50,8 @@ import 'package:petpal/features/admin/presentation/screens/sitter_verification_s
 import 'package:petpal/features/admin/presentation/screens/poi_management_screen.dart';
 import 'package:petpal/features/admin/presentation/screens/moderation_queue_screen.dart';
 import 'package:petpal/features/admin/presentation/screens/user_directory_screen.dart';
+import 'package:petpal/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:petpal/features/notifications/presentation/widgets/notification_shell.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -57,7 +59,7 @@ class AppRouter {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const AuthGate(),
+        builder: (context, state) => const NotificationShell(child: AuthGate()),
       ),
       GoRoute(
         path: '/onboarding',
@@ -176,7 +178,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/profile/bookings',
-        builder: (context, state) => const BookingsScreen(),
+        builder: (context, state) => const MyBookingsScreen(),
       ),
       GoRoute(
         path: '/provider/availability',
@@ -343,6 +345,10 @@ class AppRouter {
       GoRoute(
         path: '/admin/users',
         builder: (context, state) => const UserDirectoryScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
