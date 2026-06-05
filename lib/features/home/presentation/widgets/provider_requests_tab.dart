@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 
@@ -34,60 +35,65 @@ class _ProviderAllRequestsTabState extends ConsumerState<ProviderRequestsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-            child: GlassCard(
-              useBlur: true,
-              padding: const EdgeInsets.all(6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ProviderToggleChip(
-                      label: 'טיולים',
-                      icon: Icons.directions_walk_rounded,
-                      selected: _selected == 0,
-                      onTap: () => setState(() => _selected = 0),
-                    ),
+    return Column(
+      children: [
+        const AppHeaderBar(title: 'הבקשות'),
+        Expanded(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                child: GlassCard(
+                  useBlur: true,
+                  padding: const EdgeInsets.all(6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _ProviderToggleChip(
+                          label: 'טיולים',
+                          icon: Icons.directions_walk_rounded,
+                          selected: _selected == 0,
+                          onTap: () => setState(() => _selected = 0),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _ProviderToggleChip(
+                          label: 'שמירה',
+                          icon: Icons.home_work_rounded,
+                          selected: _selected == 1,
+                          onTap: () => setState(() => _selected = 1),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _ProviderToggleChip(
+                          label: 'הזמנות',
+                          icon: Icons.calendar_month_rounded,
+                          selected: _selected == 2,
+                          onTap: () => setState(() => _selected = 2),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _ProviderToggleChip(
-                      label: 'שמירה',
-                      icon: Icons.home_work_rounded,
-                      selected: _selected == 1,
-                      onTap: () => setState(() => _selected = 1),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _ProviderToggleChip(
-                      label: 'הזמנות',
-                      icon: Icons.calendar_month_rounded,
-                      selected: _selected == 2,
-                      onTap: () => setState(() => _selected = 2),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: switch (_selected) {
+                    1 => const _ProviderSittingRequestsView(
+                        key: ValueKey('req_sitting')),
+                    2 => const _IncomingBookingsView(
+                        key: ValueKey('req_bookings')),
+                    _ => const _ProviderRequestsView(key: ValueKey('req_walk')),
+                  },
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: switch (_selected) {
-                1 => const _ProviderSittingRequestsView(
-                    key: ValueKey('req_sitting')),
-                2 => const _IncomingBookingsView(key: ValueKey('req_bookings')),
-                _ => const _ProviderRequestsView(key: ValueKey('req_walk')),
-              },
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

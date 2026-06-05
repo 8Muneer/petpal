@@ -1,16 +1,18 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/luxury_hero.dart';
+import 'package:petpal/core/widgets/profile_menu.dart';
 import 'package:petpal/core/widgets/glass_search_bar.dart';
 import 'package:petpal/core/widgets/discovery_chip.dart';
 import 'package:petpal/core/widgets/luxury_service_card.dart';
 import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
 import 'package:petpal/features/home/presentation/widgets/my_requests_tab.dart';
-import 'package:petpal/features/sitting/domain/entities/sitting_request.dart' show SittingStatus;
+import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
+    show SittingStatus;
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
@@ -23,7 +25,6 @@ import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
 import 'package:petpal/features/explore/presentation/widgets/poi_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
-
 
 enum ServiceType { dogWalk, petSitting, available }
 
@@ -54,23 +55,38 @@ class UserHomeScreen extends ConsumerStatefulWidget {
 
 class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
   int _currentIndex = 0;
-  late final List<Widget> _tabs;
+
+  // Built tabs are kept alive after first visit so their scroll/state is preserved.
+  final Map<int, Widget> _builtTabs = {};
 
   @override
   void initState() {
     super.initState();
-    _tabs = [
-      _HomeTab(
-        onAction: _toast,
-        onTabChange: (i) => setState(() => _currentIndex = i),
-      ),
-      const FeedScreen(),
-      const ExploreScreen(),
-      const LostFoundFeedScreen(),
-      const ServicesTab(),
-      const MyRequestsTab(),
-      const ChatTab(),
-    ];
+    _buildTab(0); // Only the initial tab; all others are lazy.
+  }
+
+  Widget _buildTab(int index) {
+    return _builtTabs.putIfAbsent(
+        index,
+        () => switch (index) {
+              0 => _HomeTab(
+                  onAction: _toast,
+                  onTabChange: _switchTab,
+                ),
+              1 => const FeedScreen(),
+              2 => const ExploreScreen(),
+              3 => const LostFoundFeedScreen(),
+              4 => const ServicesTab(),
+              5 => const MyRequestsTab(),
+              6 => const ChatTab(),
+              _ => const SizedBox.shrink(),
+            });
+  }
+
+  void _switchTab(int index) {
+    _buildTab(
+        index); // Ensure widget is in map before setState triggers a build.
+    setState(() => _currentIndex = index);
   }
 
   void _toast(String msg) {
@@ -90,21 +106,50 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AppScaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _tabs,
+        body: Stack(
+          children: [
+            for (final entry in _builtTabs.entries)
+              Offstage(
+                offstage: entry.key != _currentIndex,
+                child: TickerMode(
+                  enabled: entry.key == _currentIndex,
+                  child: entry.value,
+                ),
+              ),
+          ],
         ),
         bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
-          onChanged: (i) => setState(() => _currentIndex = i),
+          onChanged: _switchTab,
           items: const [
-            AppNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'בית'),
-            AppNavItem(icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded, label: 'פיד'),
-            AppNavItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: 'גלה'),
-            AppNavItem(icon: Icons.pets_outlined, activeIcon: Icons.pets_rounded, label: 'אבודים'),
-            AppNavItem(icon: Icons.design_services_outlined, activeIcon: Icons.design_services_rounded, label: 'שירותים'),
-            AppNavItem(icon: Icons.assignment_outlined, activeIcon: Icons.assignment_rounded, label: 'הזמנות'),
-            AppNavItem(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'צ׳אט'),
+            AppNavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: 'בית'),
+            AppNavItem(
+                icon: Icons.feed_outlined,
+                activeIcon: Icons.feed_rounded,
+                label: 'פיד'),
+            AppNavItem(
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore_rounded,
+                label: 'גלה'),
+            AppNavItem(
+                icon: Icons.pets_outlined,
+                activeIcon: Icons.pets_rounded,
+                label: 'אבודים'),
+            AppNavItem(
+                icon: Icons.design_services_outlined,
+                activeIcon: Icons.design_services_rounded,
+                label: 'שירותים'),
+            AppNavItem(
+                icon: Icons.assignment_outlined,
+                activeIcon: Icons.assignment_rounded,
+                label: 'הזמנות'),
+            AppNavItem(
+                icon: Icons.chat_bubble_outline_rounded,
+                activeIcon: Icons.chat_bubble_rounded,
+                label: 'צ׳אט'),
           ],
         ),
       ),
@@ -152,19 +197,27 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
 
   Color _sittingStatusColor(SittingStatus status) {
     switch (status) {
-      case SittingStatus.open: return AppColors.warning;
-      case SittingStatus.taken: return AppColors.success;
-      case SittingStatus.closed: return AppColors.primary;
-      case SittingStatus.declined: return AppColors.error;
+      case SittingStatus.open:
+        return AppColors.warning;
+      case SittingStatus.taken:
+        return AppColors.success;
+      case SittingStatus.closed:
+        return AppColors.primary;
+      case SittingStatus.declined:
+        return AppColors.error;
     }
   }
 
   String _sittingStatusLabel(SittingStatus status) {
     switch (status) {
-      case SittingStatus.open: return 'ממתין';
-      case SittingStatus.taken: return 'אושר';
-      case SittingStatus.closed: return 'הושלם';
-      case SittingStatus.declined: return 'נדחה';
+      case SittingStatus.open:
+        return 'ממתין';
+      case SittingStatus.taken:
+        return 'אושר';
+      case SittingStatus.closed:
+        return 'הושלם';
+      case SittingStatus.declined:
+        return 'נדחה';
     }
   }
 
@@ -180,7 +233,6 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     final vetsAsync = ref.watch(topRatedPOIsProvider(type: POIType.vet));
     final storesAsync = ref.watch(topRatedPOIsProvider(type: POIType.store));
 
-
     return Stack(
       children: [
         CustomScrollView(
@@ -195,21 +247,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               searchBar: const GlassSearchBar(hintText: 'חפש שירותים...'),
               profileImageUrl: profile?.photoUrl,
               userName: profile?.name,
-              profileMenuItems: [
-                ProfileMenuItem(
-                  icon: Icons.person_rounded,
-                  label: 'הפרופיל שלי',
-                  subtitle: 'ניהול פרטים אישיים',
-                  onTap: () => context.push('/profile'),
-                ),
-                ProfileMenuItem(
-                  icon: Icons.pets_rounded,
-                  iconColor: AppColors.sapphire,
-                  label: 'החיות שלי',
-                  subtitle: 'ניהול חיות המחמד שלך',
-                  onTap: () => context.push('/my-pets'),
-                ),
-              ],
+              onNotificationTap: () => context.push('/notifications'),
+              profileMenuItems: buildProfileMenuItems(context),
             ),
 
             // 2. Discovery Chips
@@ -299,7 +338,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   child: Row(
                     children: [
                       const Icon(Icons.error_outline_rounded,
@@ -314,7 +354,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            const SliverToBoxAdapter(child: SizedBox(height: 5)),
 
             // 4. My Walk Requests
             SliverToBoxAdapter(
@@ -330,8 +370,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                       final req = requests[index];
                       return WalkRequestHomeCard(
                         request: req,
-                        onTap: () =>
-                            context.push('/walks/detail', extra: req),
+                        onTap: () => context.push('/walks/detail', extra: req),
                       );
                     },
                   );
@@ -341,7 +380,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   child: Row(
                     children: [
                       const Icon(Icons.error_outline_rounded,
@@ -356,15 +396,15 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            const SliverToBoxAdapter(child: SizedBox(height: 2)),
 
             // 5. Available Sitters
             SliverToBoxAdapter(
               child: sittersAsync.when(
                 data: (sitters) {
                   final top = (sitters.toList()
-                        ..sort((a, b) =>
-                            (b.rating ?? 0).compareTo(a.rating ?? 0)))
+                        ..sort(
+                            (a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0)))
                       .take(10)
                       .toList();
                   if (top.isEmpty) return const SizedBox.shrink();
@@ -382,8 +422,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                         rating: (s.rating ?? 0).toStringAsFixed(1),
                         location: s.area,
                         imageUrl: s.providerPhotoUrl ?? '',
-                        onTap: () => context.push(
-                            '/services/provider/sitting',
+                        onTap: () => context.push('/services/provider/sitting',
                             extra: s),
                       );
                     },
@@ -394,7 +433,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   child: Row(
                     children: [
                       const Icon(Icons.error_outline_rounded,
@@ -416,8 +456,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               child: walkersAsync.when(
                 data: (walkers) {
                   final top = (walkers.toList()
-                        ..sort((a, b) =>
-                            (b.rating ?? 0).compareTo(a.rating ?? 0)))
+                        ..sort(
+                            (a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0)))
                       .take(10)
                       .toList();
                   if (top.isEmpty) return const SizedBox.shrink();
@@ -435,9 +475,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                         rating: (w.rating ?? 0).toStringAsFixed(1),
                         location: w.area,
                         imageUrl: w.providerPhotoUrl ?? '',
-                        onTap: () => context.push(
-                            '/services/provider/walk',
-                            extra: w),
+                        onTap: () =>
+                            context.push('/services/provider/walk', extra: w),
                       );
                     },
                   );
@@ -447,7 +486,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   child: Row(
                     children: [
                       const Icon(Icons.error_outline_rounded,
@@ -494,7 +534,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                 ),
                 loading: () => const SizedBox(
                   height: 240,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
                 error: (e, _) => const SizedBox.shrink(),
               ),
@@ -532,7 +573,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                 ),
                 loading: () => const SizedBox(
                   height: 240,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
                 error: (e, _) => const SizedBox.shrink(),
               ),
@@ -570,7 +612,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                 ),
                 loading: () => const SizedBox(
                   height: 240,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
                 error: (e, _) => const SizedBox.shrink(),
               ),

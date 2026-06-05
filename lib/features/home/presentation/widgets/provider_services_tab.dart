@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/gradient_action_card.dart';
 
@@ -12,7 +13,6 @@ import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
-
 
 class ProviderServicesTab extends ConsumerStatefulWidget {
   const ProviderServicesTab({super.key});
@@ -22,55 +22,58 @@ class ProviderServicesTab extends ConsumerStatefulWidget {
       _ProviderMyServicesTabState();
 }
 
-class _ProviderMyServicesTabState
-    extends ConsumerState<ProviderServicesTab> {
+class _ProviderMyServicesTabState extends ConsumerState<ProviderServicesTab> {
   int _selected = 0; // 0 = walk, 1 = sitting
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-            child: GlassCard(
-              useBlur: true,
-              padding: const EdgeInsets.all(6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ProviderToggleChip(
-                      label: 'פרסם שירותי טיולים',
-                      icon: Icons.directions_walk_rounded,
-                      selected: _selected == 0,
-                      onTap: () => setState(() => _selected = 0),
-                    ),
+    return Column(
+      children: [
+        const AppHeaderBar(title: 'השירותים שלי'),
+        Expanded(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                child: GlassCard(
+                  useBlur: true,
+                  padding: const EdgeInsets.all(6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _ProviderToggleChip(
+                          label: 'פרסם שירותי טיולים',
+                          icon: Icons.directions_walk_rounded,
+                          selected: _selected == 0,
+                          onTap: () => setState(() => _selected = 0),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _ProviderToggleChip(
+                          label: 'פרסם שירותי שמירה',
+                          icon: Icons.home_work_rounded,
+                          selected: _selected == 1,
+                          onTap: () => setState(() => _selected = 1),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ProviderToggleChip(
-                      label: 'פרסם שירותי שמירה',
-                      icon: Icons.home_work_rounded,
-                      selected: _selected == 1,
-                      onTap: () => setState(() => _selected = 1),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _selected == 0
+                      ? const _ProviderAdvertiseView(key: ValueKey('adv_walk'))
+                      : const _ProviderSittingAdvertiseView(
+                          key: ValueKey('adv_sitting')),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: _selected == 0
-                  ? const _ProviderAdvertiseView(key: ValueKey('adv_walk'))
-                  : const _ProviderSittingAdvertiseView(
-                      key: ValueKey('adv_sitting')),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -387,8 +390,7 @@ class _MyServiceCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color:
-                        isActive ? AppColors.success : AppColors.warning,
+                    color: isActive ? AppColors.success : AppColors.warning,
                   ),
                 ),
               ),
@@ -573,8 +575,7 @@ class _MySittingServiceCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color:
-                        isActive ? AppColors.success : AppColors.warning,
+                    color: isActive ? AppColors.success : AppColors.warning,
                   ),
                 ),
               ),

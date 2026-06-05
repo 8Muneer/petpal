@@ -1,4 +1,5 @@
 ﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:petpal/features/notifications/data/datasources/notification_writer.dart';
 
 class MessagingDatasource {
   final FirebaseFirestore _db;
@@ -102,6 +103,32 @@ class MessagingDatasource {
     });
 
     await batch.commit();
+
+    // Notify the other participant — fire-and-forget
+    _sendMessageNotification(
+            conversationId, senderId, senderName, text)
+        .ignore();
+  }
+
+  Future<void> _sendMessageNotification(String conversationId, String senderId,
+      String senderName, String text) async {
+    try {
+      final snap = await _conversations.doc(conversationId).get();
+      final d = snap.data() as Map<String, dynamic>?;
+      if (d == null) return;
+      final participants = List<String>.from(d['participants'] ?? []);
+      final recipientId =
+          participants.firstWhere((p) => p != senderId, orElse: () => '');
+      if (recipientId.isEmpty) return;
+      await writeClientNotification(
+        _db,
+        userId: recipientId,
+        title: senderName,
+        body: text.length > 80 ? text.substring(0, 80) : text,
+        type: 'newMessage',
+        data: {'conversationId': conversationId, 'otherName': senderName},
+      );
+    } catch (_) {}
   }
 
   /// Sends a context card message (request/service details) without updating lastMessage.

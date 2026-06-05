@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
+import 'package:petpal/core/widgets/app_search_bar.dart';
+import 'package:petpal/core/widgets/filter_button.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
@@ -136,7 +140,8 @@ List<_ServiceEntry> _runFilter(
     all = all.where((e) => f.petTypes.any(e.petTypes.contains)).toList();
   }
   if (f.selectedDays.isNotEmpty) {
-    all = all.where((e) => f.selectedDays.any(e.availableDays.contains)).toList();
+    all =
+        all.where((e) => f.selectedDays.any(e.availableDays.contains)).toList();
   }
   if (f.minRating > 0) {
     all = all.where((e) => (e.rating ?? 0) >= f.minRating).toList();
@@ -684,195 +689,230 @@ class _ServicesTabState extends ConsumerState<ServicesTab> {
     final items = _runFilter(walks, sittings, _filter, _query);
     final activeCount = _filter.activeCount;
 
-    return SafeArea(
-      bottom: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Search bar + filter button ────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _openFilterSheet(walks, sittings),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: activeCount > 0
-                              ? AppColors.primary
-                              : AppColors.pureWhite,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: activeCount > 0
+    return Column(
+      children: [
+        const AppHeaderBar(title: 'שירותים'),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Service type tabs ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: List.generate(_typeFilters.length, (i) {
+                    final label = _typeFilters[i];
+                    final selected = _filter.typeFilter == label;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                          left: i < _typeFilters.length - 1 ? 8 : 0),
+                      child: GestureDetector(
+                        onTap: () => setState(() =>
+                            _filter = _filter.copyWith(typeFilter: label)),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: selected
                                 ? AppColors.primary
-                                : AppColors.border,
+                                : AppColors.pureWhite,
+                            borderRadius: AppRadius.fullRadius,
+                            border: Border.all(
+                              color: selected
+                                  ? AppColors.primary
+                                  : AppColors.border,
+                              width: 1.5,
+                            ),
+                            boxShadow: selected ? null : AppShadows.subtle,
                           ),
-                          boxShadow: AppShadows.subtle,
+                          child: Text(
+                            label,
+                            style: AppTextStyles.labelMd.copyWith(
+                              color: selected
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                        child: Icon(Icons.tune_rounded,
-                            color: activeCount > 0
-                                ? Colors.white
-                                : AppColors.textSecondary,
-                            size: 22),
                       ),
-                      if (activeCount > 0)
-                        Positioned(
-                          top: -6,
-                          left: -6,
-                          child: Container(
-                            width: 18,
-                            height: 18,
-                            decoration: const BoxDecoration(
-                              color: AppColors.error,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text('$activeCount',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800)),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                    );
+                  }),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _SearchBar(
-                    controller: _searchCtrl,
-                    hint: 'חפש/י לפי שם או אזור...',
-                    onChanged: (v) {
-                      _searchDebounce?.cancel();
-                      _searchDebounce = Timer(
-                        const Duration(milliseconds: 280),
-                        () => setState(() => _query = v.trim().toLowerCase()),
-                      );
-                    },
+              ),
+
+              // ── Search bar + filter button ────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Row(
+                  children: [
+                    FilterButton(
+                      activeCount: activeCount,
+                      onTap: () => _openFilterSheet(walks, sittings),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: AppSearchBar(
+                        controller: _searchCtrl,
+                        hint: 'חפש/י לפי שם או אזור...',
+                        onChanged: (v) {
+                          _searchDebounce?.cancel();
+                          _searchDebounce = Timer(
+                            const Duration(milliseconds: 280),
+                            () =>
+                                setState(() => _query = v.trim().toLowerCase()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Active filter removable chips ─────────────────────────────────
+              if (!_filter.isDefault) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 32,
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      if (_filter.typeFilter != 'הכל')
+                        _ActiveChip(
+                            label: _filter.typeFilter,
+                            onRemove: () => setState(() =>
+                                _filter = _filter.copyWith(typeFilter: 'הכל'))),
+                      if (_filter.minRating > 0)
+                        _ActiveChip(
+                            label: '★ ${_filter.minRating}+',
+                            onRemove: () => setState(() =>
+                                _filter = _filter.copyWith(minRating: 0))),
+                      if (_filter.priceRange.start > 0 ||
+                          _filter.priceRange.end < 500)
+                        _ActiveChip(
+                            label:
+                                '₪${_filter.priceRange.start.round()}–₪${_filter.priceRange.end.round()}',
+                            onRemove: () => setState(() => _filter =
+                                _filter.copyWith(
+                                    priceRange: const RangeValues(0, 500)))),
+                      if (_filter.selectedDays.isNotEmpty)
+                        _ActiveChip(
+                            label: _filter.selectedDays.join(' '),
+                            onRemove: () => setState(() =>
+                                _filter = _filter.copyWith(selectedDays: {}))),
+                      for (final p in _filter.petTypes)
+                        _ActiveChip(
+                            label: p,
+                            onRemove: () => setState(() {
+                                  final s = Set<String>.from(_filter.petTypes)
+                                    ..remove(p);
+                                  _filter = _filter.copyWith(petTypes: s);
+                                })),
+                      if (_filter.activeOnly)
+                        _ActiveChip(
+                            label: 'זמינים',
+                            onRemove: () => setState(() =>
+                                _filter = _filter.copyWith(activeOnly: false))),
+                      if (_filter.hasReviewsOnly)
+                        _ActiveChip(
+                            label: 'עם ביקורות',
+                            onRemove: () => setState(() => _filter =
+                                _filter.copyWith(hasReviewsOnly: false))),
+                      if (_filter.sortBy != 'ברירת מחדל')
+                        _ActiveChip(
+                            label: _filter.sortBy,
+                            onRemove: () => setState(() => _filter =
+                                _filter.copyWith(sortBy: 'ברירת מחדל'))),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
 
-          // ── Active filter removable chips ─────────────────────────────────
-          if (!_filter.isDefault) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 32,
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                scrollDirection: Axis.horizontal,
-                children: [
-                  if (_filter.typeFilter != 'הכל')
-                    _ActiveChip(
-                        label: _filter.typeFilter,
-                        onRemove: () => setState(() =>
-                            _filter = _filter.copyWith(typeFilter: 'הכל'))),
-                  if (_filter.minRating > 0)
-                    _ActiveChip(
-                        label: '★ ${_filter.minRating}+',
-                        onRemove: () => setState(
-                            () => _filter = _filter.copyWith(minRating: 0))),
-                  if (_filter.priceRange.start > 0 ||
-                      _filter.priceRange.end < 500)
-                    _ActiveChip(
-                        label:
-                            '₪${_filter.priceRange.start.round()}–₪${_filter.priceRange.end.round()}',
-                        onRemove: () => setState(() => _filter = _filter
-                            .copyWith(priceRange: const RangeValues(0, 500)))),
-                  if (_filter.selectedDays.isNotEmpty)
-                    _ActiveChip(
-                        label: _filter.selectedDays.join(' '),
-                        onRemove: () => setState(() =>
-                            _filter = _filter.copyWith(selectedDays: {}))),
-                  for (final p in _filter.petTypes)
-                    _ActiveChip(
-                        label: p,
-                        onRemove: () => setState(() {
-                              final s = Set<String>.from(_filter.petTypes)
-                                ..remove(p);
-                              _filter = _filter.copyWith(petTypes: s);
-                            })),
-                  if (_filter.activeOnly)
-                    _ActiveChip(
-                        label: 'זמינים',
-                        onRemove: () => setState(() =>
-                            _filter = _filter.copyWith(activeOnly: false))),
-                  if (_filter.hasReviewsOnly)
-                    _ActiveChip(
-                        label: 'עם ביקורות',
-                        onRemove: () => setState(() =>
-                            _filter = _filter.copyWith(hasReviewsOnly: false))),
-                  if (_filter.sortBy != 'ברירת מחדל')
-                    _ActiveChip(
-                        label: _filter.sortBy,
-                        onRemove: () => setState(() =>
-                            _filter = _filter.copyWith(sortBy: 'ברירת מחדל'))),
-                ],
+              const SizedBox(height: 10),
+
+              // ── Unified grid ──────────────────────────────────────────────────
+              Expanded(
+                child: Builder(builder: (_) {
+                  if (walksAsync.isLoading || sittingAsync.isLoading) {
+                    return ListView.builder(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16,
+                          MediaQuery.of(context).viewPadding.bottom + 84),
+                      itemCount: 3,
+                      itemBuilder: (_, __) => const Padding(
+                        padding: EdgeInsets.only(bottom: 14),
+                        child: _ProviderCardSkeleton(),
+                      ),
+                    );
+                  }
+                  if (walksAsync.hasError || sittingAsync.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.cloud_off_rounded,
+                              size: 48,
+                              color:
+                                  AppColors.textMuted.withValues(alpha: 0.4)),
+                          const SizedBox(height: 12),
+                          Text('שגיאה בטעינת השירותים',
+                              style: AppTextStyles.headlineSm
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    );
+                  }
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search_off_rounded,
+                                size: 52,
+                                color:
+                                    AppColors.textMuted.withValues(alpha: 0.4)),
+                            const SizedBox(height: 14),
+                            Text(
+                              'לא נמצאו ספקים עם הסינון הנוכחי',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.headlineSm
+                                  .copyWith(color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () =>
+                                  setState(() => _filter = _FilterState()),
+                              child: Text(
+                                'נקה סינון',
+                                style: AppTextStyles.bodyMd.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16,
+                        MediaQuery.of(context).viewPadding.bottom + 84),
+                    itemCount: items.length,
+                    itemBuilder: (_, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _ProviderCard(entry: items[i]),
+                    ),
+                  );
+                }),
               ),
-            ),
-          ],
-
-          const SizedBox(height: 10),
-
-          // ── Unified grid ──────────────────────────────────────────────────
-          Expanded(
-            child: Builder(builder: (_) {
-              if (walksAsync.isLoading || sittingAsync.isLoading) {
-                return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary));
-              }
-              if (walksAsync.hasError || sittingAsync.hasError) {
-                return const Center(child: Text('שגיאה בטעינת השירותים'));
-              }
-              if (items.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search_off_rounded,
-                          size: 56,
-                          color: AppColors.textMuted.withValues(alpha: 0.5)),
-                      const SizedBox(height: 12),
-                      Text('לא נמצאו שירותים',
-                          style: AppTextStyles.headlineSm
-                              .copyWith(color: AppColors.textSecondary)),
-                      const SizedBox(height: 6),
-                      Text('נסה/י לשנות את הסינון',
-                          style: AppTextStyles.labelMd),
-                    ],
-                  ),
-                );
-              }
-              return GridView.builder(
-                padding: EdgeInsets.fromLTRB(
-                    16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 84),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.58,
-                ),
-                itemCount: items.length,
-                itemBuilder: (_, i) {
-                  final e = items[i];
-                  return e.isWalk
-                      ? _WalkServiceCard(service: e.walk!)
-                      : _SittingServiceCard(service: e.sitting!);
-                },
-              );
-            }),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -995,7 +1035,7 @@ class _WalkServicesViewState extends ConsumerState<WalkServicesView> {
         // Search bar
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: _SearchBar(
+          child: AppSearchBar(
             controller: _searchCtrl,
             hint: 'חפש/י ספק טיולים...',
             onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
@@ -1097,7 +1137,7 @@ class _SittingServicesViewState extends ConsumerState<SittingServicesView> {
         // Search bar
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: _SearchBar(
+          child: AppSearchBar(
             controller: _searchCtrl,
             hint: 'חפש/י ספק שמירה...',
             onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
@@ -2386,42 +2426,357 @@ class _MiniChip extends StatelessWidget {
   }
 }
 
-class _SearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onChanged;
+// ── Editorial single-column card for ServicesTab ──────────────────────────────
 
-  const _SearchBar({
-    required this.controller,
-    required this.hint,
-    required this.onChanged,
-  });
+class _ProviderCard extends StatelessWidget {
+  final _ServiceEntry entry;
+
+  const _ProviderCard({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final photo = entry.isWalk
+        ? entry.walk?.providerPhotoUrl
+        : entry.sitting?.providerPhotoUrl;
+    final name = entry.providerName;
+    final area = entry.area;
+    final displayPrice = formatPrice(entry.priceText, entry.priceType);
+    final rating = entry.rating;
+    final reviewCount = entry.reviewCount;
+    final isActive = entry.isActive;
+    final isWalk = entry.isWalk;
+    final detail =
+        isWalk ? entry.walk!.duration : entry.sitting!.sittingLocation;
+
+    return GestureDetector(
+      onTap: () {
+        if (isWalk) {
+          context.push('/services/provider/walk', extra: entry.walk);
+        } else {
+          context.push('/services/provider/sitting', extra: entry.sitting);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.pureWhite,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.card,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Hero image ─────────────────────────────────────────────────
+            SizedBox(
+              height: 200,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Photo or solid placeholder
+                  photo != null && photo.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: photo,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              Container(color: AppColors.prussianBlue),
+                          errorWidget: (_, __, ___) =>
+                              _CardPhotoPlaceholder(name: name, isWalk: isWalk),
+                        )
+                      : _CardPhotoPlaceholder(name: name, isWalk: isWalk),
+
+                  // Available status — top trailing (RTL: top left)
+                  if (isActive)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.statusOpen,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'זמין',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Service type — top leading (RTL: top right)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.prussianBlue3.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isWalk ? 'טיול' : 'שמירה',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Content ────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name + price
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        displayPrice,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Rating
+                  if (rating != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 13, color: AppColors.warning),
+                          const SizedBox(width: 3),
+                          Text(
+                            rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                          if (reviewCount != null) ...[
+                            const SizedBox(width: 3),
+                            Text(
+                              '($reviewCount)',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                  // Area + service detail
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined,
+                          size: 13, color: AppColors.textMuted),
+                      const SizedBox(width: 3),
+                      Text(
+                        area,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Text('·',
+                            style: TextStyle(color: AppColors.textMuted)),
+                      ),
+                      Icon(
+                        isWalk ? Icons.timer_outlined : Icons.home_outlined,
+                        size: 13,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          detail,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Availability days summary
+                  if (entry.availableDays.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _AvailabilityDotRow(days: entry.availableDays),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardPhotoPlaceholder extends StatelessWidget {
+  final String name;
+  final bool isWalk;
+
+  const _CardPhotoPlaceholder({required this.name, required this.isWalk});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 46,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: AppRadius.fullRadius,
-        boxShadow: AppShadows.subtle,
-      ),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        textAlignVertical: TextAlignVertical.center,
-        style: AppTextStyles.body,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.caption,
-          prefixIcon: const Icon(Icons.search_rounded,
-              color: AppColors.textMuted, size: 20),
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-          isDense: true,
+      color: isWalk ? AppColors.prussianBlue : AppColors.regalNavy,
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 64,
+            fontWeight: FontWeight.w700,
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _AvailabilityDotRow extends StatelessWidget {
+  final List<String> days;
+  static const _allDays = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+
+  const _AvailabilityDotRow({required this.days});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.calendar_today_outlined,
+            size: 12, color: AppColors.textMuted),
+        const SizedBox(width: 5),
+        Row(
+          children: _allDays.map((d) {
+            final active = days.contains(d);
+            return Padding(
+              padding: const EdgeInsets.only(left: 3),
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: active
+                      ? AppColors.primary.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: active ? AppColors.primary : AppColors.border,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    d,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: active ? AppColors.primary : AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProviderCardSkeleton extends StatelessWidget {
+  const _ProviderCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.pureWhite,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppShadows.card,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Image skeleton
+          Container(height: 200, color: AppColors.divider),
+          // Content skeleton
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                    height: 16,
+                    width: 160,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(8),
+                    )),
+                const SizedBox(height: 8),
+                Container(
+                    height: 12,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(6),
+                    )),
+                const SizedBox(height: 8),
+                Container(
+                    height: 12,
+                    width: 140,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(6),
+                    )),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
