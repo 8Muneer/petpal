@@ -53,25 +53,25 @@
 *   **✓ Role-Based Access Control (RBAC)**: Defined authorization levels for Pet Owners and Service Providers.
 
 ## Marketplace: Discovery & Scheduling
-*   **✗ Advanced Filtering**: Granular search based on animal species, price, and expertise. *(In Progress)*
-*   **✗ Service Booking**: Time-slot scheduling system and formal confirmation workflow. *(In Progress)*
-*   **✗ Request Management**: Provider-side interface for approving/declining incoming requests. *(In Progress)*
-*   **✗ Availability Calendar**: Provider management of active working hours. *(In Progress)*
+*   **✓ Advanced Filtering**: Granular search based on animal species, price, and expertise. *(Completed)*
+*   **✓ Service Booking**: Time-slot scheduling system and formal confirmation workflow. *(Completed)*
+*   **✓ Request Management**: Provider-side interface for approving/declining incoming requests. *(Completed)*
+*   **✓ Availability Calendar**: Provider management of active working hours. *(Completed)*
 
 ## Community Safety: Lost & Found
-*   **✗ Lost Pet Reporting**: Structured forms with photo uploads and GPS coordinates. *(In Progress)*
-*   **✗ Finder Reporting**: Streamlined workflow to capture location data for found pets. *(In Progress)*
-*   **✗ AI Vision Integration**: Implementing TensorFlow Lite for on-device animal image matching. *(In Progress)*
+*   **✓ Lost Pet Reporting**: Structured forms with photo uploads and GPS coordinates. *(Completed)*
+*   **✓ Finder Reporting**: Streamlined workflow to capture location data for found pets. *(Completed)*
+*   **✓ AI Vision Integration**: Gemini multimodal AI matching and comparison screens. *(Completed)*
 
 ## User Profile & Trust Management
 *   **✓ Basic Profile Module**: Foundational profile creation during signup.
-*   **✗ Identity Verification**: Secure document upload and verification for providers. *(In Progress)*
+*   **✓ Identity Verification**: Admin system with moderation queues, user directory, and verification flows. *(Completed)*
 *   **✗ Favorites Management**: Persistence logic for saved service providers. *(In Progress)*
-*   **✗ Dual-Sided Ratings**: Numerical scores and text feedback post-service. *(In Progress)*
+*   **✓ Dual-Sided Ratings**: Numerical reviews and feedback system with real-time rating updates. *(Completed)*
 
 ## Payments & Real-Time Communications
 *   **✗ Financial Integration**: Third-party API integration for secure fund transfers. *(In Progress)*
-*   **✗ FCM Notifications**: Firebase Cloud Messaging for real-time booking alerts. *(In Progress)*
+*   **✓ FCM Notifications**: End-to-end local/push and Firestore notifications. *(Completed)*
 
 ## User Experience & Aesthetics
 *   **✓ Premium UI/UX Design**: Implementation of *Organic Modernism* and *Glassmorphism*.
