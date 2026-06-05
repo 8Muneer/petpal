@@ -1,16 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/location_picker_field.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
@@ -164,7 +160,7 @@ class _CreateWalkServiceScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFFB7185) : AppColors.primary,
+            isError ? AppColors.error : AppColors.primary,
       ),
     );
   }
@@ -266,7 +262,7 @@ class _CreateWalkServiceScreenState
                                           color: selected
                                               ? AppColors.primary
                                               : AppColors.textSecondary
-                                                  .withOpacity(0.25),
+                                                  .withValues(alpha: 0.25),
                                         ),
                                       ),
                                       child: Column(
@@ -303,7 +299,7 @@ class _CreateWalkServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color:
-                                    AppColors.primary.withOpacity(0.06),
+                                    AppColors.primary.withValues(alpha: 0.06),
                               ),
                               child: TextField(
                                 controller: _priceController,
@@ -315,7 +311,7 @@ class _CreateWalkServiceScreenState
                                       : '₪50 לשעה',
                                   hintStyle: TextStyle(
                                     color: AppColors.textSecondary
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                     fontWeight: FontWeight.w600,
                                   ),
                                   border: InputBorder.none,
@@ -350,13 +346,13 @@ class _CreateWalkServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color:
-                                    AppColors.textSecondary.withOpacity(0.06),
+                                    AppColors.textSecondary.withValues(alpha: 0.06),
                               ),
                               child: Row(
                                 children: [
                                   Icon(Icons.handshake_outlined,
                                       color: AppColors.textSecondary
-                                          .withOpacity(0.7),
+                                          .withValues(alpha: 0.7),
                                       size: 18),
                                   const SizedBox(width: 8),
                                   Text(
@@ -365,7 +361,7 @@ class _CreateWalkServiceScreenState
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textSecondary
-                                          .withOpacity(0.8),
+                                          .withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ],
@@ -425,7 +421,7 @@ class _CreateWalkServiceScreenState
                                       color: selected
                                           ? AppColors.primary
                                           : AppColors.textSecondary
-                                              .withOpacity(0.25),
+                                              .withValues(alpha: 0.25),
                                     ),
                                   ),
                                   child: Column(
@@ -487,7 +483,7 @@ class _CreateWalkServiceScreenState
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 color: AppColors.primary
-                                    .withOpacity(0.06),
+                                    .withValues(alpha: 0.06),
                               ),
                               child: TextField(
                                 controller: _customDurationController,
@@ -496,7 +492,7 @@ class _CreateWalkServiceScreenState
                                   hintText: 'לדוגמה: 3 שעות, לילה שלם',
                                   hintStyle: TextStyle(
                                     color: AppColors.textSecondary
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                     fontWeight: FontWeight.w600,
                                   ),
                                   border: InputBorder.none,
@@ -543,12 +539,12 @@ class _CreateWalkServiceScreenState
                                 color: _allDaysSelected
                                     ? AppColors.primary
                                     : AppColors.primary
-                                        .withOpacity(0.07),
+                                        .withValues(alpha: 0.07),
                                 border: Border.all(
                                   color: _allDaysSelected
                                       ? AppColors.primary
                                       : AppColors.primary
-                                          .withOpacity(0.3),
+                                          .withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Row(
@@ -614,7 +610,7 @@ class _CreateWalkServiceScreenState
                                       color: selected
                                           ? AppColors.primary
                                           : AppColors.textSecondary
-                                              .withOpacity(0.25),
+                                              .withValues(alpha: 0.25),
                                     ),
                                   ),
                                   child: Center(
@@ -676,7 +672,7 @@ class _CreateWalkServiceScreenState
                               'תאר/י את הניסיון שלך, הזמינות, ומה מייחד אותך כמטייל/ת חיות מחמד...',
                           hintStyle: TextStyle(
                             color:
-                                AppColors.textSecondary.withOpacity(0.6),
+                                AppColors.textSecondary.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w600,
                             height: 1.5,
                           ),
@@ -721,7 +717,7 @@ class _CreateWalkServiceScreenState
                               : [
                                   BoxShadow(
                                     color: AppColors.primary
-                                        .withOpacity(0.3),
+                                        .withValues(alpha: 0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
@@ -792,7 +788,7 @@ class _CreateWalkServiceScreenState
           border: Border.all(
             color: selected
                 ? AppColors.primary
-                : AppColors.textSecondary.withOpacity(0.25),
+                : AppColors.textSecondary.withValues(alpha: 0.25),
           ),
         ),
         child: Text(
@@ -824,7 +820,7 @@ class _SectionHeader extends StatelessWidget {
           height: 30,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(9),
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
           ),
           child: Icon(icon, size: 16, color: AppColors.primary),
         ),

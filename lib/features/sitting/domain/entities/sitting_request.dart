@@ -6,7 +6,7 @@ export 'package:petpal/features/walks/domain/entities/walk_request.dart'
 
 enum SittingType { atOwnerHome, atSitterHome }
 
-enum SittingStatus { open, taken, closed }
+enum SittingStatus { open, taken, closed, declined }
 
 class SittingRequest extends Equatable {
   final String id;
@@ -17,6 +17,7 @@ class SittingRequest extends Equatable {
   final PetType petType;
   final PetGender? petGender;
   final String? petImageUrl;
+  final List<String> petImageUrls;
   final DateTime? startDate;
   final DateTime? endDate;
   final SittingType sittingType;
@@ -24,7 +25,12 @@ class SittingRequest extends Equatable {
   final String? specialInstructions;
   final String? budget;
   final SittingStatus status;
+  final List<String> rules;
+  final bool isPublicJob;
+  final String? sitterUid;
+  final String? sitterName;
   final DateTime? createdAt;
+  final String? refusalReason;
 
   const SittingRequest({
     required this.id,
@@ -35,6 +41,7 @@ class SittingRequest extends Equatable {
     required this.petType,
     this.petGender,
     this.petImageUrl,
+    this.petImageUrls = const [],
     this.startDate,
     this.endDate,
     required this.sittingType,
@@ -42,12 +49,23 @@ class SittingRequest extends Equatable {
     this.specialInstructions,
     this.budget,
     this.status = SittingStatus.open,
+    this.rules = const [],
+    this.isPublicJob = true,
+    this.sitterUid,
+    this.sitterName,
     this.createdAt,
+    this.refusalReason,
   });
 
   int get numberOfNights {
     if (startDate == null || endDate == null) return 0;
     return endDate!.difference(startDate!).inDays;
+  }
+
+  List<String> get allImages {
+    if (petImageUrls.isNotEmpty) return petImageUrls;
+    if (petImageUrl != null && petImageUrl!.isNotEmpty) return [petImageUrl!];
+    return [];
   }
 
   @override
@@ -60,6 +78,7 @@ class SittingRequest extends Equatable {
         petType,
         petGender,
         petImageUrl,
+        petImageUrls,
         startDate,
         endDate,
         sittingType,
@@ -67,6 +86,11 @@ class SittingRequest extends Equatable {
         specialInstructions,
         budget,
         status,
+        rules,
+        isPublicJob,
+        sitterUid,
+        sitterName,
         createdAt,
+        refusalReason,
       ];
 }

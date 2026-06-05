@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/widgets/app_button.dart';
 
 /// Legacy wrapper — delegates to [AppButton].

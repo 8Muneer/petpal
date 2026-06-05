@@ -4,163 +4,218 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_button.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/app_card.dart';
-import 'package:petpal/core/widgets/app_input.dart';
-import 'package:petpal/core/widgets/app_scaffold.dart';
-import 'package:petpal/core/widgets/petpal_scaffold.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/time_ago_text.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
-class FeedScreen extends ConsumerWidget {
+final feedFilterProvider = StateProvider<String>((ref) => 'all');
+
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(feedPostsProvider);
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    const threshold = 200.0;
+
+    if (maxScroll - currentScroll <= threshold) {
+      ref.read(paginatedFeedProvider.notifier).fetchNextPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final feedStateAsync = ref.watch(paginatedFeedProvider);
+    final selectedFilter = ref.watch(feedFilterProvider);
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: AppScaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      color: AppColors.textPrimary,
+      child: Scaffold(
+        backgroundColor: AppColors.surface,
+        body: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(paginatedFeedProvider),
+          color: AppColors.primary,
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              // Shared app header (avatar · title · bell)
+              AppHeaderBar.sliver(title: 'פיד', subtitle: 'קהילת PetPal'),
+
+              // Sticky filter bar
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SliverFeedFilterDelegate(
+                  child: Container(
+                    color: AppColors.surface,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: _FeedFilterBar(
+                      selectedFilter: selectedFilter,
+                      onFilterChanged: (f) =>
+                          ref.read(feedFilterProvider.notifier).state = f,
                     ),
-                    const Expanded(
-                      child: Text(
-                        'פיד חדשות',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () {
-                        if (uid.isEmpty) {
-                          _showLoginDialog(context);
-                          return;
-                        }
-                        context.push('/feed/create');
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [AppColors.primary, AppColors.statusOpen],
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.add_rounded,
-                                size: 18, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              'פוסט חדש',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
 
-              // Posts list
-              Expanded(
-                child: postsAsync.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
+              // Facebook-style create post CTA
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: InkWell(
+                    onTap: () {
+                      if (uid.isEmpty) {
+                        _showLoginDialog(context);
+                        return;
+                      }
+                      context.push('/feed/create');
+                    },
+                    borderRadius: BorderRadius.circular(32),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: AppShadows.subtle,
+                      ),
+                      child: Row(
+                        children: [
+                          LiveUserAvatar(
+                            uid: uid,
+                            fallbackName: '',
+                            size: 36,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'מה את/ה חושב/ת?',
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: AppColors.textMuted),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.photo_library_outlined,
+                            color: Colors.green.withValues(alpha: 0.8),
+                            size: 22,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  error: (e, _) => Center(
-                    child: Text('שגיאה בטעינת הפיד: $e'),
-                  ),
-                  data: (posts) {
-                    if (posts.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.feed_outlined,
-                                size: 64,
-                                color: AppColors.textSecondary
-                                    .withOpacity(0.5)),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'אין פוסטים עדיין',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'היה/י הראשון/ה לפרסם!',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _PostCard(
-                            post: post,
-                            currentUid: uid,
-                            onTap: () => context.push('/feed/${post.id}'),
-                            onLike: () {
-                              if (uid.isEmpty) {
-                                _showLoginDialog(context);
-                                return;
-                              }
-                              ref
-                                  .read(feedRepositoryProvider)
-                                  .toggleLike(post.id, uid);
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
                 ),
+              ),
+
+              // Posts
+              feedStateAsync.when(
+                loading: () => const SliverFillRemaining(
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                ),
+                error: (e, _) => SliverFillRemaining(
+                  child: Center(child: Text('שגיאה בטעינת הפיד: $e')),
+                ),
+                data: (state) {
+                  final posts = state.posts;
+                  final filteredPosts = selectedFilter == 'all'
+                      ? posts
+                      : posts
+                          .where((p) => p.type.name == selectedFilter)
+                          .toList();
+
+                  if (filteredPosts.isEmpty) {
+                    return SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _EmptyFeedState(
+                        onTap: () {
+                          if (uid.isEmpty) {
+                            _showLoginDialog(context);
+                            return;
+                          }
+                          context.push('/feed/create');
+                        },
+                      ),
+                    );
+                  }
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == filteredPosts.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          }
+
+                          final post = filteredPosts[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _PostCard(
+                              post: post,
+                              currentUid: uid,
+                              onTap: () => context.push('/feed/${post.id}'),
+                              onLike: () {
+                                if (uid.isEmpty) {
+                                  _showLoginDialog(context);
+                                  return;
+                                }
+                                ref
+                                    .read(feedRepositoryProvider)
+                                    .toggleLike(post.id, uid);
+                              },
+                              onEdit: () => context.push(
+                                '/feed/edit',
+                                extra: post,
+                              ),
+                              onDelete: () async {
+                                await ref
+                                    .read(feedRepositoryProvider)
+                                    .deletePost(post.id);
+                              },
+                            ),
+                          );
+                        },
+                        childCount: filteredPosts.length +
+                            (state.isLoadingMore ? 1 : 0),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -169,6 +224,90 @@ class FeedScreen extends ConsumerWidget {
     );
   }
 }
+
+// ─── Sliver delegate ──────────────────────────────────────────────────────────
+
+class _SliverFeedFilterDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  const _SliverFeedFilterDelegate({required this.child});
+
+  @override
+  double get minExtent => 72;
+  @override
+  double get maxExtent => 72;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverFeedFilterDelegate oldDelegate) => false;
+}
+
+// ─── Filter bar ───────────────────────────────────────────────────────────────
+
+class _FeedFilterBar extends StatelessWidget {
+  final String selectedFilter;
+  final void Function(String) onFilterChanged;
+
+  const _FeedFilterBar({
+    required this.selectedFilter,
+    required this.onFilterChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const filters = [
+      ('all', 'הכל'),
+      ('post', 'פוסטים'),
+      ('tip', 'טיפים'),
+    ];
+
+    return SizedBox(
+      height: 48,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: filters.length,
+        itemBuilder: (context, index) {
+          final (filterId, filterLabel) = filters[index];
+          final isSelected = filterId == selectedFilter;
+
+          return Padding(
+            padding: const EdgeInsets.only(left: 10),
+            child: ChoiceChip(
+              label: Text(filterLabel),
+              selected: isSelected,
+              onSelected: (_) => onFilterChanged(filterId),
+              backgroundColor: Colors.white,
+              selectedColor: AppColors.primary,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 13,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected ? AppColors.primary : AppColors.border,
+                ),
+              ),
+              showCheckmark: false,
+              elevation: isSelected ? 4 : 0,
+              shadowColor: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : Colors.transparent,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─── Login dialog ─────────────────────────────────────────────────────────────
 
 void _showLoginDialog(BuildContext context) {
   showDialog<void>(
@@ -213,28 +352,89 @@ void _showLoginDialog(BuildContext context) {
   );
 }
 
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+class _EmptyFeedState extends StatelessWidget {
+  final VoidCallback onTap;
+  const _EmptyFeedState({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.feed_outlined,
+            size: 64,
+            color: AppColors.textSecondary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'אין פוסטים עדיין',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'היה/י הראשון/ה לפרסם!',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 24),
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [AppColors.primary, AppColors.statusOpen],
+                ),
+              ),
+              child: const Text(
+                'פרסם פוסט',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Post card ────────────────────────────────────────────────────────────────
+
 class _PostCard extends StatelessWidget {
   final FeedPost post;
   final String currentUid;
   final VoidCallback onTap;
   final VoidCallback onLike;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
 
   const _PostCard({
     required this.post,
     required this.currentUid,
     required this.onTap,
     required this.onLike,
+    required this.onEdit,
+    required this.onDelete,
   });
-
-  String get _timeAgo {
-    if (post.createdAt == null) return '';
-    final diff = DateTime.now().difference(post.createdAt!);
-    if (diff.inMinutes < 1) return 'עכשיו';
-    if (diff.inMinutes < 60) return 'לפני ${diff.inMinutes} דק׳';
-    if (diff.inHours < 24) return 'לפני ${diff.inHours} שעות';
-    if (diff.inDays < 7) return 'לפני ${diff.inDays} ימים';
-    return '${post.createdAt!.day}/${post.createdAt!.month}/${post.createdAt!.year}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -245,7 +445,6 @@ class _PostCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: AppCard(
-        
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,12 +471,12 @@ class _PostCard extends StatelessWidget {
                           fontSize: 14,
                         ),
                       ),
-                      Text(
-                        _timeAgo,
+                      TimeAgoText(
+                        createdAt: post.createdAt,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary.withOpacity(0.8),
+                          color: AppColors.textSecondary.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -288,7 +487,7 @@ class _PostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.12),
+                      color: AppColors.warning.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Row(
@@ -308,6 +507,99 @@ class _PostCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                if (post.authorUid == currentUid)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded,
+                        size: 20, color: AppColors.textSecondary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    color: Colors.white,
+                    elevation: 8,
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        onEdit();
+                      } else if (value == 'delete') {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: AlertDialog(
+                              backgroundColor: Colors.white,
+                              surfaceTintColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22)),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.delete_outline_rounded,
+                                      color: AppColors.error),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'מחיקת פוסט',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w900),
+                                  ),
+                                ],
+                              ),
+                              content: const Text(
+                                'האם את/ה בטוח/ה שברצונך למחוק את הפוסט? פעולה זו אינה הפיכה.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('ביטול'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.error,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text('מחק/י',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w900)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                        if (confirmed == true) await onDelete();
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined,
+                                size: 18, color: AppColors.textPrimary),
+                            SizedBox(width: 10),
+                            Text('עריכה',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded,
+                                size: 18, color: AppColors.error),
+                            SizedBox(width: 10),
+                            Text('מחיקה',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.error)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
 
@@ -324,34 +616,65 @@ class _PostCard extends StatelessWidget {
               ),
             ),
 
-            // Optional image
-            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+            // Images
+            if (post.imageUrls.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: post.imageUrl!,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
+              if (post.imageUrls.length == 1)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: post.imageUrls.first,
+                    width: double.infinity,
                     height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      height: 200,
+                      color: AppColors.borderFaint,
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.primary, strokeWidth: 2),
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      height: 200,
+                      color: AppColors.borderFaint,
+                      child: const Icon(Icons.broken_image_rounded,
+                          color: AppColors.textMuted),
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: post.imageUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) => ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: CachedNetworkImage(
+                        imageUrl: post.imageUrls[i],
+                        width: 160,
+                        height: 160,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          width: 160,
+                          color: AppColors.borderFaint,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary, strokeWidth: 2),
+                          ),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          width: 160,
+                          color: AppColors.borderFaint,
+                          child: const Icon(Icons.broken_image_rounded,
+                              color: AppColors.textMuted),
+                        ),
                       ),
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 200,
-                    color: AppColors.borderFaint,
-                    child: const Icon(Icons.broken_image_rounded,
-                        color: AppColors.textMuted),
-                  ),
                 ),
-              ),
             ],
 
             const SizedBox(height: 12),
@@ -369,12 +692,10 @@ class _PostCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isLiked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
+                          Icons.pets_rounded,
                           size: 20,
                           color: isLiked
-                              ? const Color(0xFFFB7185)
+                              ? AppColors.primary
                               : AppColors.textSecondary,
                         ),
                         const SizedBox(width: 6),
@@ -384,7 +705,7 @@ class _PostCard extends StatelessWidget {
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: isLiked
-                                ? const Color(0xFFFB7185)
+                                ? AppColors.primary
                                 : AppColors.textSecondary,
                           ),
                         ),

@@ -10,10 +10,12 @@ import 'package:petpal/features/auth/presentation/widgets/auth_gate.dart';
 import 'package:petpal/features/home/presentation/screens/guest_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
+import 'package:petpal/features/pets/presentation/screens/my_pets_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/profile_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/security_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/privacy_screen.dart';
+import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/create_post_screen.dart';
 import 'package:petpal/features/feed/presentation/screens/post_detail_screen.dart';
@@ -27,7 +29,7 @@ import 'package:petpal/features/walks/presentation/screens/walk_request_detail_s
 import 'package:petpal/features/walks/presentation/screens/create_walk_service_screen.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/screens/create_sitting_service_screen.dart';
-import 'package:petpal/features/profile/presentation/screens/bookings_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/my_bookings_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/availability_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/service_settings_screen.dart';
 import 'package:petpal/features/messaging/presentation/screens/chat_list_screen.dart';
@@ -38,6 +40,18 @@ import 'package:petpal/features/lost_and_found/presentation/screens/create_lost_
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_post_detail_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_browse_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/create_booking_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/provider_profile_screen.dart';
+import 'package:petpal/features/reviews/presentation/screens/leave_review_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/poi_detail_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/admin_hub_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/sitter_verification_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/poi_management_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/moderation_queue_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/user_directory_screen.dart';
+import 'package:petpal/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:petpal/features/notifications/presentation/widgets/notification_shell.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -45,7 +59,7 @@ class AppRouter {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const AuthGate(),
+        builder: (context, state) => const NotificationShell(child: AuthGate()),
       ),
       GoRoute(
         path: '/onboarding',
@@ -96,6 +110,14 @@ class AppRouter {
         builder: (context, state) => const CreatePostScreen(),
       ),
       GoRoute(
+        path: '/feed/edit',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! FeedPost) return const OnboardingScreen();
+          return CreatePostScreen(post: extra);
+        },
+      ),
+      GoRoute(
         path: '/feed/:postId',
         builder: (context, state) {
           final postId = state.pathParameters['postId']!;
@@ -108,15 +130,19 @@ class AppRouter {
       ),
       GoRoute(
         path: '/walks/edit',
-        builder: (context, state) => CreateWalkRequestScreen(
-          initialRequest: state.extra as WalkRequest,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! WalkRequest) return const OnboardingScreen();
+          return CreateWalkRequestScreen(initialRequest: extra);
+        },
       ),
       GoRoute(
         path: '/walks/detail',
-        builder: (context, state) => WalkRequestDetailScreen(
-          request: state.extra as WalkRequest,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! WalkRequest) return const OnboardingScreen();
+          return WalkRequestDetailScreen(request: extra);
+        },
       ),
       GoRoute(
         path: '/walks/service/create',
@@ -130,15 +156,19 @@ class AppRouter {
       ),
       GoRoute(
         path: '/sitting/edit',
-        builder: (context, state) => CreateSittingRequestScreen(
-          initialRequest: state.extra as SittingRequest,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! SittingRequest) return const OnboardingScreen();
+          return CreateSittingRequestScreen(initialRequest: extra);
+        },
       ),
       GoRoute(
         path: '/sitting/detail',
-        builder: (context, state) => SittingRequestDetailScreen(
-          request: state.extra as SittingRequest,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! SittingRequest) return const OnboardingScreen();
+          return SittingRequestDetailScreen(request: extra);
+        },
       ),
       GoRoute(
         path: '/sitting/service/create',
@@ -148,7 +178,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/profile/bookings',
-        builder: (context, state) => const BookingsScreen(),
+        builder: (context, state) => const MyBookingsScreen(),
       ),
       GoRoute(
         path: '/provider/availability',
@@ -166,8 +196,11 @@ class AppRouter {
         path: '/chat/:conversationId',
         builder: (context, state) {
           final extra = state.extra;
-          final otherName = extra is Map ? (extra['otherName'] as String? ?? '') : (extra as String? ?? '');
-          final otherPhotoUrl = extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
+          final otherName = extra is Map
+              ? (extra['otherName'] as String? ?? '')
+              : (extra as String? ?? '');
+          final otherPhotoUrl =
+              extra is Map ? (extra['otherPhotoUrl'] as String?) : null;
           final otherUid = extra is Map ? (extra['otherUid'] as String?) : null;
           return ChatScreen(
             conversationId: state.pathParameters['conversationId']!,
@@ -187,25 +220,135 @@ class AppRouter {
       ),
       GoRoute(
         path: '/lost-found/detail',
-        builder: (context, state) => LostFoundPostDetailScreen(
-          initialPost: state.extra as LostFoundPost,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! LostFoundPost) return const OnboardingScreen();
+          return LostFoundPostDetailScreen(initialPost: extra);
+        },
       ),
       GoRoute(
         path: '/lost-found/browse',
-        builder: (context, state) => LostFoundBrowseScreen(
-          anchorPost: state.extra as LostFoundPost,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! LostFoundPost) return const OnboardingScreen();
+          return LostFoundBrowseScreen(anchorPost: extra);
+        },
       ),
       GoRoute(
         path: '/lost-found/compare',
         builder: (context, state) {
-          final extra = state.extra as Map<String, LostFoundPost>;
-          return AiCompareScreen(
-            post1: extra['post1']!,
-            post2: extra['post2']!,
+          final extra = state.extra;
+          if (extra is! Map<String, LostFoundPost>) {
+            return const OnboardingScreen();
+          }
+          final post1 = extra['post1'];
+          final post2 = extra['post2'];
+          if (post1 == null || post2 == null) return const OnboardingScreen();
+          return AiCompareScreen(post1: post1, post2: post2);
+        },
+      ),
+      GoRoute(
+        path: '/bookings/create',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! Map<String, dynamic>) return const OnboardingScreen();
+          final providerUid = extra['providerUid'] as String?;
+          final providerName = extra['providerName'] as String?;
+          final serviceId = extra['serviceId'] as String?;
+          final serviceType = extra['serviceType'] as String?;
+          final priceText = extra['priceText'] as String?;
+          if (providerUid == null ||
+              providerName == null ||
+              serviceId == null ||
+              serviceType == null ||
+              priceText == null) {
+            return const OnboardingScreen();
+          }
+          return CreateBookingScreen(
+            providerUid: providerUid,
+            providerName: providerName,
+            providerPhotoUrl: extra['providerPhotoUrl'] as String?,
+            serviceId: serviceId,
+            serviceType: serviceType,
+            priceText: priceText,
           );
         },
+      ),
+      GoRoute(
+        path: '/services/provider/walk',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! WalkService) return const OnboardingScreen();
+          return ProviderProfileScreen.walk(service: extra);
+        },
+      ),
+      GoRoute(
+        path: '/services/provider/sitting',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! SittingService) return const OnboardingScreen();
+          return ProviderProfileScreen.sitting(service: extra);
+        },
+      ),
+      GoRoute(
+        path: '/my-pets',
+        builder: (context, state) => const MyPetsScreen(),
+      ),
+      GoRoute(
+        path: '/reviews/leave',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! Map<String, dynamic>) return const OnboardingScreen();
+          final bookingId = extra['bookingId'] as String?;
+          final providerUid = extra['providerUid'] as String?;
+          final providerName = extra['providerName'] as String?;
+          if (bookingId == null ||
+              providerUid == null ||
+              providerName == null) {
+            return const OnboardingScreen();
+          }
+          return LeaveReviewScreen(
+            bookingId: bookingId,
+            providerUid: providerUid,
+            providerName: providerName,
+            providerPhotoUrl: extra['providerPhotoUrl'] as String?,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/explore',
+        builder: (context, state) => const ExploreScreen(),
+      ),
+      GoRoute(
+        path: '/explore/poi/:poiId',
+        builder: (context, state) {
+          final poiId = state.pathParameters['poiId']!;
+          return POIDetailScreen(poiId: poiId);
+        },
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminHubScreen(),
+      ),
+      GoRoute(
+        path: '/admin/verification',
+        builder: (context, state) => const SitterVerificationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/poi',
+        builder: (context, state) => const POIManagementScreen(),
+      ),
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (context, state) => const ModerationQueueScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const UserDirectoryScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
     errorBuilder: (context, state) => const OnboardingScreen(),
@@ -226,7 +369,8 @@ class AppRouter {
       if (publicRoutes.contains(location)) return null;
 
       // Allow guest access to feed post details
-      if (location.startsWith('/feed/') && !location.startsWith('/feed/create')) {
+      if (location.startsWith('/feed/') &&
+          !location.startsWith('/feed/create')) {
         return null;
       }
 

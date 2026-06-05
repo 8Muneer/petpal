@@ -10,6 +10,10 @@ class FeedRemoteDatasource {
 
   CollectionReference get _postsRef => _firestore.collection('posts');
 
+  Query getPostsQuery() {
+    return _postsRef.orderBy('createdAt', descending: true);
+  }
+
   Stream<List<FeedPostModel>> watchPosts() {
     return _postsRef
         .orderBy('createdAt', descending: true)
@@ -48,6 +52,17 @@ class FeedRemoteDatasource {
     });
   }
 
+  Future<FeedPostModel?> getPost(String postId) async {
+    final doc = await _postsRef.doc(postId).get();
+    if (!doc.exists) return null;
+    return FeedPostModel.fromFirestore(doc);
+  }
+
+  Future<List<FeedPostModel>> getUserPosts(String uid) async {
+    final snap = await _postsRef.where('authorUid', isEqualTo: uid).get();
+    return snap.docs.map((doc) => FeedPostModel.fromFirestore(doc)).toList();
+  }
+
   Future<void> deleteAllUserPosts(String uid) async {
     final snap = await _postsRef.where('authorUid', isEqualTo: uid).get();
     for (final doc in snap.docs) {
@@ -58,6 +73,10 @@ class FeedRemoteDatasource {
       }
       await doc.reference.delete();
     }
+  }
+
+  Future<void> updatePost(String postId, Map<String, dynamic> data) async {
+    await _postsRef.doc(postId).update(data);
   }
 
   Future<void> deletePost(String postId) async {

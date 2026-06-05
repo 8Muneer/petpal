@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +29,8 @@ class _CreateLostFoundPostScreenState
   final _colorController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _area = '';
+  double? _latitude;
+  double? _longitude;
   bool _isLoading = false;
 
   static const _speciesOptions = ['כלב', 'חתול', 'ציפור', 'ארנב', 'אחר'];
@@ -79,6 +81,8 @@ class _CreateLostFoundPostScreenState
         description: _descriptionController.text.trim(),
         area: _area,
         imageUrl: '',
+        latitude: _latitude,
+        longitude: _longitude,
       );
 
       final createFn = ref.read(createLostFoundPostProvider);
@@ -92,7 +96,7 @@ class _CreateLostFoundPostScreenState
           margin: const EdgeInsets.all(14),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: AppColors.success,
           content: const Text(
             'הדיווח פורסם! ה-AI מחפש התאמות...',
             style: TextStyle(fontWeight: FontWeight.w700),
@@ -112,7 +116,7 @@ class _CreateLostFoundPostScreenState
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFFFB7185),
+        backgroundColor: AppColors.error,
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
     );
@@ -123,7 +127,7 @@ class _CreateLostFoundPostScreenState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: AppColors.surface,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -209,6 +213,10 @@ class _CreateLostFoundPostScreenState
               LocationPickerField(
                 initialValue: _area,
                 onChanged: (val) => setState(() => _area = val),
+                onCoordinatesPicked: (lat, lng) {
+                  _latitude = lat;
+                  _longitude = lng;
+                },
               ),
               const SizedBox(height: 32),
 
@@ -219,7 +227,7 @@ class _CreateLostFoundPostScreenState
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFB7185),
+                    backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -265,14 +273,14 @@ class _CreateLostFoundPostScreenState
             label: 'החיה שלי אבדה',
             icon: Icons.search_rounded,
             selected: _type == LostFoundType.lost,
-            color: const Color(0xFFFB7185),
+            color: AppColors.error,
             onTap: () => setState(() => _type = LostFoundType.lost),
           ),
           _TypeButton(
             label: 'מצאתי חיה',
             icon: Icons.favorite_rounded,
             selected: _type == LostFoundType.found,
-            color: const Color(0xFF60A5FA),
+            color: AppColors.blueSlate,
             onTap: () => setState(() => _type = LostFoundType.found),
           ),
         ],
@@ -290,7 +298,7 @@ class _CreateLostFoundPostScreenState
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _imageFile == null
-                ? const Color(0xFFE5E7EB)
+                ? AppColors.border
                 : Colors.transparent,
             width: 2,
           ),
@@ -309,18 +317,18 @@ class _CreateLostFoundPostScreenState
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFB7185).withValues(alpha: 0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(Icons.add_photo_alternate_rounded,
-                        color: Color(0xFFFB7185), size: 28),
+                        color: AppColors.error, size: 28),
                   ),
                   const SizedBox(height: 12),
                   const Text(
                     'הוסף תמונה של החיה',
                     style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
+                        color: AppColors.onSurface,
                         fontSize: 15),
                   ),
                   const SizedBox(height: 4),
@@ -383,13 +391,13 @@ class _CreateLostFoundPostScreenState
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: selected
-                    ? const Color(0xFFFB7185)
+                    ? AppColors.error
                     : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: selected
-                      ? const Color(0xFFFB7185)
-                      : const Color(0xFFE5E7EB),
+                      ? AppColors.error
+                      : AppColors.border,
                 ),
               ),
               child: Text(
@@ -413,7 +421,7 @@ class _CreateLostFoundPostScreenState
       style: const TextStyle(
           fontWeight: FontWeight.w800,
           fontSize: 14,
-          color: Color(0xFF1A1A2E)),
+          color: AppColors.onSurface),
     );
   }
 
@@ -434,20 +442,20 @@ class _CreateLostFoundPostScreenState
         fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide:
-              const BorderSide(color: Color(0xFFFB7185), width: 1.5),
+              const BorderSide(color: AppColors.error, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFFB7185)),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 class WalkRequestModel extends WalkRequest {
@@ -14,6 +14,7 @@ class WalkRequestModel extends WalkRequest {
     required super.duration,
     required super.area,
     super.petImageUrl,
+    super.petImageUrls,
     super.petGender,
     super.specialInstructions,
     super.budget,
@@ -60,6 +61,12 @@ class WalkRequestModel extends WalkRequest {
         petGender = null;
     }
 
+    final legacyUrl = data['petImageUrl'] as String?;
+    final rawUrls = data['petImageUrls'];
+    final List<String> petImageUrls = rawUrls is List
+        ? rawUrls.whereType<String>().toList()
+        : (legacyUrl != null && legacyUrl.isNotEmpty ? [legacyUrl] : []);
+
     return WalkRequestModel(
       id: doc.id,
       ownerUid: data['ownerUid'] as String? ?? '',
@@ -71,7 +78,8 @@ class WalkRequestModel extends WalkRequest {
       preferredTime: data['preferredTime'] as String? ?? '',
       duration: data['duration'] as String? ?? '',
       area: data['area'] as String? ?? '',
-      petImageUrl: data['petImageUrl'] as String?,
+      petImageUrl: legacyUrl,
+      petImageUrls: petImageUrls,
       petGender: petGender,
       specialInstructions: data['specialInstructions'] as String?,
       budget: data['budget'] as String?,

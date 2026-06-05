@@ -1,4 +1,4 @@
-import 'package:petpal/features/walks/domain/entities/walk_request.dart';
+﻿import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 
 abstract class WalkRepository {
   Stream<List<WalkRequest>> watchRequests(String ownerUid);

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -24,11 +22,37 @@ class FeedImageService {
 
   Future<String> uploadPostImage(String postId, XFile file) async {
     final ref = _storage.ref().child('post_images/$postId');
-    await ref.putFile(
-      File(file.path),
+    await ref.putData(
+      await file.readAsBytes(),
       SettableMetadata(contentType: 'image/jpeg'),
     );
     return ref.getDownloadURL();
+  }
+
+  Future<List<String>> uploadPostImages(
+      String postId, List<XFile> files) async {
+    final urls = <String>[];
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    for (var i = 0; i < files.length; i++) {
+      final ref = _storage.ref().child('post_images/${postId}_${timestamp}_$i');
+      await ref.putData(
+        await files[i].readAsBytes(),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      urls.add(await ref.getDownloadURL());
+    }
+    return urls;
+  }
+
+  Future<void> deleteImageByUrl(String url) async {
+    try {
+      final ref = _storage.refFromURL(url);
+      await ref.delete();
+    } on FirebaseException catch (e) {
+      if (e.code != 'object-not-found') rethrow;
+    } catch (_) {
+      // Ignored if URL is not a valid Storage reference or other error
+    }
   }
 
   Future<void> deletePostImage(String postId) async {

@@ -1,34 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:petpal/core/constants/app_constants.dart';
+import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
+import 'package:petpal/features/admin/presentation/screens/admin_hub_screen.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
 
-  Future<String?> _fetchUserRole(String uid) async {
-    final doc = await FirebaseFirestore.instance
-        .collection(AppConstants.usersCollection)
-        .doc(uid)
-        .get();
-    final data = doc.data();
-    if (data == null) return null;
+  @override
+  ConsumerState<AuthGate> createState() => _AuthGateState();
+}
 
-    final role = (data['role'] ?? data['userType'])?.toString().trim();
-    if (role == null || role.isEmpty) return null;
-    return role;
+class _AuthGateState extends ConsumerState<AuthGate> {
+  // Cached per UID so rebuilds don't re-fire Firestore reads.
+  String? _cachedUid;
+  Future<String?>? _roleFuture;
+  // Tracks UIDs that have already had their FCM token registered this session.
+  final Set<String> _tokenRegisteredUids = {};
+
+  Future<String?> _fetchUserRole(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection(AppConstants.usersCollection)
+          .doc(uid)
+          .get();
+      final data = doc.data();
+      if (data == null) return null;
+
+      final role = (data['role'] ?? data['userType'])?.toString().trim();
+      if (role == null || role.isEmpty) return null;
+      return role;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _roleFor(String uid) {
+    if (_cachedUid != uid) {
+      _cachedUid = uid;
+      _roleFuture = _fetchUserRole(uid);
+    }
+    return _roleFuture!;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Deregister FCM token on sign-out (catches all sign-out paths).
+    ref.listen<AsyncValue<User?>>(authStateChangesProvider, (prev, next) {
+      final prevUid = prev?.asData?.value?.uid;
+      final nextUid = next.asData?.value?.uid;
+      if (prevUid != null && nextUid == null) {
+        ref.read(notificationServiceProvider).deregisterToken(prevUid);
+      }
+    });
+
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // While FirebaseAuth is initializing
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -37,10 +71,9 @@ class AuthGate extends StatelessWidget {
 
         final user = snapshot.data;
 
-        // Logged in -> route by role (Firestore)
         if (user != null) {
           return FutureBuilder<String?>(
-            future: _fetchUserRole(user.uid),
+            future: _roleFor(user.uid),
             builder: (context, roleSnap) {
               if (roleSnap.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -48,22 +81,51 @@ class AuthGate extends StatelessWidget {
                 );
               }
 
+              // Surface Firestore errors instead of silently defaulting to pet owner.
+              if (roleSnap.hasError) {
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Unable to load profile.'),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _cachedUid = null;
+                            _roleFuture = null;
+                          }),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               final role = (roleSnap.data ?? '').toLowerCase();
 
-              // Accept a few common spellings
+              // Register FCM token once per UID (non-blocking).
+              if (!_tokenRegisteredUids.contains(user.uid)) {
+                _tokenRegisteredUids.add(user.uid);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ref.read(notificationServiceProvider).registerToken(user.uid);
+                });
+              }
+
+              if (role == 'admin') return const AdminHubScreen();
+
               if (role == 'serviceprovider' ||
                   role == 'service_provider' ||
                   role == 'provider') {
                 return const ServiceProviderHomeScreen();
               }
 
-              // Default: PetOwner
               return const UserHomeScreen();
             },
           );
         }
 
-        // Not logged in -> Onboarding
         return const OnboardingScreen();
       },
     );

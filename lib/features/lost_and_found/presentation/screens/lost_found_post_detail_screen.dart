@@ -20,6 +20,7 @@ class _LostFoundPostDetailScreenState
     with TickerProviderStateMixin {
   late AnimationController _matchCardController;
   bool _isRerunning = false;
+  bool _hasTriggeredResumption = false;
 
   @override
   void initState() {
@@ -51,9 +52,19 @@ class _LostFoundPostDetailScreenState
 
     final isLost = livePost.type == LostFoundType.lost;
     final accent =
-        isLost ? const Color(0xFFFB7185) : const Color(0xFF60A5FA);
+        isLost ? AppColors.error : AppColors.blueSlate;
     final isOwner = livePost.reporterUid == currentUserUid;
     final isSearching = livePost.matchingStatus == MatchingStatus.searching;
+
+    // Trigger lazy resumption if matching status is pending and we haven't rerun yet
+    if (livePost.matchingStatus == MatchingStatus.pending &&
+        !_hasTriggeredResumption &&
+        !_isRerunning) {
+      _hasTriggeredResumption = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _rerunMatching(livePost);
+      });
+    }
 
     // Trigger match card animation when matches arrive
     if (livePost.matches.isNotEmpty) {
@@ -63,7 +74,7 @@ class _LostFoundPostDetailScreenState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: AppColors.surface,
         body: CustomScrollView(
           slivers: [
             _buildAppBar(livePost, accent),
@@ -116,7 +127,7 @@ class _LostFoundPostDetailScreenState
               ],
             ),
             child: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 16, color: Color(0xFF1A1A2E)),
+                size: 16, color: AppColors.onSurface),
           ),
         ),
       ),
@@ -125,12 +136,12 @@ class _LostFoundPostDetailScreenState
           imageUrl: post.imageUrl,
           fit: BoxFit.cover,
           placeholder: (_, __) => Container(
-              color: const Color(0xFFF0F2F5),
+              color: AppColors.surface,
               child: const Center(
                   child:
                       Icon(Icons.pets_rounded, color: Colors.grey, size: 64))),
           errorWidget: (_, __, ___) => Container(
-              color: const Color(0xFFF0F2F5),
+              color: AppColors.surface,
               child: const Center(
                   child:
                       Icon(Icons.pets_rounded, color: Colors.grey, size: 64))),
@@ -162,7 +173,7 @@ class _LostFoundPostDetailScreenState
             style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF1A1A2E)),
+                color: AppColors.onSurface),
           ),
         ),
       ],
@@ -192,7 +203,7 @@ class _LostFoundPostDetailScreenState
             style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF1A1A2E))),
+                color: AppColors.onSurface)),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -224,13 +235,13 @@ class _LostFoundPostDetailScreenState
         Row(
           children: [
             const Icon(Icons.auto_awesome_rounded,
-                color: Color(0xFF8B5CF6), size: 20),
+                color: AppColors.smartBlue, size: 20),
             const SizedBox(width: 8),
             const Text('התאמות AI',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF1A1A2E))),
+                    color: AppColors.onSurface)),
             if (post.matches.isNotEmpty) ...[
               const SizedBox(width: 8),
               Container(
@@ -238,13 +249,13 @@ class _LostFoundPostDetailScreenState
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color:
-                      const Color(0xFF10B981).withValues(alpha: 0.12),
+                      AppColors.success.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text('${post.matches.length}',
                     style: const TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF10B981),
+                        color: AppColors.success,
                         fontSize: 13)),
               ),
             ],
@@ -307,7 +318,7 @@ class _LostFoundPostDetailScreenState
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, true),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
+                      backgroundColor: AppColors.success,
                       foregroundColor: Colors.white,
                       elevation: 0,
                     ),
@@ -327,7 +338,7 @@ class _LostFoundPostDetailScreenState
         label: const Text('החיה נמצאה / נפתר',
             style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: AppColors.success,
           foregroundColor: Colors.white,
           elevation: 0,
           shape:
@@ -391,9 +402,9 @@ class _SearchingIndicatorState extends State<_SearchingIndicator>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color.lerp(const Color(0xFF8B5CF6),
-                        const Color(0xFF6366F1), _pulse.value)!,
-                    const Color(0xFF6366F1),
+                    Color.lerp(AppColors.smartBlue,
+                        AppColors.regalNavy, _pulse.value)!,
+                    AppColors.regalNavy,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -401,7 +412,7 @@ class _SearchingIndicatorState extends State<_SearchingIndicator>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF8B5CF6)
+                    color: AppColors.smartBlue
                         .withValues(alpha: 0.2 + _pulse.value * 0.3),
                     blurRadius: 16,
                     spreadRadius: 1,
@@ -417,7 +428,7 @@ class _SearchingIndicatorState extends State<_SearchingIndicator>
               style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
-                  color: Color(0xFF1A1A2E))),
+                  color: AppColors.onSurface)),
           const SizedBox(height: 4),
           const Text('בודק תמונות של דיווחים אחרים',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
@@ -471,8 +482,8 @@ class _DotsLoaderState extends State<_DotsLoader>
             height: 7 + _dots[i].value * 7,
             decoration: BoxDecoration(
               color: Color.lerp(
-                const Color(0xFF8B5CF6).withValues(alpha: 0.25),
-                const Color(0xFF8B5CF6),
+                AppColors.smartBlue.withValues(alpha: 0.25),
+                AppColors.smartBlue,
                 _dots[i].value,
               ),
               borderRadius: BorderRadius.circular(4),
@@ -493,15 +504,15 @@ class _PendingState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF8B5CF6).withValues(alpha: 0.06),
+        color: AppColors.smartBlue.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: const Color(0xFF8B5CF6).withValues(alpha: 0.2)),
+            color: AppColors.smartBlue.withValues(alpha: 0.2)),
       ),
       child: const Row(
         children: [
           Icon(Icons.hourglass_empty_rounded,
-              color: Color(0xFF8B5CF6), size: 20),
+              color: AppColors.smartBlue, size: 20),
           SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -510,7 +521,7 @@ class _PendingState extends StatelessWidget {
                 Text('ממתין להתחלת חיפוש',
                     style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF8B5CF6),
+                        color: AppColors.smartBlue,
                         fontSize: 14)),
                 SizedBox(height: 2),
                 Text('ה-AI יתחיל לחפש בקרוב',
@@ -555,7 +566,7 @@ class _NoMatchesState extends StatelessWidget {
               style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
-                  color: Color(0xFF1A1A2E))),
+                  color: AppColors.onSurface)),
           const SizedBox(height: 4),
           const Text('ה-AI לא מצא חיות דומות בדיווחים הקיימים',
               textAlign: TextAlign.center,
@@ -571,8 +582,8 @@ class _NoMatchesState extends StatelessWidget {
                       style: TextStyle(
                           fontWeight: FontWeight.w800, fontSize: 13)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF8B5CF6),
-                    side: const BorderSide(color: Color(0xFF8B5CF6)),
+                    foregroundColor: AppColors.smartBlue,
+                    side: const BorderSide(color: AppColors.smartBlue),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -589,7 +600,7 @@ class _NoMatchesState extends StatelessWidget {
                       style: TextStyle(
                           fontWeight: FontWeight.w800, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5CF6),
+                    backgroundColor: AppColors.smartBlue,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -627,8 +638,8 @@ class _MatchesList extends StatelessWidget {
                 style:
                     TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF8B5CF6),
-              side: const BorderSide(color: Color(0xFF8B5CF6)),
+              foregroundColor: AppColors.smartBlue,
+              side: const BorderSide(color: AppColors.smartBlue),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
@@ -639,19 +650,22 @@ class _MatchesList extends StatelessWidget {
   }
 }
 
-class _MatchCard extends StatelessWidget {
+class _MatchCard extends ConsumerWidget {
   final LostFoundMatch match;
   final LostFoundPost post;
   const _MatchCard({required this.match, required this.post});
 
   Color get _color {
-    if (match.confidence >= 80) return const Color(0xFF10B981);
-    if (match.confidence >= 60) return const Color(0xFFF59E0B);
-    return const Color(0xFFFB7185);
+    if (match.confidence >= 80) return AppColors.success;
+    if (match.confidence >= 60) return AppColors.warning;
+    return AppColors.error;
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final candidateAsync = ref.watch(singlePostProvider(match.postId));
+    final candidate = candidateAsync.valueOrNull;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -671,7 +685,19 @@ class _MatchCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Navigate to compare screen
+            if (candidate != null) {
+              context.push('/lost-found/compare', extra: {
+                'post1': post,
+                'post2': candidate,
+              });
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('טוען נתוני השוואה...'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -685,11 +711,11 @@ class _MatchCard extends StatelessWidget {
                     height: 72,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                        color: const Color(0xFFF0F2F5),
+                        color: AppColors.surface,
                         child: const Icon(Icons.pets_rounded,
                             color: Colors.grey)),
                     errorWidget: (_, __, ___) => Container(
-                        color: const Color(0xFFF0F2F5),
+                        color: AppColors.surface,
                         child: const Icon(Icons.pets_rounded,
                             color: Colors.grey)),
                   ),
@@ -703,7 +729,7 @@ class _MatchCard extends StatelessWidget {
                           style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 14,
-                              color: Color(0xFF1A1A2E))),
+                              color: AppColors.onSurface)),
                       const SizedBox(height: 4),
                       Text(match.reason,
                           maxLines: 2,
@@ -747,7 +773,7 @@ class _RerunButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+          color: AppColors.smartBlue.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: isLoading
@@ -755,18 +781,18 @@ class _RerunButton extends StatelessWidget {
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Color(0xFF8B5CF6)))
+                    strokeWidth: 2, color: AppColors.smartBlue))
             : const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.refresh_rounded,
-                      size: 14, color: Color(0xFF8B5CF6)),
+                      size: 14, color: AppColors.smartBlue),
                   SizedBox(width: 4),
                   Text('חפש שוב',
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF8B5CF6))),
+                          color: AppColors.smartBlue)),
                 ],
               ),
       ),
