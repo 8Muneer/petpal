@@ -25,8 +25,8 @@ class LostFoundMatchService {
       );
       debugPrint('[Match] Found ${candidates.length} candidates');
 
-      final matchFutures = candidates.map((candidate) async {
-        if (candidate.imageUrl.isEmpty) return;
+      for (final candidate in candidates) {
+        if (candidate.imageUrl.isEmpty) continue;
         debugPrint('[Match] Comparing with candidate ${candidate.id}');
 
         final result = await _gemini.compareImages(
@@ -35,8 +35,15 @@ class LostFoundMatchService {
         );
 
         debugPrint('[Match] Result: ${result?.confidence}% match=${result?.isMatch}');
-        if (result == null) return;
-        if (!result.isMatch || result.confidence < 50) return;
+        if (result == null) continue;
+        if (!result.isMatch || result.confidence < 50) continue;
+
+        final featuresForNew = result.comparisonTable.map((f) => MatchFeature(
+          featureName: f.featureName,
+          pet1Value: f.pet1Value,
+          pet2Value: f.pet2Value,
+          status: f.status,
+        )).toList();
 
         final matchForNew = LostFoundMatchModel(
           postId: candidate.id,
@@ -44,8 +51,18 @@ class LostFoundMatchService {
           reporterName: candidate.reporterName,
           confidence: result.confidence,
           reason: result.reason,
+          features: featuresForNew,
         );
         await _datasource.addMatch(post.id, matchForNew.toMap());
+
+        // For the candidate post, we swap pet1Value and pet2Value so that
+        // pet1Value refers to the candidate post itself, keeping the host perspective.
+        final featuresForCandidate = result.comparisonTable.map((f) => MatchFeature(
+          featureName: f.featureName,
+          pet1Value: f.pet2Value, // Swapped
+          pet2Value: f.pet1Value, // Swapped
+          status: f.status,
+        )).toList();
 
         final matchForCandidate = LostFoundMatchModel(
           postId: post.id,
@@ -53,12 +70,11 @@ class LostFoundMatchService {
           reporterName: post.reporterName,
           confidence: result.confidence,
           reason: result.reason,
+          features: featuresForCandidate,
         );
         await _datasource.addMatch(candidate.id, matchForCandidate.toMap());
         debugPrint('[Match] Saved match between ${post.id} and ${candidate.id}');
-      });
-
-      await Future.wait(matchFutures);
+      }
     } catch (e, st) {
       debugPrint('[Match] ERROR: $e\n$st');
     } finally {

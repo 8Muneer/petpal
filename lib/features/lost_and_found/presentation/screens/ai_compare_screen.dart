@@ -1,4 +1,5 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +54,26 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
       parent: _resultController,
       curve: Curves.easeOut,
     );
+
+    // Pre-populate with cached match result if it exists in post1's matches list
+    final cachedMatch = widget.post1.matches.firstWhereOrNull((m) => m.postId == widget.post2.id);
+    if (cachedMatch != null) {
+      _result = GeminiMatchResult(
+        isMatch: cachedMatch.confidence >= 50,
+        confidence: cachedMatch.confidence,
+        reason: cachedMatch.reason,
+        comparisonTable: cachedMatch.features.map((f) => GeminiMatchFeature(
+          featureName: f.featureName,
+          pet1Value: f.pet1Value,
+          pet2Value: f.pet2Value,
+          status: f.status,
+        )).toList(),
+      );
+      _state = _CompareState.result;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resultController.forward(from: 0);
+      });
+    }
   }
 
   @override
@@ -359,7 +380,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
                   animation: _confidenceAnim,
                   color: _confidenceColor,
                 ),
-                const SizedBox(height: 20),
+                _buildComparisonTable(_result!.comparisonTable),
 
                 // Reason
                 if (_result!.reason.isNotEmpty) ...[
@@ -406,6 +427,132 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonTable(List<GeminiMatchFeature> features) {
+    if (features.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            Icon(Icons.list_alt_rounded, color: AppColors.smartBlue, size: 18),
+            SizedBox(width: 8),
+            Text(
+              'השוואת מאפיינים',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                color: AppColors.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1.2), // Feature Name
+                1: FlexColumnWidth(1.4), // Pet 1
+                2: FlexColumnWidth(1.4), // Pet 2
+                3: FixedColumnWidth(48),  // Status Badge
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                // Header
+                TableRow(
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                  ),
+                  children: [
+                    _tableHeaderCell('מאפיין'),
+                    _tableHeaderCell('דיווח א׳'),
+                    _tableHeaderCell('דיווח ב׳'),
+                    _tableHeaderCell('התאמה'),
+                  ],
+                ),
+                // Rows
+                ...features.map((f) {
+                  return TableRow(
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                    ),
+                    children: [
+                      _tableBodyCell(f.featureName, isBold: true),
+                      _tableBodyCell(f.pet1Value),
+                      _tableBodyCell(f.pet2Value),
+                      _tableStatusCell(f.status),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _tableHeaderCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+          color: AppColors.textMuted,
+        ),
+      ),
+    );
+  }
+
+  Widget _tableBodyCell(String text, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
+          fontSize: 12,
+          color: isBold ? AppColors.onSurface : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _tableStatusCell(String status) {
+    IconData icon;
+    Color color;
+    switch (status) {
+      case 'MATCH':
+        icon = Icons.check_circle_rounded;
+        color = AppColors.success;
+        break;
+      case 'MISMATCH':
+        icon = Icons.cancel_rounded;
+        color = AppColors.error;
+        break;
+      default:
+        icon = Icons.remove_circle_rounded;
+        color = Colors.grey;
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Icon(icon, color: color, size: 18),
       ),
     );
   }

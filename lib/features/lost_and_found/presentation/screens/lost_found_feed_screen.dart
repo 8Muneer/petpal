@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/app_header_bar.dart';
+import 'package:petpal/core/widgets/filter_button.dart';
 import 'package:petpal/core/widgets/luxury_lost_found_card.dart';
 import 'package:petpal/core/widgets/lost_found_toggle_bar.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
@@ -67,19 +69,95 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           slivers: [
-            _buildSliverAppBar(state),
+            AppHeaderBar.sliver(title: 'אבודים'),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Lost / Found toggle
-                    LostFoundToggleBar(
-                      selectedIndex: state.selectedTabIndex,
-                      onTabChanged: (i) => ref
-                          .read(lostFoundControllerProvider.notifier)
-                          .setTab(i),
+                    Row(
+                      children: [
+                        FilterButton(
+                          activeCount: state.hasActiveFilters ? 1 : 0,
+                          onTap: () => _showFilterSheet(state),
+                        ),
+                        const Spacer(),
+                        _buildViewTypeToggle(state),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: LostFoundToggleBar(
+                            selectedIndex: state.selectedTabIndex,
+                            onTabChanged: (i) => ref
+                                .read(lostFoundControllerProvider.notifier)
+                                .setTab(i),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => ref
+                              .read(lostFoundControllerProvider.notifier)
+                              .toggleMyReportsOnly(),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: state.showMyReportsOnly
+                                  ? AppColors.primary
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: state.showMyReportsOnly
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (state.showMyReportsOnly
+                                          ? AppColors.primary
+                                          : Colors.black)
+                                      .withValues(
+                                          alpha: state.showMyReportsOnly
+                                              ? 0.25
+                                              : 0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  state.showMyReportsOnly
+                                      ? Icons.person_rounded
+                                      : Icons.person_outline_rounded,
+                                  size: 16,
+                                  color: state.showMyReportsOnly
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'הדיווחים שלי',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: state.showMyReportsOnly
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     // Create CTA
@@ -104,77 +182,18 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
     );
   }
 
-  Widget _buildSliverAppBar(LostFoundState state) {
-    final active = state.hasActiveFilters;
-    return SliverAppBar(
-      floating: true,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: AppColors.background.withValues(alpha: 0.95),
-      surfaceTintColor: Colors.transparent,
-      leadingWidth: 56,
-      leading: Center(
-        child: GestureDetector(
-          onTap: () => _showFilterSheet(state),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: active ? AppColors.primary : Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: active ? AppColors.primary : AppColors.border,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (active ? AppColors.primary : Colors.black)
-                      .withValues(alpha: active ? 0.25 : 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.tune_rounded,
-              size: 18,
-              color: active ? Colors.white : AppColors.textMuted,
-            ),
-          ),
-        ),
+  Widget _buildViewTypeToggle(LostFoundState state) {
+    final isMap = state.viewType == LostFoundViewType.map;
+    return IconButton(
+      icon: Icon(
+        isMap ? Icons.grid_view_rounded : Icons.map_outlined,
+        color: isMap ? AppColors.primary : AppColors.textMuted,
       ),
-      centerTitle: true,
-      title: const Text(
-        'Lost & Found',
-        style: TextStyle(
-          fontFamily: 'Playfair Display',
-          fontStyle: FontStyle.italic,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(
-            state.viewType == LostFoundViewType.map
-                ? Icons.grid_view_rounded
-                : Icons.map_outlined,
-            color: state.viewType == LostFoundViewType.map
-                ? AppColors.primary
-                : AppColors.textMuted,
-          ),
-          tooltip: state.viewType == LostFoundViewType.map
-              ? 'תצוגת רשת'
-              : 'תצוגת מפה',
-          onPressed: () {
-            final next = state.viewType == LostFoundViewType.map
-                ? LostFoundViewType.grid
-                : LostFoundViewType.map;
-            ref.read(lostFoundControllerProvider.notifier).setViewType(next);
-          },
-        ),
-      ],
+      tooltip: isMap ? 'תצוגת רשת' : 'תצוגת מפה',
+      onPressed: () {
+        final next = isMap ? LostFoundViewType.grid : LostFoundViewType.map;
+        ref.read(lostFoundControllerProvider.notifier).setViewType(next);
+      },
     );
   }
 
@@ -231,11 +250,21 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
       chips.add(_ActiveChip(label: label, onRemove: onRemove));
     }
 
-    if (state.selectedPetType != null) add(state.selectedPetType!, () => n.setPetType(null));
-    if (state.selectedArea != null) add(state.selectedArea!, () => n.setArea(null));
-    if (state.selectedColor != null) add(state.selectedColor!, () => n.setColor(null));
-    if (state.selectedSize != null) add(state.selectedSize!, () => n.setSize(null));
-    if (state.selectedGender != null) add(state.selectedGender!, () => n.setGender(null));
+    if (state.selectedPetType != null) {
+      add(state.selectedPetType!, () => n.setPetType(null));
+    }
+    if (state.selectedArea != null) {
+      add(state.selectedArea!, () => n.setArea(null));
+    }
+    if (state.selectedColor != null) {
+      add(state.selectedColor!, () => n.setColor(null));
+    }
+    if (state.selectedSize != null) {
+      add(state.selectedSize!, () => n.setSize(null));
+    }
+    if (state.selectedGender != null) {
+      add(state.selectedGender!, () => n.setGender(null));
+    }
     if (state.selectedDateRange != null) {
       final label = state.selectedDateRange == '24h'
           ? '24 שעות'
@@ -246,6 +275,9 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
     }
     if (state.showActiveOnly) add('פעיל בלבד', () => n.setActiveOnly(false));
     if (state.hasImageOnly) add('עם תמונה', () => n.setHasImageOnly(false));
+    if (state.showMyReportsOnly) {
+      add('הדיווחים שלי', () => n.toggleMyReportsOnly());
+    }
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -256,8 +288,8 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
   Widget _buildGridFeed(AsyncValue<List<LostFoundPost>> postsAsync) {
     return postsAsync.when(
       loading: () => const SliverFillRemaining(
-        child: Center(
-            child: CircularProgressIndicator(color: AppColors.primary)),
+        child:
+            Center(child: CircularProgressIndicator(color: AppColors.primary)),
       ),
       error: (e, _) => SliverFillRemaining(
         child: Center(child: Text('שגיאה בטעינה: $e')),
@@ -267,7 +299,8 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
           return const SliverFillRemaining(child: _EmptyState());
         }
         return SliverPadding(
-          padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewPadding.bottom + 84),
+          padding: EdgeInsets.fromLTRB(
+              20, 0, 20, MediaQuery.of(context).viewPadding.bottom + 84),
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
@@ -290,9 +323,8 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                   ),
                   child: LuxuryLostFoundCard(
                     post: posts[index],
-                    onTap: () => context.push(
-                        '/lost-found/detail',
-                        extra: posts[index]),
+                    onTap: () =>
+                        context.push('/lost-found/detail', extra: posts[index]),
                   ),
                 );
               },
@@ -326,8 +358,7 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.petpal.app',
               ),
               MarkerLayer(
@@ -344,8 +375,7 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                         decoration: BoxDecoration(
                           color: isLost ? AppColors.error : AppColors.success,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                              color: Colors.white, width: 2.5),
+                          border: Border.all(color: Colors.white, width: 2.5),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.2),
@@ -392,8 +422,7 @@ class _ActiveChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -479,9 +508,18 @@ class _FilterSheetState extends State<_FilterSheet> {
   ];
 
   static const _quickAreas = [
-    'תל אביב', 'ירושלים', 'חיפה', 'ראשון לציון',
-    'פתח תקווה', 'אשדוד', 'נתניה', 'באר שבע',
-    'רמת גן', 'הרצליה', 'הוד השרון', 'כפר סבא',
+    'תל אביב',
+    'ירושלים',
+    'חיפה',
+    'ראשון לציון',
+    'פתח תקווה',
+    'אשדוד',
+    'נתניה',
+    'באר שבע',
+    'רמת גן',
+    'הרצליה',
+    'הוד השרון',
+    'כפר סבא',
   ];
 
   static const _sizes = ['קטן', 'בינוני', 'גדול'];
@@ -704,7 +742,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                 children: _petTypes.map((e) {
                   final selected = _petType == e.$1;
                   return _selectableChip(
-                    e.$1, selected,
+                    e.$1,
+                    selected,
                     () => setState(() => _petType = selected ? null : e.$1),
                     icon: e.$2,
                   );
@@ -719,8 +758,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               _textFilterField(
                 controller: _areaController,
                 hint: 'הזן עיר או שכונה...',
-                onChanged: (v) =>
-                    setState(() => _area = v.isEmpty ? null : v),
+                onChanged: (v) => setState(() => _area = v.isEmpty ? null : v),
               ),
               const SizedBox(height: 10),
               Wrap(
@@ -743,9 +781,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                             : AppColors.surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: selected
-                              ? AppColors.primary
-                              : Colors.transparent,
+                          color:
+                              selected ? AppColors.primary : Colors.transparent,
                         ),
                       ),
                       child: Text(
@@ -771,8 +808,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               _textFilterField(
                 controller: _colorController,
                 hint: 'לבן, שחור, חום...',
-                onChanged: (v) =>
-                    setState(() => _color = v.isEmpty ? null : v),
+                onChanged: (v) => setState(() => _color = v.isEmpty ? null : v),
               ),
               const SizedBox(height: 24),
               _divider(),
@@ -786,7 +822,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                 children: _sizes.map((s) {
                   final selected = _size == s;
                   return _selectableChip(
-                    s, selected,
+                    s,
+                    selected,
                     () => setState(() => _size = selected ? null : s),
                   );
                 }).toList(),
@@ -803,7 +840,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                 children: _genders.map((g) {
                   final selected = _gender == g;
                   return _selectableChip(
-                    g, selected,
+                    g,
+                    selected,
                     () => setState(() => _gender = selected ? null : g),
                   );
                 }).toList(),
@@ -820,9 +858,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                 children: _dateRanges.map((d) {
                   final selected = _dateRange == d.$2;
                   return _selectableChip(
-                    d.$1, selected,
-                    () => setState(
-                        () => _dateRange = selected ? null : d.$2),
+                    d.$1,
+                    selected,
+                    () => setState(() => _dateRange = selected ? null : d.$2),
                   );
                 }).toList(),
               ),

@@ -20,6 +20,7 @@ class _LostFoundPostDetailScreenState
     with TickerProviderStateMixin {
   late AnimationController _matchCardController;
   bool _isRerunning = false;
+  bool _hasTriggeredResumption = false;
 
   @override
   void initState() {
@@ -54,6 +55,16 @@ class _LostFoundPostDetailScreenState
         isLost ? AppColors.error : AppColors.blueSlate;
     final isOwner = livePost.reporterUid == currentUserUid;
     final isSearching = livePost.matchingStatus == MatchingStatus.searching;
+
+    // Trigger lazy resumption if matching status is pending and we haven't rerun yet
+    if (livePost.matchingStatus == MatchingStatus.pending &&
+        !_hasTriggeredResumption &&
+        !_isRerunning) {
+      _hasTriggeredResumption = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _rerunMatching(livePost);
+      });
+    }
 
     // Trigger match card animation when matches arrive
     if (livePost.matches.isNotEmpty) {

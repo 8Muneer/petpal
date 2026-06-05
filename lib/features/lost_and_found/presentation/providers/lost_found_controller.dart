@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
 import 'package:petpal/features/lost_and_found/presentation/providers/lost_found_provider.dart';
 
@@ -16,6 +16,7 @@ class LostFoundState {
   final String? selectedDateRange; // '24h' | 'week' | 'month'
   final bool showActiveOnly;
   final bool hasImageOnly;
+  final bool showMyReportsOnly;
 
   const LostFoundState({
     this.selectedTabIndex = 0,
@@ -29,6 +30,7 @@ class LostFoundState {
     this.selectedDateRange,
     this.showActiveOnly = false,
     this.hasImageOnly = false,
+    this.showMyReportsOnly = false,
   });
 
   bool get hasActiveFilters =>
@@ -39,7 +41,8 @@ class LostFoundState {
       selectedGender != null ||
       selectedDateRange != null ||
       showActiveOnly ||
-      hasImageOnly;
+      hasImageOnly ||
+      showMyReportsOnly;
 
   LostFoundState copyWith({
     int? selectedTabIndex,
@@ -53,6 +56,7 @@ class LostFoundState {
     String? selectedDateRange,
     bool? showActiveOnly,
     bool? hasImageOnly,
+    bool? showMyReportsOnly,
     bool clearPetType = false,
     bool clearArea = false,
     bool clearColor = false,
@@ -72,6 +76,7 @@ class LostFoundState {
       selectedDateRange: clearDateRange ? null : (selectedDateRange ?? this.selectedDateRange),
       showActiveOnly: showActiveOnly ?? this.showActiveOnly,
       hasImageOnly: hasImageOnly ?? this.hasImageOnly,
+      showMyReportsOnly: showMyReportsOnly ?? this.showMyReportsOnly,
     );
   }
 }
@@ -109,6 +114,7 @@ class LostFoundController extends StateNotifier<LostFoundState> {
 
   void setActiveOnly(bool v) => state = state.copyWith(showActiveOnly: v);
   void setHasImageOnly(bool v) => state = state.copyWith(hasImageOnly: v);
+  void toggleMyReportsOnly() => state = state.copyWith(showMyReportsOnly: !state.showMyReportsOnly);
 
   void clearFilters() => state = LostFoundState(
         selectedTabIndex: state.selectedTabIndex,
@@ -194,6 +200,10 @@ final filteredLostFoundPostsProvider =
 
     if (state.hasImageOnly) {
       filtered = filtered.where((p) => p.imageUrl.isNotEmpty).toList();
+    }
+
+    if (state.showMyReportsOnly) {
+      filtered = filtered.where((p) => p.reporterUid == currentUserUid).toList();
     }
 
     return filtered;
