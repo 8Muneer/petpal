@@ -71,53 +71,9 @@ class _BookingCard extends ConsumerStatefulWidget {
 }
 
 class _BookingCardState extends ConsumerState<_BookingCard> {
-  bool _isCancelling = false;
   bool _isOpeningChat = false;
 
   BookingRequest get booking => widget.booking;
-
-  Future<void> _cancel() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('ביטול הזמנה'),
-          content: const Text('האם אתה בטוח שברצונך לבטל את ההזמנה?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('לא'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('בטל הזמנה',
-                  style: TextStyle(color: AppColors.error)),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _isCancelling = true);
-    try {
-      await ref
-          .read(bookingRepositoryProvider)
-          .cancelBooking(booking.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ההזמנה בוטלה')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('שגיאה בביטול ההזמנה')),
-      );
-    } finally {
-      if (mounted) setState(() => _isCancelling = false);
-    }
-  }
 
   Future<void> _openChat() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -323,8 +279,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
           ],
 
           // ── Action buttons ────────────────────────────────────
-          if (booking.status == BookingStatus.pending ||
-              booking.status == BookingStatus.accepted) ...[
+          if (booking.status == BookingStatus.accepted) ...[
             const Divider(height: 1, color: AppColors.divider),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -332,50 +287,22 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                 children: [
                   Row(
                     children: [
-                      if (booking.status == BookingStatus.accepted)
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _isOpeningChat ? null : _openChat,
-                            icon: _isOpeningChat
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.chat_bubble_outline_rounded,
-                                    size: 16),
-                            label: const Text('פתח צ\'אט'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              textStyle: AppTextStyles.labelMd
-                                  .copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ),
-                      if (booking.status == BookingStatus.accepted)
-                        const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _isCancelling ? null : _cancel,
-                          icon: _isCancelling
+                          onPressed: _isOpeningChat ? null : _openChat,
+                          icon: _isOpeningChat
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.error),
+                                      strokeWidth: 2),
                                 )
-                              : const Icon(Icons.cancel_outlined, size: 16),
-                          label: const Text('בטל הזמנה'),
+                              : const Icon(Icons.chat_bubble_outline_rounded,
+                                  size: 16),
+                          label: const Text('פתח צ\'אט'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.error,
-                            side: BorderSide(
-                                color: AppColors.error.withValues(alpha: 0.6)),
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10)),
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -386,32 +313,20 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                       ),
                     ],
                   ),
-                  if (booking.status == BookingStatus.accepted && !hasReview) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.push('/reviews/leave', extra: {
-                          'bookingId': booking.id,
-                          'providerUid': booking.providerUid,
-                          'providerName': booking.providerName,
-                          'providerPhotoUrl': booking.providerPhotoUrl,
-                        }),
-                        icon: const Icon(Icons.star_border_rounded, size: 16),
-                        label: const Text('השאר ביקורת'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.warning,
-                          side: BorderSide(
-                              color: AppColors.warning.withValues(alpha: 0.6)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          textStyle: AppTextStyles.labelMd
-                              .copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ),
+                  if (!hasReview)
+                    _ReviewCtaCard(
+                      onTap: () => context.push('/reviews/leave', extra: {
+                        'bookingId': booking.id,
+                        'providerUid': booking.providerUid,
+                        'providerName': booking.providerName,
+                        'providerPhotoUrl': booking.providerPhotoUrl,
+                      }),
+                    )
+                  else
+                    _SubmittedReviewCard(
+                      rating: existingReview?.value?.rating ?? 5,
+                      comment: existingReview?.value?.comment ?? '',
                     ),
-                  ],
                 ],
               ),
             ),
@@ -441,6 +356,105 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
 }
 
 // ── Shared sub-widgets ─────────────────────────────────────────────────────────
+
+class _ReviewCtaCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ReviewCtaCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.08),
+          borderRadius: AppRadius.mdRadius,
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.star_rounded, color: AppColors.warning, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'השירות הסתיים — כתוב ביקורת',
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_left_rounded,
+                color: AppColors.warning, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubmittedReviewCard extends StatelessWidget {
+  final int rating;
+  final String comment;
+
+  const _SubmittedReviewCard({required this.rating, required this.comment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: AppRadius.mdRadius,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'הביקורת שלך:',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Row(
+                children: List.generate(
+                  5,
+                  (index) => Icon(
+                    Icons.star_rounded,
+                    color: index < rating
+                        ? AppColors.warning
+                        : AppColors.textMuted.withValues(alpha: 0.3),
+                    size: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              comment,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: AppColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _PetAvatar extends StatelessWidget {
   final String? imageUrl;

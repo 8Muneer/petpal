@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:petpal/features/notifications/data/datasources/notification_writer.dart';
 import 'package:petpal/features/reviews/domain/entities/review.dart';
 
 class ReviewDatasource {
@@ -12,6 +13,17 @@ class ReviewDatasource {
     final providerRef = _db.collection('users').doc(review.providerId);
     final reviewRef = _reviews.doc(review.bookingId);
 
+    // Query for any service listings of the provider before entering the transaction
+    final sittingServicesQuery = await _db
+        .collection('sitting_services')
+        .where('providerUid', isEqualTo: review.providerId)
+        .get();
+    final walkServicesQuery = await _db
+        .collection('walk_services')
+        .where('providerUid', isEqualTo: review.providerId)
+        .get();
+
+    bool isNew = false;
     await _db.runTransaction((transaction) async {
       final providerSnap = await transaction.get(providerRef);
       final reviewSnap = await transaction.get(reviewRef);
@@ -20,12 +32,16 @@ class ReviewDatasource {
       final double currentAvg = (providerData['ratingAverage'] as num?)?.toDouble() ?? 0.0;
       final int currentCount = (providerData['reviewCount'] as num?)?.toInt() ?? 0;
 
+      double newAvg;
+      int newCount;
+
       if (reviewSnap.exists) {
         final oldReviewData = reviewSnap.data() as Map<String, dynamic>;
         final double oldRating = (oldReviewData['rating'] as num).toDouble();
         final double newRating = review.rating.toDouble();
 
-        final double newAvg = currentCount > 0
+        newCount = currentCount;
+        newAvg = currentCount > 0
             ? (currentAvg * currentCount - oldRating + newRating) / currentCount
             : newRating;
 
@@ -38,8 +54,9 @@ class ReviewDatasource {
           'ratingAverage': newAvg,
         });
       } else {
-        final int newCount = currentCount + 1;
-        final double newAvg = (currentAvg * currentCount + review.rating) / newCount;
+        isNew = true;
+        newCount = currentCount + 1;
+        newAvg = (currentAvg * currentCount + review.rating) / newCount;
 
         transaction.set(reviewRef, {
           ...review.toMap(),
@@ -51,7 +68,35 @@ class ReviewDatasource {
           'reviewCount': newCount,
         });
       }
+
+      // Update sitting_services listings
+      for (final doc in sittingServicesQuery.docs) {
+        transaction.update(doc.reference, {
+          'rating': newAvg,
+          'reviewCount': newCount,
+        });
+      }
+
+      // Update walk_services listings
+      for (final doc in walkServicesQuery.docs) {
+        transaction.update(doc.reference, {
+          'rating': newAvg,
+          'reviewCount': newCount,
+        });
+      }
     });
+
+    // Only notify on the first review submission, not edits
+    if (isNew) {
+      writeClientNotification(
+        _db,
+        userId: review.providerId,
+        title: 'חוות דעת חדשה',
+        body: 'קיבלת חוות דעת עם דירוג ${review.rating} כוכבים',
+        type: 'newReview',
+        data: {'reviewId': review.bookingId},
+      ).ignore();
+    }
   }
 
   /// Returns the existing review for a booking, or null if none.
