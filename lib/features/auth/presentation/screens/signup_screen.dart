@@ -1,12 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/validators.dart';
-import 'package:petpal/core/widgets/app_button.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,32 +13,55 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
+class _SignupScreenState extends State<SignupScreen>
+    with SingleTickerProviderStateMixin {
+  final _nameCtrl     = TextEditingController();
+  final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _confirmCtrl = TextEditingController();
+  final _confirmCtrl  = TextEditingController();
 
-  bool _isLoading = false;
-  bool _acceptTerms = false;
-  bool _isPetOwner = true;
+  late AnimationController _animCtrl;
+  late Animation<double>   _fadeAnim;
+  late Animation<Offset>   _slideAnim;
+
+  bool    _isLoading   = false;
+  bool    _acceptTerms = false;
+  bool    _isPetOwner  = true;
 
   String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmError;
 
-  final _auth = FirebaseAuth.instance;
+  final _auth     = FirebaseAuth.instance;
   final _usersRef = FirebaseFirestore.instance.collection('users');
 
   @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnim  = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end:   Offset.zero,
+    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
+    _animCtrl.forward();
+  }
+
+  @override
   void dispose() {
+    _animCtrl.dispose();
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
   }
+
+  // ── Validation ───────────────────────────────────────────────────────────────
 
   void _validateName(String v) => setState(() {
         _nameError = v.trim().isEmpty ? 'אנא הזן/י שם מלא' : null;
@@ -68,8 +89,7 @@ class _SignupScreenState extends State<SignupScreen> {
       });
 
   void _validateConfirm(String v) => setState(() {
-        _confirmError =
-            v != _passwordCtrl.text ? 'הסיסמאות אינן תואמות' : null;
+        _confirmError = v != _passwordCtrl.text ? 'הסיסמאות אינן תואמות' : null;
       });
 
   bool get _formValid =>
@@ -82,24 +102,22 @@ class _SignupScreenState extends State<SignupScreen> {
       _passwordCtrl.text.isNotEmpty &&
       _confirmCtrl.text.isNotEmpty;
 
-  String _authError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'email-already-in-use':
-        return 'האימייל כבר בשימוש. נסה/י להתחבר או השתמש/י באימייל אחר.';
-      case 'invalid-email':
-        return 'כתובת האימייל לא תקינה.';
-      case 'weak-password':
-        return 'הסיסמה חלשה מדי. נסה/י סיסמה חזקה יותר.';
-      case 'network-request-failed':
-        return 'בעיית רשת. בדוק/י את החיבור ונסה/י שוב.';
-      default:
-        return 'שגיאה בהרשמה. נסה/י שוב.';
-    }
-  }
+  // ── Auth ─────────────────────────────────────────────────────────────────────
 
-  void _showSnack(String msg, {bool isError = false}) {
+  String _authError(FirebaseAuthException e) => switch (e.code) {
+        'email-already-in-use'   => 'האימייל כבר בשימוש. נסה/י להתחבר או השתמש/י באימייל אחר.',
+        'invalid-email'          => 'כתובת האימייל לא תקינה.',
+        'weak-password'          => 'הסיסמה חלשה מדי. נסה/י סיסמה חזקה יותר.',
+        'network-request-failed' => 'בעיית רשת. בדוק/י את החיבור ונסה/י שוב.',
+        _                        => 'שגיאה בהרשמה. נסה/י שוב.',
+      };
+
+  void _snack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         content: Text(msg),
         backgroundColor: isError ? AppColors.danger : AppColors.primary,
       ),
@@ -113,7 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _validateConfirm(_confirmCtrl.text);
 
     if (!_acceptTerms) {
-      _showSnack('יש לאשר את תנאי השימוש', isError: true);
+      _snack('יש לאשר את תנאי השימוש', isError: true);
       return;
     }
     if (!_formValid) return;
@@ -121,150 +139,160 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
+        email:    _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
       );
-
       final uid = cred.user?.uid;
-
-      try {
-        await cred.user?.updateDisplayName(_nameCtrl.text.trim());
-      } catch (_) {}
+      try { await cred.user?.updateDisplayName(_nameCtrl.text.trim()); } catch (_) {}
 
       if (uid != null) {
         try {
-          await _usersRef.doc(uid).set(
-            {
-              'uid': uid,
-              'name': _nameCtrl.text.trim(),
-              'email': _emailCtrl.text.trim(),
-              'role': _isPetOwner ? 'petOwner' : 'serviceProvider',
-              'isVerified': false,
-              'createdAt': FieldValue.serverTimestamp(),
-              'updatedAt': FieldValue.serverTimestamp(),
-            },
-            SetOptions(merge: true),
-          );
+          await _usersRef.doc(uid).set({
+            'uid':        uid,
+            'name':       _nameCtrl.text.trim(),
+            'email':      _emailCtrl.text.trim(),
+            'role':       _isPetOwner ? 'petOwner' : 'serviceProvider',
+            'isVerified': false,
+            'createdAt':  FieldValue.serverTimestamp(),
+            'updatedAt':  FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
         } catch (_) {}
       }
 
       if (!mounted) return;
-      _showSnack('החשבון נוצר בהצלחה! ברוך/ה הבא/ה 🎉');
+      _snack('החשבון נוצר בהצלחה! ברוך/ה הבא/ה 🎉');
       context.go('/');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _showSnack(_authError(e), isError: true);
+      _snack(_authError(e), isError: true);
     } catch (_) {
       if (!mounted) return;
-      _showSnack('שגיאה לא צפויה. נסה/י שוב.', isError: true);
+      _snack('שגיאה לא צפויה. נסה/י שוב.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final topPadding = MediaQuery.of(context).padding.top;
+    final topPadding     = MediaQuery.of(context).padding.top;
+    final bottomPadding  = MediaQuery.of(context).padding.bottom;
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: Container(
-          width: size.width,
-          height: size.height,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: const NetworkImage(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // ── Full-screen background image ──────────────────────────────
+            Positioned.fill(
+              child: Image.network(
                 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2000',
-              ),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Colors.black.withValues(alpha: 0.3),
-                BlendMode.darken,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
               ),
             ),
-          ),
-          child: Stack(
-            children: [
-              // --- HEADER SECTION ---
-              Positioned(
-                top: topPadding + 20,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    // Back button
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: _BackButton(
-                          onTap: () => context.pop(),
-                          color: Colors.white.withValues(alpha: 0.2),
-                          iconColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'יצירת חשבון',
-                      style: AppTextStyles.h1.copyWith(
-                        color: Colors.white,
-                        fontSize: 28,
-                        letterSpacing: -0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'הצטרף/י לקהילת PetPal',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
 
-              // --- FLOATING FORM CARD ---
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: size.height * 0.75,
-                  decoration: BoxDecoration(
-                    color: AppColors.pureWhite,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(40),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 40,
-                        offset: const Offset(0, -10),
-                      ),
+            // ── Dark gradient overlay ─────────────────────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.0, 0.28, 0.58, 1.0],
+                    colors: [
+                      Colors.black.withValues(alpha: 0.62),
+                      Colors.black.withValues(alpha: 0.28),
+                      Colors.black.withValues(alpha: 0.58),
+                      Colors.black.withValues(alpha: 0.82),
                     ],
                   ),
+                ),
+              ),
+            ),
+
+            // ── Radial vignette ───────────────────────────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.1,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.35),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Scrollable content ────────────────────────────────────────
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: SlideTransition(
+                  position: _slideAnim,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      topPadding + 76,
+                      24,
+                      24 + keyboardHeight + bottomPadding,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Role selector
-                        _RoleSelector(
+                        // ── Title ────────────────────────────────────────
+                        Text(
+                          'יצירת חשבון',
+                          style: AppTextStyles.h1.copyWith(
+                            color: Colors.white,
+                            fontSize: 30,
+                            letterSpacing: -0.5,
+                            shadows: [
+                              Shadow(
+                                color:      Colors.black.withValues(alpha: 0.55),
+                                blurRadius: 18,
+                                offset:     const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'הצטרף/י לקהילת PetPal',
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 14,
+                            shadows: [
+                              Shadow(
+                                color:      Colors.black.withValues(alpha: 0.45),
+                                blurRadius: 10,
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        // ── Role selector ─────────────────────────────────
+                        _GlassRoleSelector(
                           isPetOwner: _isPetOwner,
                           onChanged: (v) => setState(() => _isPetOwner = v),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
-                        // Form fields
-                        AppInput(
+                        // ── Full name ─────────────────────────────────────
+                        _GlassInput(
                           controller: _nameCtrl,
                           label: 'שם מלא',
                           hint: 'הזן/י שם',
@@ -273,8 +301,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           errorText: _nameError,
                           onChanged: _validateName,
                         ),
-                        const SizedBox(height: 16),
-                        AppInput(
+
+                        const SizedBox(height: 12),
+
+                        // ── Email ─────────────────────────────────────────
+                        _GlassInput(
                           controller: _emailCtrl,
                           label: 'אימייל',
                           hint: 'name@example.com',
@@ -285,25 +316,29 @@ class _SignupScreenState extends State<SignupScreen> {
                           errorText: _emailError,
                           onChanged: _validateEmail,
                         ),
-                        const SizedBox(height: 16),
-                        AppInput(
+
+                        const SizedBox(height: 12),
+
+                        // ── Password ──────────────────────────────────────
+                        _GlassInput(
                           controller: _passwordCtrl,
                           label: 'סיסמה',
                           icon: Icons.lock_outline_rounded,
                           isPassword: true,
                           textInputAction: TextInputAction.next,
-                          textDirection: TextDirection.ltr,
                           errorText: _passwordError,
                           onChanged: _validatePassword,
                         ),
-                        const SizedBox(height: 16),
-                        AppInput(
+
+                        const SizedBox(height: 12),
+
+                        // ── Confirm password ──────────────────────────────
+                        _GlassInput(
                           controller: _confirmCtrl,
                           label: 'אימות סיסמה',
                           icon: Icons.lock_reset_outlined,
                           isPassword: true,
                           textInputAction: TextInputAction.done,
-                          textDirection: TextDirection.ltr,
                           errorText: _confirmError,
                           onChanged: _validateConfirm,
                           onEditingComplete: _isLoading ? null : _handleSignup,
@@ -311,134 +346,270 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         const SizedBox(height: 16),
 
-                        // Terms checkbox
-                        GestureDetector(
+                        // ── Terms ─────────────────────────────────────────
+                        _GlassTermsRow(
+                          accepted: _acceptTerms,
                           onTap: () =>
                               setState(() => _acceptTerms = !_acceptTerms),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: Checkbox(
-                                  value: _acceptTerms,
-                                  onChanged: (v) =>
-                                      setState(() => _acceptTerms = v ?? false),
-                                  activeColor: AppColors.primary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AppRadius.smRadius,
-                                  ),
-                                  side: const BorderSide(
-                                      color: AppColors.border, width: 1.5),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: Text(
-                                  'אני מאשר/ת את תנאי השימוש והמדיניות',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 28),
 
-                        AppButton(
-                          label: 'צור חשבון',
-                          onTap: _isLoading ? null : _handleSignup,
+                        // ── Submit ────────────────────────────────────────
+                        _GradientButton(
+                          label: 'יצירת חשבון',
+                          icon: Icons.check_rounded,
                           isLoading: _isLoading,
-                          leadingIcon: Icons.check_rounded,
+                          onTap: _isLoading ? null : _handleSignup,
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
+                        // ── Login link ────────────────────────────────────
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               'כבר יש לך חשבון?',
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textSecondary,
+                                color: Colors.white.withValues(alpha: 0.70),
                               ),
                             ),
-                            TextButton(
-                              onPressed: _isLoading
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: _isLoading
                                   ? null
                                   : () => context.push('/login'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
                               child: Text(
                                 'התחבר/י',
-                                style: AppTextStyles.bodyBold.copyWith(
-                                  color: AppColors.primary,
-                                  decoration: TextDecoration.underline,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
                           ],
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ── Back button (on top so it receives taps) ──────────────────
+            Positioned(
+              top: topPadding + 16,
+              right: 20,
+              child: _CircleBackButton(onTap: () => context.pop()),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BackButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final Color? color;
-  final Color? iconColor;
+// ── Circle back button ────────────────────────────────────────────────────────
 
-  const _BackButton({
-    required this.onTap,
-    this.color,
-    this.iconColor,
-  });
+class _CircleBackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CircleBackButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 42,
+        height: 42,
         decoration: BoxDecoration(
-          color: color ?? AppColors.surfaceBase,
+          color: Colors.white.withValues(alpha: 0.18),
           borderRadius: AppRadius.mdRadius,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.30),
+            width: 1,
+          ),
         ),
-        child: Icon(
-          Icons.arrow_forward_rounded,
-          size: 22,
-          color: iconColor ?? AppColors.textSecondary,
+        child: const Icon(
+          Icons.arrow_back_rounded,
+          size: 20,
+          color: Colors.white,
         ),
       ),
     );
   }
 }
 
-class _RoleSelector extends StatelessWidget {
-  final bool isPetOwner;
+// ── Glass text input ──────────────────────────────────────────────────────────
+
+class _GlassInput extends StatefulWidget {
+  final TextEditingController controller;
+  final String                label;
+  final String?               hint;
+  final IconData              icon;
+  final bool                  isPassword;
+  final TextInputType?        keyboardType;
+  final TextInputAction?      textInputAction;
+  final TextDirection?        textDirection;
+  final String?               errorText;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback?         onEditingComplete;
+
+  const _GlassInput({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    this.hint,
+    this.isPassword          = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.textDirection,
+    this.errorText,
+    this.onChanged,
+    this.onEditingComplete,
+  });
+
+  @override
+  State<_GlassInput> createState() => _GlassInputState();
+}
+
+class _GlassInputState extends State<_GlassInput> {
+  final _focus = FocusNode();
+  bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focused   = _focus.hasFocus;
+    final hasError  = widget.errorText != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.label,
+          style: TextStyle(
+            color: hasError
+                ? AppColors.danger
+                : focused
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.72),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: hasError
+                  ? AppColors.danger
+                  : focused
+                      ? Colors.white.withValues(alpha: 0.85)
+                      : Colors.white.withValues(alpha: 0.22),
+              width: focused ? 1.5 : 1.0,
+            ),
+          ),
+          child: TextField(
+            controller:        widget.controller,
+            focusNode:         _focus,
+            obscureText:       widget.isPassword && _obscure,
+            keyboardType:      widget.keyboardType,
+            textInputAction:   widget.textInputAction,
+            textDirection:     widget.textDirection,
+            onChanged:         widget.onChanged,
+            onEditingComplete: widget.onEditingComplete,
+            cursorColor:       Colors.white,
+            style: const TextStyle(
+              color:      Colors.white,
+              fontSize:   15,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              hintText:  widget.hint,
+              hintStyle: TextStyle(
+                color:    Colors.white.withValues(alpha: 0.45),
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(
+                widget.icon,
+                color: focused
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.60),
+                size: 20,
+              ),
+              suffixIcon: widget.isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: Colors.white.withValues(alpha: 0.60),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    )
+                  : null,
+              filled:    true,
+              fillColor: Colors.transparent,
+              border:         InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical:   15,
+              ),
+            ),
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, right: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    size: 12, color: AppColors.danger),
+                const SizedBox(width: 4),
+                Text(
+                  widget.errorText!,
+                  style: const TextStyle(
+                    color:      AppColors.danger,
+                    fontSize:   11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Glass role selector ───────────────────────────────────────────────────────
+
+class _GlassRoleSelector extends StatelessWidget {
+  final bool               isPetOwner;
   final ValueChanged<bool> onChanged;
 
-  const _RoleSelector({
+  const _GlassRoleSelector({
     required this.isPetOwner,
     required this.onChanged,
   });
@@ -448,29 +619,37 @@ class _RoleSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('בחר/י סוג משתמש', style: AppTextStyles.h3),
-        const SizedBox(height: 12),
+        Text(
+          'בחר/י סוג משתמש',
+          style: TextStyle(
+            color:       Colors.white.withValues(alpha: 0.72),
+            fontSize:    13,
+            fontWeight:  FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
-              child: _RoleTile(
-                label: 'בעל חיית מחמד',
-                subtitle: 'מחפש/ת מטפל/ת',
-                icon: Icons.pets_rounded,
-                color: AppColors.walks,
-                isSelected: isPetOwner,
-                onTap: () => onChanged(true),
+              child: _GlassRoleTile(
+                label:       'בעל חיית מחמד',
+                subtitle:    'מחפש/ת מטפל/ת',
+                icon:        Icons.pets_rounded,
+                accentColor: AppColors.walks,
+                isSelected:  isPetOwner,
+                onTap:       () => onChanged(true),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _RoleTile(
-                label: 'מטפל/ת',
-                subtitle: 'מציע/ה שירותים',
-                icon: Icons.favorite_rounded,
-                color: AppColors.sitting,
-                isSelected: !isPetOwner,
-                onTap: () => onChanged(false),
+              child: _GlassRoleTile(
+                label:       'מטפל/ת',
+                subtitle:    'מציע/ה שירותים',
+                icon:        Icons.favorite_rounded,
+                accentColor: AppColors.sitting,
+                isSelected:  !isPetOwner,
+                onTap:       () => onChanged(false),
               ),
             ),
           ],
@@ -483,7 +662,10 @@ class _RoleSelector extends StatelessWidget {
             isPetOwner
                 ? 'לבעלי חיות מחמד שמחפשים דוג-ווקר/סיטר'
                 : 'למטפלים/דוג-ווקרים שמציעים שירותים',
-            style: AppTextStyles.caption,
+            style: TextStyle(
+              color:    Colors.white.withValues(alpha: 0.52),
+              fontSize: 12,
+            ),
           ),
         ),
       ],
@@ -491,19 +673,19 @@ class _RoleSelector extends StatelessWidget {
   }
 }
 
-class _RoleTile extends StatelessWidget {
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final bool isSelected;
+class _GlassRoleTile extends StatelessWidget {
+  final String       label;
+  final String       subtitle;
+  final IconData     icon;
+  final Color        accentColor;
+  final bool         isSelected;
   final VoidCallback onTap;
 
-  const _RoleTile({
+  const _GlassRoleTile({
     required this.label,
     required this.subtitle,
     required this.icon,
-    required this.color,
+    required this.accentColor,
     required this.isSelected,
     required this.onTap,
   });
@@ -514,38 +696,212 @@ class _RoleTile extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(AppSpacing.md),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withValues(alpha: 0.08)
-              : AppColors.surfaceBase,
-          borderRadius: AppRadius.lgRadius,
+              ? accentColor.withValues(alpha: 0.22)
+              : Colors.white.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? color.withValues(alpha: 0.50)
-                : AppColors.border,
-            width: isSelected ? 1.8 : 1.0,
+                ? accentColor
+                : Colors.white.withValues(alpha: 0.35),
+            width: isSelected ? 2.0 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color:      accentColor.withValues(alpha: 0.40),
+                    blurRadius: 20,
+                    offset:     const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           children: [
-            Icon(icon,
-                color: isSelected ? color : AppColors.textMuted, size: 28),
-            const SizedBox(height: 6),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width:  42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? accentColor.withValues(alpha: 0.30)
+                    : Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: isSelected
+                    ? accentColor
+                    : Colors.white.withValues(alpha: 0.55),
+                size: 22,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               label,
-              style: AppTextStyles.label.copyWith(
-                color: isSelected ? color : AppColors.textSecondary,
+              style: const TextStyle(
+                color:      Colors.white,
                 fontWeight: FontWeight.w700,
+                fontSize:   13,
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 2),
             Text(
               subtitle,
-              style: AppTextStyles.label.copyWith(color: AppColors.textMuted),
+              style: TextStyle(
+                color:    Colors.white.withValues(alpha: 0.48),
+                fontSize: 11,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Glass terms row ───────────────────────────────────────────────────────────
+
+class _GlassTermsRow extends StatelessWidget {
+  final bool         accepted;
+  final VoidCallback onTap;
+
+  const _GlassTermsRow({required this.accepted, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve:    Curves.easeInOut,
+            width:  22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: accepted ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: accepted
+                    ? AppColors.primary
+                    : Colors.white.withValues(alpha: 0.30),
+                width: 1.5,
+              ),
+              boxShadow: accepted
+                  ? [
+                      BoxShadow(
+                        color:      AppColors.primary.withValues(alpha: 0.50),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                        offset:     const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: accepted
+                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'אני מאשר/ת את תנאי השימוש והמדיניות',
+              style: TextStyle(
+                color:      Colors.white.withValues(alpha: 0.80),
+                fontSize:   13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Gradient submit button ────────────────────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  final String        label;
+  final IconData      icon;
+  final bool          isLoading;
+  final VoidCallback? onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.icon,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: isLoading
+            ? null
+            : const LinearGradient(
+                colors: [AppColors.primary, AppColors.regalNavy],
+                begin:  Alignment.centerRight,
+                end:    Alignment.centerLeft,
+              ),
+        color: isLoading ? AppColors.primary : null,
+        boxShadow: isLoading
+            ? null
+            : [
+                BoxShadow(
+                  color:      AppColors.primary.withValues(alpha: 0.50),
+                  blurRadius: 28,
+                  spreadRadius: 0,
+                  offset:     const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color:      AppColors.primary.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset:     const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width:  24,
+                    height: 24,
+                    child:  CircularProgressIndicator(
+                      color:       Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color:       Colors.white,
+                          fontWeight:  FontWeight.w800,
+                          fontSize:    16,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(icon, color: Colors.white, size: 20),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
