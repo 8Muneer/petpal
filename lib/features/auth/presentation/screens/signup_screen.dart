@@ -191,7 +191,7 @@ class _SignupScreenState extends State<SignupScreen>
             // ── Full-screen background image ──────────────────────────────
             Positioned.fill(
               child: Image.network(
-                'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2000',
+                'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=2000',
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
               ),

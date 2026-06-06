@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -18,29 +18,113 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surfaceCard,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top 58% — auto-scrolling masonry gallery
-              const Expanded(
-                flex: 58,
-                child: _MasonryGallery(),
-              ),
-
-              // Bottom 42% — content
-              Expanded(
-                flex: 42,
-                child: _BottomContent(
-                  onStartPressed: () {
-                    debugPrint('🚀 Let\'s start pressed');
-                    context.push('/login');
-                  },
-                  onGuestPressed: () => context.go('/guest'),
+        backgroundColor: const Color(0xFF5A9DBF),
+        body: Stack(
+          children: [
+            // ── Dark gradient overlay (same as login) ─────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.0, 0.28, 0.58, 1.0],
+                    colors: [
+                      Colors.black.withValues(alpha: 0.62),
+                      Colors.black.withValues(alpha: 0.28),
+                      Colors.black.withValues(alpha: 0.58),
+                      Colors.black.withValues(alpha: 0.82),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ── Radial vignette ───────────────────────────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.1,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.35),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Content ───────────────────────────────────────────────────
+            SafeArea(
+              child: Column(
+                children: [
+                  // ShaderMask fades gallery pixels → transparent at bottom
+                  // so background shows through with no hard boundary
+                  Expanded(
+                    flex: 58,
+                    child: ShaderMask(
+                      shaderCallback: (rect) => const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: [0.0, 0.80, 0.97, 1.0],
+                        colors: [
+                          Colors.white,
+                          Colors.white,
+                          Colors.transparent,
+                          Colors.transparent,
+                        ],
+                      ).createShader(rect),
+                      blendMode: BlendMode.dstIn,
+                      child: const _MasonryGallery(),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 42,
+                    child: _BottomContent(
+                      onStartPressed: () {
+                        debugPrint('🚀 Let\'s start pressed');
+                        context.push('/login');
+                      },
+                      onGuestPressed: () => context.go('/guest'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Logo pill (above everything) ──────────────────────────────
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              right: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.30),
+                  borderRadius: AppRadius.fullRadius,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.pets_rounded,
+                        size: 18, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      'PetPal',
+                      style:
+                          AppTextStyles.bodyBold.copyWith(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -117,114 +201,56 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(28),
-        bottomRight: Radius.circular(28),
-      ),
-      child: Stack(
-        children: [
-          Row(
-            children: List.generate(3, (col) {
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ListView.builder(
-                    controller: _controllers[col],
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 120,
-                    itemBuilder: (_, index) {
-                      final imgIdx = (col + index * 3) % _petImages.length;
-                      final h = 110.0 + Random(imgIdx).nextDouble() * 80;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.network(
-                            _petImages[imgIdx],
+    return Stack(
+      children: [
+        Row(
+          children: List.generate(3, (col) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: ListView.builder(
+                  controller: _controllers[col],
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 120,
+                  itemBuilder: (_, index) {
+                    final imgIdx = (col + index * 3) % _petImages.length;
+                    final h = 110.0 + Random(imgIdx).nextDouble() * 80;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          _petImages[imgIdx],
+                          height: h,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
                             height: h,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.borderFaint,
+                            child: const Icon(
+                              Icons.pets,
+                              color: AppColors.textMuted,
+                              size: 32,
+                            ),
+                          ),
+                          loadingBuilder: (_, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
                               height: h,
                               color: AppColors.borderFaint,
-                              child: const Icon(
-                                Icons.pets,
-                                color: AppColors.textMuted,
-                                size: 32,
-                              ),
-                            ),
-                            loadingBuilder: (_, child, progress) {
-                              if (progress == null) return child;
-                              return Container(
-                                height: h,
-                                color: AppColors.borderFaint,
-                              );
-                            },
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            }),
-          ),
-
-          // Bottom fade to white
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 110,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withValues(alpha: 0),
-                    Colors.white.withValues(alpha: 0.9),
-                  ],
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
-          ),
+            );
+          }),
+        ),
 
-          // Top logo pill
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.92),
-                borderRadius: AppRadius.fullRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.18),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.pets_rounded,
-                      size: 18, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'PetPal',
-                    style: AppTextStyles.bodyBold
-                        .copyWith(color: AppColors.textPrimary),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -242,173 +268,183 @@ class _BottomContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.primary.withValues(alpha: 0.05),
-            AppColors.surfaceCard,
-          ],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 18, 28, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Paw watermark + headline
-            Stack(
-              alignment: Alignment.center,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: AppTextStyles.h1.copyWith(
+                fontSize: 28,
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    blurRadius: 14,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
               children: [
-                Icon(
-                  Icons.pets_rounded,
-                  size: 100,
-                  color: AppColors.primary.withValues(alpha: 0.04),
-                ),
-                Column(
-                  children: [
-                    RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: AppTextStyles.h1.copyWith(
-                            fontSize: 26, color: AppColors.textPrimary),
-                        children: [
-                          const TextSpan(text: 'ברוכים הבאים ל-'),
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: ShaderMask(
-                              blendMode: BlendMode.srcIn,
-                              shaderCallback: (bounds) =>
-                                  const LinearGradient(
-                                colors: [
-                                  AppColors.primary,
-                                  AppColors.regalNavy,
-                                ],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ).createShader(bounds),
-                              child: Text(
-                                'PetPal',
-                                style: AppTextStyles.h1.copyWith(
-                                  fontSize: 26,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+                const TextSpan(text: 'ברוכים הבאים ל-'),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFFFFD966), Color(0xFFFF9800)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ).createShader(bounds),
+                    child: Text(
+                      'PetPal',
+                      style: AppTextStyles.h1.copyWith(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: const Color(0xFFFF9800).withValues(alpha: 0.55),
+                            blurRadius: 18,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'מצא/י מטפל/ת אמין/ה או פרסם/י מודעות אבוד/נמצא בקלות.\nהכל במקום אחד — שירותים, צ׳אט והתראות.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.caption.copyWith(
+              height: 1.7,
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.82),
+              letterSpacing: 0.2,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+          ),
+
+          const Spacer(),
+
+          // Feature pills
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _FeaturePill(
+                icon: Icons.directions_walk_rounded,
+                label: 'טיולים',
+                color: AppColors.sapphire,
+              ),
+              SizedBox(width: 10),
+              _FeaturePill(
+                icon: Icons.home_work_rounded,
+                label: 'שמירה',
+                color: AppColors.success,
+              ),
+              SizedBox(width: 10),
+              _FeaturePill(
+                icon: Icons.pets_rounded,
+                label: 'אבודים',
+                color: AppColors.warning,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Gradient CTA button
+          Container(
+            height: 54,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.regalNavy],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.40),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onStartPressed,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.rocket_launch_rounded,
+                        color: Colors.white, size: 18),
+                    SizedBox(width: 8),
                     Text(
-                      'מצא/י מטפל/ת אמין/ה או פרסם/י מודעות אבוד/נמצא בקלות.\nהכל במקום אחד — שירותים, צ׳אט והתראות.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.caption.copyWith(height: 1.7),
+                      'בואו נתחיל',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // Feature pills — each with its own accent colour
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                _FeaturePill(
-                  icon: Icons.directions_walk_rounded,
-                  label: 'טיולים',
-                  color: AppColors.sapphire,
-                ),
-                SizedBox(width: 10),
-                _FeaturePill(
-                  icon: Icons.home_work_rounded,
-                  label: 'שמירה',
-                  color: AppColors.success,
-                ),
-                SizedBox(width: 10),
-                _FeaturePill(
-                  icon: Icons.pets_rounded,
-                  label: 'אבודים',
-                  color: AppColors.warning,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Gradient CTA button
-            Container(
-              height: 54,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.regalNavy],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: onStartPressed,
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.rocket_launch_rounded,
-                          color: Colors.white, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'בואו נתחיל',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Divider-style guest link
+          Row(
+            children: [
+              Expanded(
+                  child: Divider(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      thickness: 1)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: GestureDetector(
+                  onTap: onGuestPressed,
+                  child: Text(
+                    'המשך/י כאורח/ת',
+                    style: AppTextStyles.body.copyWith(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.30),
+                          blurRadius: 6,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Divider-style guest link
-            Row(
-              children: [
-                const Expanded(
-                    child: Divider(color: AppColors.divider, thickness: 1)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: GestureDetector(
-                    onTap: onGuestPressed,
-                    child: Text(
-                      'המשך/י כאורח/ת',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      ],
                     ),
                   ),
                 ),
-                const Expanded(
-                    child: Divider(color: AppColors.divider, thickness: 1)),
-              ],
-            ),
-          ],
-        ),
+              ),
+              Expanded(
+                  child: Divider(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      thickness: 1)),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -418,15 +454,17 @@ class _FeaturePill extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  const _FeaturePill({required this.icon, required this.label, required this.color});
+  const _FeaturePill(
+      {required this.icon, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: color.withValues(alpha: 0.18),
         borderRadius: AppRadius.fullRadius,
+        border: Border.all(color: color.withValues(alpha: 0.40), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

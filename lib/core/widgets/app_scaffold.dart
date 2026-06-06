@@ -10,6 +10,7 @@ class AppScaffold extends StatelessWidget {
   final FloatingActionButtonLocation? floatingActionButtonLocation;
   final bool extendBody;
   final bool resizeToAvoidBottomInset;
+  final Color? backgroundColor;
 
   const AppScaffold({
     super.key,
@@ -20,6 +21,7 @@ class AppScaffold extends StatelessWidget {
     this.floatingActionButtonLocation,
     this.extendBody = false,
     this.resizeToAvoidBottomInset = true,
+    this.backgroundColor,
   });
 
   @override
@@ -42,7 +44,7 @@ class AppScaffold extends StatelessWidget {
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
-      backgroundColor: AppColors.surfaceBase,
+      backgroundColor: backgroundColor ?? AppColors.surfaceBase,
       appBar: appBar,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
