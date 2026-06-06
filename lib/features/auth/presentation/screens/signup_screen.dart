@@ -159,9 +159,11 @@ class _SignupScreenState extends State<SignupScreen>
         } catch (_) {}
       }
 
+      // Sign out so the router reads the role fresh on next login
+      await _auth.signOut();
       if (!mounted) return;
-      _snack('החשבון נוצר בהצלחה! ברוך/ה הבא/ה 🎉');
-      context.go('/');
+      _snack('החשבון נוצר בהצלחה! אנא התחבר/י כדי להמשיך 🎉');
+      context.go('/login');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _snack(_authError(e), isError: true);
