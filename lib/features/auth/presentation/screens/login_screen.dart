@@ -25,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool    _isLoading     = false;
   String? _emailError;
   String? _passwordError;
+  String? _serverError;
 
   @override
   void initState() {
@@ -85,6 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       };
 
   void _snack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -97,6 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Future<void> _handleLogin() async {
+    setState(() => _serverError = null);
     _validateEmail(_emailCtrl.text);
     _validatePassword(_passwordCtrl.text);
     if (!_formValid) return;
@@ -111,10 +114,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       context.go('/');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _snack(_authError(e), isError: true);
+      final msg = _authError(e);
+      setState(() => _serverError = msg);
+      _snack(msg, isError: true);
     } catch (_) {
       if (!mounted) return;
-      _snack('שגיאה לא צפויה. נסה/י שוב.', isError: true);
+      const msg = 'שגיאה לא צפויה. נסה/י שוב.';
+      setState(() => _serverError = msg);
+      _snack(msg, isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -310,6 +317,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           isLoading: _isLoading,
                           onTap: _isLoading ? null : _handleLogin,
                         ),
+
+                        if (_serverError != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                  color: AppColors.danger.withValues(alpha: 0.45)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded,
+                                    color: AppColors.danger, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _serverError!,
+                                    style: const TextStyle(
+                                      color: AppColors.danger,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
 
                         const SizedBox(height: 24),
 
