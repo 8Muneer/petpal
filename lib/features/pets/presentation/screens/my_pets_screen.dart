@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -610,24 +609,18 @@ class _PetDetailSheetState extends State<_PetDetailSheet>
                   left: 16,
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.35),
-                                width: 1),
-                          ),
-                          child: const Icon(Icons.close_rounded,
-                              color: Colors.white, size: 18),
-                        ),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.30),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.45),
+                            width: 1),
                       ),
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white, size: 18),
                     ),
                   ),
                 ),

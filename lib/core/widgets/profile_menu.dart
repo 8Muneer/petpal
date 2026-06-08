@@ -42,6 +42,13 @@ List<ProfileMenuItem> buildProfileMenuItems(BuildContext context) {
       subtitle: 'ניהול חיות המחמד שלך',
       onTap: () => context.push('/my-pets'),
     ),
+    ProfileMenuItem(
+      icon: Icons.calendar_today_rounded,
+      iconColor: AppColors.primary,
+      label: 'הזמנות',
+      subtitle: 'ההזמנות שלי',
+      onTap: () => context.push('/profile/bookings'),
+    ),
     _logoutItem(context),
   ];
 }

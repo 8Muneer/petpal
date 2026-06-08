@@ -20,7 +20,6 @@ import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_f
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
 import 'package:petpal/features/home/presentation/widgets/services_tab.dart';
-import 'package:petpal/features/messaging/presentation/widgets/chat_tab.dart';
 import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
 import 'package:petpal/features/explore/presentation/widgets/poi_card.dart';
@@ -78,7 +77,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               3 => const LostFoundFeedScreen(),
               4 => const ServicesTab(),
               5 => const MyRequestsTab(),
-              6 => const ChatTab(),
               _ => const SizedBox.shrink(),
             });
   }
@@ -129,7 +127,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             AppNavItem(
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
-                label: 'פיד'),
+                label: 'קהילה'),
             AppNavItem(
                 icon: Icons.explore_outlined,
                 activeIcon: Icons.explore_rounded,
@@ -145,11 +143,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             AppNavItem(
                 icon: Icons.assignment_outlined,
                 activeIcon: Icons.assignment_rounded,
-                label: 'הזמנות'),
-            AppNavItem(
-                icon: Icons.chat_bubble_outline_rounded,
-                activeIcon: Icons.chat_bubble_rounded,
-                label: 'צ׳אט'),
+                label: 'בקשות'),
           ],
         ),
       ),
@@ -248,6 +242,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               profileImageUrl: profile?.photoUrl,
               userName: profile?.name,
               onNotificationTap: () => context.push('/notifications'),
+              onChatTap: () => context.push('/chat'),
               profileMenuItems: buildProfileMenuItems(context),
             ),
 
@@ -301,7 +296,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                       ),
                       const SizedBox(width: 12),
                       DiscoveryChip(
-                        label: 'פיד',
+                        label: 'קהילה',
                         icon: Icons.feed_outlined,
                         onTap: () => widget.onTabChange(1),
                       ),
