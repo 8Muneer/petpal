@@ -1,5 +1,4 @@
 import 'dart:math' show min;
-import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +33,7 @@ class LuxuryHero extends StatelessWidget {
   final String? userName;
   final List<ProfileMenuItem> profileMenuItems;
   final VoidCallback? onNotificationTap;
+  final VoidCallback? onChatTap;
 
   const LuxuryHero({
     super.key,
@@ -44,6 +44,7 @@ class LuxuryHero extends StatelessWidget {
     this.userName,
     this.profileMenuItems = const [],
     this.onNotificationTap,
+    this.onChatTap,
   });
 
   @override
@@ -107,7 +108,38 @@ class LuxuryHero extends StatelessWidget {
                   Text('PetPal',
                       style: AppTextStyles.headlineLg.copyWith(
                           color: Colors.white, fontStyle: FontStyle.italic)),
-                  NotificationBellButton(onTap: onNotificationTap),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: onChatTap,
+                        behavior: HitTestBehavior.opaque,
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Center(
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.30),
+                                    width: 1),
+                              ),
+                              child: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      NotificationBellButton(onTap: onNotificationTap),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -297,12 +329,16 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
         parent: _enter,
         curve: const Interval(0.0, 0.45, curve: Curves.easeOut));
 
+    final n = widget.items.length;
     _itemAnims = List.generate(
-      widget.items.length,
+      n,
       (i) => CurvedAnimation(
         parent: _enter,
-        curve: Interval(0.40 + i * 0.09, 0.82 + i * 0.09,
-            curve: Curves.easeOutCubic),
+        curve: Interval(
+          0.40 + (i / n.clamp(1, n)) * 0.30,
+          0.65 + (i / n.clamp(1, n)) * 0.30,
+          curve: Curves.easeOutCubic,
+        ),
       ),
     );
 
@@ -339,18 +375,15 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            // ── Blurred barrier ─────────────────────────────────────────
+            // ── Barrier ─────────────────────────────────────────────────
             Positioned.fill(
               child: FadeTransition(
                 opacity: _barrierFade.drive(Tween(begin: 0.0, end: 1.0)),
                 child: GestureDetector(
                   onTap: _dismiss,
                   behavior: HitTestBehavior.opaque,
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                    child: Container(
-                        color: AppColors.prussianBlue3.withValues(alpha: 0.45)),
-                  ),
+                  child: Container(
+                      color: AppColors.prussianBlue3.withValues(alpha: 0.55)),
                 ),
               ),
             ),
@@ -370,17 +403,15 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                       topLeft: Radius.circular(32),
                       bottomLeft: Radius.circular(32),
                     ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-                      child: Container(
+                    child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Colors.white.withValues(alpha: 0.97),
-                              Colors.white.withValues(alpha: 0.93),
-                              AppColors.surface.withValues(alpha: 0.95),
+                              Colors.white,
+                              Colors.white,
+                              AppColors.surface,
                             ],
                             stops: const [0.0, 0.5, 1.0],
                           ),
@@ -413,7 +444,6 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -493,24 +523,18 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                   alignment: Alignment.centerLeft,
                   child: GestureDetector(
                     onTap: _dismiss,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.25),
-                                width: 1),
-                          ),
-                          child: const Icon(Icons.close_rounded,
-                              color: Colors.white, size: 16),
-                        ),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 1),
                       ),
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white, size: 16),
                     ),
                   ),
                 ),
