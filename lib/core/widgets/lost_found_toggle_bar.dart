@@ -1,5 +1,4 @@
-﻿import 'dart:ui';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
 class LostFoundToggleBar extends StatelessWidget {
@@ -16,9 +15,7 @@ class LostFoundToggleBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
+      child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.8),
@@ -32,7 +29,6 @@ class LostFoundToggleBar extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 

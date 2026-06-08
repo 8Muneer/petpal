@@ -1,5 +1,4 @@
-﻿import 'dart:ui';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
 /// A specialized glass-morphism pill for ratings, badges, and small overlays.
@@ -24,9 +23,7 @@ class GlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: AppRadius.fullRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
+      child: Container(
           padding: padding,
           decoration: BoxDecoration(
             color: (color ?? Colors.white).withValues(alpha: opacity),
@@ -38,7 +35,6 @@ class GlassPill extends StatelessWidget {
           ),
           child: child,
         ),
-      ),
     );
   }
 }

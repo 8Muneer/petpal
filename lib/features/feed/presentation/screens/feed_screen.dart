@@ -67,12 +67,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ),
             slivers: [
               // Shared app header (avatar · title · bell)
-              AppHeaderBar.sliver(title: 'פיד', subtitle: 'קהילת PetPal'),
+              AppHeaderBar.sliver(title: 'קהילה', subtitle: 'קהילת PetPal'),
 
               // Sticky filter bar
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _SliverFeedFilterDelegate(
+                  selectedFilter: selectedFilter,
                   child: Container(
                     color: AppColors.surface,
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -229,7 +230,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
 class _SliverFeedFilterDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
-  const _SliverFeedFilterDelegate({required this.child});
+  final String selectedFilter;
+  const _SliverFeedFilterDelegate({required this.child, required this.selectedFilter});
 
   @override
   double get minExtent => 72;
@@ -243,7 +245,8 @@ class _SliverFeedFilterDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _SliverFeedFilterDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _SliverFeedFilterDelegate oldDelegate) =>
+      oldDelegate.selectedFilter != selectedFilter;
 }
 
 // ─── Filter bar ───────────────────────────────────────────────────────────────
