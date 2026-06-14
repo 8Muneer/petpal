@@ -57,6 +57,22 @@ class PaginatedFeedNotifier extends StateNotifier<AsyncValue<FeedState>> {
     }
   }
 
+  void localToggleLike(String postId, String uid) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final updatedPosts = current.posts.map((post) {
+      if (post.id != postId) return post;
+      final likes = List<String>.from(post.likes);
+      if (likes.contains(uid)) {
+        likes.remove(uid);
+      } else {
+        likes.add(uid);
+      }
+      return post.copyWith(likes: likes);
+    }).toList();
+    state = AsyncValue.data(current.copyWith(posts: updatedPosts));
+  }
+
   Future<void> fetchNextPage() async {
     final currentVal = state.asData?.value;
     if (currentVal == null || !currentVal.hasMore || currentVal.isLoadingMore) return;

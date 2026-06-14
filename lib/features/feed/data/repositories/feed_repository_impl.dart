@@ -18,8 +18,9 @@ class FeedRepositoryImpl implements FeedRepository {
       _datasource.createPost(data);
 
   @override
-  Future<void> toggleLike(String postId, String uid) =>
-      _datasource.toggleLike(postId, uid);
+  Future<void> toggleLike(String postId, String uid,
+          {bool? isCurrentlyLiked}) =>
+      _datasource.toggleLike(postId, uid, isCurrentlyLiked: isCurrentlyLiked);
 
   @override
   Future<void> addComment(String postId, Map<String, dynamic> data) =>

@@ -195,9 +195,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                   _showLoginDialog(context);
                                   return;
                                 }
+                                final isLiked = post.isLikedBy(uid);
+                                ref
+                                    .read(paginatedFeedProvider.notifier)
+                                    .localToggleLike(post.id, uid);
                                 ref
                                     .read(feedRepositoryProvider)
-                                    .toggleLike(post.id, uid);
+                                    .toggleLike(post.id, uid,
+                                        isCurrentlyLiked: isLiked);
                               },
                               onEdit: () => context.push(
                                 '/feed/edit',
