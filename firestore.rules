@@ -25,8 +25,16 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
       allow update: if request.auth != null && (
-        (request.auth.uid == resource.data.authorUid && request.resource.data.authorUid == resource.data.authorUid) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount'])
+        // Author can edit their own post (content, images, etc.)
+        request.auth.uid == resource.data.authorUid ||
+        // Any authenticated user may like/unlike or increment commentCount —
+        // guard by asserting the immutable fields are untouched.
+        (
+          request.resource.data.authorUid == resource.data.authorUid &&
+          request.resource.data.content == resource.data.content &&
+          request.resource.data.type == resource.data.type &&
+          request.resource.data.createdAt == resource.data.createdAt
+        )
       );
       allow delete: if request.auth != null && request.auth.uid == resource.data.authorUid;
 
@@ -79,10 +87,23 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.resource.data.reporterUid == request.auth.uid;
       allow update: if request.auth != null &&
+        // reporterUid is always immutable
         request.resource.data.reporterUid == resource.data.reporterUid &&
         (
+          // Reporter can update any field on their own post
           resource.data.reporterUid == request.auth.uid ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['matches'])
+          // Matching service (runs client-side as the creating user) may update
+          // matches/matchingStatus on any post — guard by asserting the pet data
+          // and status are untouched.
+          (
+            request.resource.data.type == resource.data.type &&
+            request.resource.data.get('petName', '') == resource.data.get('petName', '') &&
+            request.resource.data.get('description', '') == resource.data.get('description', '') &&
+            request.resource.data.get('imageUrl', '') == resource.data.get('imageUrl', '') &&
+            request.resource.data.get('area', '') == resource.data.get('area', '') &&
+            request.resource.data.get('species', '') == resource.data.get('species', '') &&
+            request.resource.data.get('status', 'active') == resource.data.get('status', 'active')
+          )
         );
       allow delete: if request.auth != null && resource.data.reporterUid == request.auth.uid;
     }

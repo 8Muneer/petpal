@@ -4,7 +4,7 @@ import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 abstract class FeedRepository {
   Stream<List<FeedPost>> watchPosts();
   Future<String> createPost(Map<String, dynamic> data);
-  Future<void> toggleLike(String postId, String uid);
+  Future<void> toggleLike(String postId, String uid, {bool? isCurrentlyLiked});
   Future<void> addComment(String postId, Map<String, dynamic> data);
   Future<void> updatePost(String postId, Map<String, dynamic> data);
   Future<void> deletePost(String postId);
