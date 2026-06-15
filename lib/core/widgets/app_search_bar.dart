@@ -20,9 +20,16 @@ class AppSearchBar extends StatelessWidget {
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: AppRadius.fullRadius,
-        boxShadow: AppShadows.subtle,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: TextField(
         controller: controller,
@@ -37,6 +44,8 @@ class AppSearchBar extends StatelessWidget {
             color: AppColors.textMuted,
             size: 20,
           ),
+          filled: false,
+          fillColor: Colors.transparent,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
