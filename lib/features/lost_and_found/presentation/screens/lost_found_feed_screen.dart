@@ -82,7 +82,8 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                           activeCount: state.hasActiveFilters ? 1 : 0,
                           onTap: () => _showFilterSheet(state),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildCreateCTA(photoUrl)),
                         _buildViewTypeToggle(state),
                       ],
                     ),
@@ -160,8 +161,6 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Create CTA
-                    _buildCreateCTA(photoUrl),
                     // Active filter chips
                     if (state.hasActiveFilters) ...[
                       const SizedBox(height: 10),
