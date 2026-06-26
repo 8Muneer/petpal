@@ -100,11 +100,12 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
 
   Future<void> _submit() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null && user.uid == widget.providerUid) {
+    if (user == null) return;
+
+    if (user.uid == widget.providerUid) {
       _snack('אינך יכול להזמין את השירות של עצמך');
       return;
     }
-
     if (_selectedPet == null) {
       _snack('יש לבחור חיית מחמד');
       return;
@@ -115,6 +116,35 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
     }
     if (!_isWalk && (_startDate == null || _endDate == null)) {
       _snack('יש לבחור תאריכי התחלה וסיום');
+      return;
+    }
+
+    // Block if an active booking with this provider+service already exists.
+    // Filters on ownerUid+providerUid+serviceId are all equality, so Firestore
+    // can serve this without a composite index and without a recency window —
+    // an old active duplicate can't fall outside a `.limit()` like the
+    // previous ownerUid+createdAt-windowed version could. Only `status` is
+    // filtered client-side, on the (necessarily tiny) exact-match result set.
+    setState(() => _isSubmitting = true);
+    bool hasDuplicate = false;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('booking_requests')
+          .where('ownerUid', isEqualTo: user.uid)
+          .where('providerUid', isEqualTo: widget.providerUid)
+          .where('serviceId', isEqualTo: widget.serviceId)
+          .get();
+      const activeStatuses = {'pending', 'accepted', 'awaitingConfirmation'};
+      hasDuplicate = snap.docs
+          .any((d) => activeStatuses.contains(d.data()['status'] as String?));
+    } catch (_) {
+      // Network error — allow submission; Firestore rules enforce server-side
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+    if (!mounted) return;
+    if (hasDuplicate) {
+      _snack('כבר קיימת הזמנה פעילה עם ספק זה');
       return;
     }
 
@@ -145,8 +175,6 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
       final profile = ref.read(currentUserProfileProvider).asData?.value;
 
       final data = {
@@ -181,7 +209,6 @@ class _CreateBookingScreenState extends ConsumerState<CreateBookingScreen> {
       await ref.read(bookingRepositoryProvider).createBooking(data);
       if (!mounted) return;
       _snack('הבקשה נשלחה בהצלחה!', success: true);
-      // Pop booking form, then pop provider profile (safe checks)
       if (context.canPop()) context.pop();
       if (context.canPop()) context.pop();
     } catch (_) {
