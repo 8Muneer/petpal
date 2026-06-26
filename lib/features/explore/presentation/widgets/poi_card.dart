@@ -1,9 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:petpal/core/providers/location_provider.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/utils/geo.dart';
 import 'package:petpal/features/explore/domain/entities/poi_model.dart';
+import 'package:petpal/features/explore/presentation/widgets/emergency_badge.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class POICard extends StatelessWidget {
+// ── Today's-hours helper ────────────────────────────────────────────────────
+
+/// Maps Dart's [DateTime.weekday] (Mon=1 … Sun=7) to the storage key used in
+/// [POI.openingHours] (sun, mon, … sat).
+const _weekdayKey = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+/// Returns a displayable string for today's opening hours, or null if the
+/// place is closed today or no hours have been entered.
+String? _todayHours(POI poi) {
+  if (poi.open24h) return 'פתוח 24/7';
+  if (poi.openingHours.isEmpty) return null;
+  final key = _weekdayKey[DateTime.now().weekday - 1];
+  final raw = poi.openingHours[key];
+  if (raw == null || raw.isEmpty) return 'סגור היום';
+  return raw; // e.g. "09:00-18:00"
+}
+
+// ── Widget ──────────────────────────────────────────────────────────────────
+
+class POICard extends ConsumerWidget {
   final POI poi;
   final VoidCallback? onTap;
   final bool isCompact;
@@ -16,7 +39,13 @@ class POICard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch device location so the distance label updates when GPS resolves.
+    // Using valueOrNull means the card renders immediately — distance just
+    // shows '...' while loading and the real value once the fix arrives.
+    final locationAsync = ref.watch(locationProvider);
+    final userLocation = locationAsync.valueOrNull;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -30,13 +59,14 @@ class POICard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section
+            // ── Image with badges ──────────────────────────────────────────
             Stack(
               children: [
                 AspectRatio(
-                  aspectRatio: 16 / 9,
+                  aspectRatio: isCompact ? 16 / 9 : 16 / 7,
                   child: CachedNetworkImage(
-                    imageUrl: poi.imageUrl ?? 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
+                    imageUrl: poi.imageUrl ??
+                        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
                       color: AppColors.surfaceDark,
@@ -48,11 +78,13 @@ class POICard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (poi.isEmergency)
-                  Positioned(
+                // effectiveIsEmergency enforces the invariant that the badge
+                // only appears on vets, even if Firestore has stale data.
+                if (poi.effectiveIsEmergency)
+                  const Positioned(
                     top: 12,
                     right: 12,
-                    child: _buildEmergencyBadge(),
+                    child: EmergencyBadge(),
                   ),
                 Positioned(
                   bottom: 12,
@@ -62,13 +94,15 @@ class POICard extends StatelessWidget {
               ],
             ),
 
-            // Content Section
+            // ── Content ───────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Name + rating on one row
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
@@ -79,25 +113,17 @@ class POICard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _buildRating(),
+                      _buildRatingBadge(),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, 
-                        size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          poi.address ?? 'אין כתובת זמינה',
-                          style: AppTextStyles.labelMd,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 6),
+
+                  // Meta row: address • distance • open status
+                  _buildMetaRow(userLocation),
+                  const SizedBox(height: 10),
+
+                  // Services / tags chip row (max 3 chips + overflow count)
+                  if (_chips.isNotEmpty) _buildChipRow(),
                 ],
               ),
             ),
@@ -107,19 +133,174 @@ class POICard extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeBadge() {
-    String typeName = '';
-    switch (poi.type) {
-      case POIType.park:
-        typeName = 'גינה';
-        break;
-      case POIType.vet:
-        typeName = 'וטרינר';
-        break;
-      case POIType.store:
-        typeName = 'חנות';
-        break;
+  // ── Meta row ─────────────────────────────────────────────────────────────
+
+  Widget _buildMetaRow(({double lat, double lng})? userLocation) {
+    final items = <Widget>[];
+
+    // Address
+    if ((poi.address ?? '').isNotEmpty) {
+      items.add(
+        Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.location_on_outlined,
+                  size: 13, color: AppColors.textMuted),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  poi.address!,
+                  style: AppTextStyles.labelSm,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
+
+    // Distance — only when both POI coords and device location exist
+    if (poi.latitude != null && poi.longitude != null) {
+      final String distText;
+      if (userLocation == null) {
+        distText = '...';
+      } else {
+        final km = distanceKm(
+            userLocation.lat, userLocation.lng, poi.latitude!, poi.longitude!);
+        distText = formatDistance(km);
+      }
+      if (items.isNotEmpty) items.add(_dot());
+      items.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.directions_walk_rounded,
+                size: 13, color: AppColors.textMuted),
+            const SizedBox(width: 3),
+            Text(distText, style: AppTextStyles.labelSm),
+          ],
+        ),
+      );
+    }
+
+    // Open status
+    final hours = _todayHours(poi);
+    if (hours != null) {
+      if (items.isNotEmpty) items.add(_dot());
+      final isOpen24 = poi.open24h;
+      items.add(
+        Text(
+          hours,
+          style: AppTextStyles.labelSm.copyWith(
+            color: isOpen24 ? AppColors.success : AppColors.textSecondary,
+            fontWeight: isOpen24 ? FontWeight.w700 : FontWeight.normal,
+          ),
+        ),
+      );
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      children: items,
+    );
+  }
+
+  Widget _dot() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: Text('·',
+            style: AppTextStyles.labelSm.copyWith(color: AppColors.textMuted)),
+      );
+
+  // ── Services / tags chip row ──────────────────────────────────────────────
+
+  /// Combined list of chips to show: services first, then tags.
+  List<String> get _chips => [...poi.services, ...poi.tags];
+
+  Widget _buildChipRow() {
+    const maxVisible = 3;
+    final all = _chips;
+    final visible = all.take(maxVisible).toList();
+    final overflow = all.length - maxVisible;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final label in visible) _chip(label),
+        if (overflow > 0) _chip('+$overflow', muted: true),
+      ],
+    );
+  }
+
+  Widget _chip(String label, {bool muted = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: muted
+            ? AppColors.surfaceDark
+            : AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: muted
+              ? AppColors.border
+              : AppColors.primary.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSm.copyWith(
+          color: muted ? AppColors.textMuted : AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  // ── Rating badge ──────────────────────────────────────────────────────────
+
+  Widget _buildRatingBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: AppColors.warning, size: 14),
+          const SizedBox(width: 3),
+          Text(
+            poi.rating.toStringAsFixed(1),
+            style: AppTextStyles.labelSm.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          if (poi.reviewCount > 0) ...[
+            const SizedBox(width: 3),
+            Text(
+              '(${poi.reviewCount})',
+              style: AppTextStyles.labelSm.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Type badge ────────────────────────────────────────────────────────────
+
+  Widget _buildTypeBadge() {
+    final typeName = switch (poi.type) {
+      POIType.park => 'גינה',
+      POIType.vet => 'וטרינר',
+      POIType.store => 'חנות',
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -136,52 +317,6 @@ class POICard extends StatelessWidget {
           letterSpacing: 0.5,
         ),
       ),
-    );
-  }
-
-  Widget _buildEmergencyBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.9),
-        borderRadius: AppRadius.fullRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.error.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bolt, color: Colors.white, size: 14),
-          SizedBox(width: 4),
-          Text(
-            '24/7',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRating() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.star_rounded, color: AppColors.warning, size: 18),
-        const SizedBox(width: 2),
-        Text(
-          poi.rating.toStringAsFixed(1),
-          style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ],
     );
   }
 }

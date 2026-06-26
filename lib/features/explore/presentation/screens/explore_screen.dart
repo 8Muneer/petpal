@@ -129,27 +129,41 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget _buildOwnerView(BuildContext context) {
     return Column(
       children: [
-        // Owner sub-tabs with pill indicator decoration
+        // Owner sub-tabs with card container
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textMuted,
-            indicatorSize: TabBarIndicatorSize.tab,
-            indicatorPadding: const EdgeInsets.symmetric(vertical: 4),
-            indicator: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.pureWhite,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: AppColors.border.withValues(alpha: 0.4),
+                  blurRadius: 1,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
-            dividerColor: Colors.transparent,
-            tabAlignment: TabAlignment.start,
-            tabs: const [
-              Tab(text: 'גינות כלבים'),
-              Tab(text: 'וטרינרים'),
-              Tab(text: 'חנויות'),
-            ],
+            padding: const EdgeInsets.all(4),
+            child: AnimatedBuilder(
+              animation: _tabController,
+              builder: (context, _) {
+                return Row(
+                  children: [
+                    Expanded(child: _buildTabButton(0, 'גינות כלבים')),
+                    _buildTabSeparator(),
+                    Expanded(child: _buildTabButton(1, 'וטרינרים')),
+                    _buildTabSeparator(),
+                    Expanded(child: _buildTabButton(2, 'חנויות')),
+                  ],
+                );
+              },
+            ),
           ),
         ),
 
@@ -168,22 +182,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   Widget _buildPOIList(POIType type) {
+    // nearbyPOIsProvider watches poiFiltersProvider internally and applies
+    // minRating / hasReviewsOnly before returning — filtering in the provider
+    // layer means it runs on the full fetched set, not after the 200-doc cap.
     final poisAsync = ref.watch(nearbyPOIsProvider(type: type));
-    final poiFilters = ref.watch(poiFiltersProvider);
 
     return poisAsync.when(
-      data: (allPois) {
-        final pois = allPois.where((poi) {
-          if (poiFilters.minRating != null &&
-              poi.rating < poiFilters.minRating!) {
-            return false;
-          }
-          if (poiFilters.hasReviewsOnly && poi.reviewCount == 0) {
-            return false;
-          }
-          return true;
-        }).toList();
-
+      data: (pois) {
         if (pois.isEmpty) {
           return const EmptyStateWidget(
             title: 'לא נמצאו תוצאות',
@@ -276,6 +281,55 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           const SliverToBoxAdapter(
               child: SizedBox(height: 120)), // Space for floating nav
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(int index, String label) {
+    final isSelected = _tabController.index == index;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        _tabController.animateTo(index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.2)
+                : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isSelected ? AppColors.primary : AppColors.textMuted,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabSeparator() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 2),
+      child: Text(
+        '|',
+        style: TextStyle(
+          color: AppColors.border,
+          fontSize: 16,
+          fontWeight: FontWeight.w300,
+        ),
       ),
     );
   }

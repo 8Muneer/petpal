@@ -7,5 +7,9 @@ abstract class POIRepository {
     POIType? type,
   });
 
+  /// Fetch a single POI by its document ID.
+  /// Returns null when the ID does not exist in Firestore (or mock data).
+  Future<POI?> getPOIById(String id);
+
   Stream<List<POI>> watchAllPOIs();
 }

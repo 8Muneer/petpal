@@ -24,8 +24,8 @@ mixin _$POI {
   String get name => throw _privateConstructorUsedError;
   POIType get type => throw _privateConstructorUsedError;
   bool get isEmergency => throw _privateConstructorUsedError;
-  double get latitude => throw _privateConstructorUsedError;
-  double get longitude => throw _privateConstructorUsedError;
+  double? get latitude => throw _privateConstructorUsedError;
+  double? get longitude => throw _privateConstructorUsedError;
   double get rating => throw _privateConstructorUsedError;
   int get reviewCount => throw _privateConstructorUsedError;
   String? get imageUrl => throw _privateConstructorUsedError;
@@ -67,8 +67,8 @@ abstract class $POICopyWith<$Res> {
       String name,
       POIType type,
       bool isEmergency,
-      double latitude,
-      double longitude,
+      double? latitude,
+      double? longitude,
       double rating,
       int reviewCount,
       String? imageUrl,
@@ -101,8 +101,8 @@ class _$POICopyWithImpl<$Res, $Val extends POI> implements $POICopyWith<$Res> {
     Object? name = null,
     Object? type = null,
     Object? isEmergency = null,
-    Object? latitude = null,
-    Object? longitude = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
     Object? rating = null,
     Object? reviewCount = null,
     Object? imageUrl = freezed,
@@ -133,14 +133,14 @@ class _$POICopyWithImpl<$Res, $Val extends POI> implements $POICopyWith<$Res> {
           ? _value.isEmergency
           : isEmergency // ignore: cast_nullable_to_non_nullable
               as bool,
-      latitude: null == latitude
+      latitude: freezed == latitude
           ? _value.latitude
           : latitude // ignore: cast_nullable_to_non_nullable
-              as double,
-      longitude: null == longitude
+              as double?,
+      longitude: freezed == longitude
           ? _value.longitude
           : longitude // ignore: cast_nullable_to_non_nullable
-              as double,
+              as double?,
       rating: null == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
@@ -204,8 +204,8 @@ abstract class _$$POIImplCopyWith<$Res> implements $POICopyWith<$Res> {
       String name,
       POIType type,
       bool isEmergency,
-      double latitude,
-      double longitude,
+      double? latitude,
+      double? longitude,
       double rating,
       int reviewCount,
       String? imageUrl,
@@ -235,8 +235,8 @@ class __$$POIImplCopyWithImpl<$Res> extends _$POICopyWithImpl<$Res, _$POIImpl>
     Object? name = null,
     Object? type = null,
     Object? isEmergency = null,
-    Object? latitude = null,
-    Object? longitude = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
     Object? rating = null,
     Object? reviewCount = null,
     Object? imageUrl = freezed,
@@ -267,14 +267,14 @@ class __$$POIImplCopyWithImpl<$Res> extends _$POICopyWithImpl<$Res, _$POIImpl>
           ? _value.isEmergency
           : isEmergency // ignore: cast_nullable_to_non_nullable
               as bool,
-      latitude: null == latitude
+      latitude: freezed == latitude
           ? _value.latitude
           : latitude // ignore: cast_nullable_to_non_nullable
-              as double,
-      longitude: null == longitude
+              as double?,
+      longitude: freezed == longitude
           ? _value.longitude
           : longitude // ignore: cast_nullable_to_non_nullable
-              as double,
+              as double?,
       rating: null == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
@@ -335,8 +335,8 @@ class _$POIImpl implements _POI {
       required this.name,
       required this.type,
       this.isEmergency = false,
-      required this.latitude,
-      required this.longitude,
+      this.latitude,
+      this.longitude,
       this.rating = 0.0,
       this.reviewCount = 0,
       this.imageUrl,
@@ -366,9 +366,9 @@ class _$POIImpl implements _POI {
   @JsonKey()
   final bool isEmergency;
   @override
-  final double latitude;
+  final double? latitude;
   @override
-  final double longitude;
+  final double? longitude;
   @override
   @JsonKey()
   final double rating;
@@ -514,8 +514,8 @@ abstract class _POI implements POI {
       required final String name,
       required final POIType type,
       final bool isEmergency,
-      required final double latitude,
-      required final double longitude,
+      final double? latitude,
+      final double? longitude,
       final double rating,
       final int reviewCount,
       final String? imageUrl,
@@ -540,9 +540,9 @@ abstract class _POI implements POI {
   @override
   bool get isEmergency;
   @override
-  double get latitude;
+  double? get latitude;
   @override
-  double get longitude;
+  double? get longitude;
   @override
   double get rating;
   @override

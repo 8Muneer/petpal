@@ -1,10 +1,12 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:petpal/core/providers/location_provider.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/utils/geo.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
+import 'package:petpal/features/explore/presentation/widgets/emergency_badge.dart';
 import 'package:petpal/features/explore/presentation/widgets/poi_map_placeholder.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,11 +20,17 @@ class POIDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final poiAsync = ref.watch(poiByIdProvider(poiId));
 
+    // Watch location separately from the POI — the detail screen can render
+    // immediately with "..." for distance and update when the GPS fix arrives,
+    // instead of blocking the whole screen on location.
+    final locationAsync = ref.watch(locationProvider);
+
     return Scaffold(
       body: poiAsync.when(
         data: (poi) {
           if (poi == null) return const Center(child: Text('המקום לא נמצא'));
-          return _buildContent(context, poi);
+          // Pass the nullable location value — null while loading, real coords once ready.
+          return _buildContent(context, poi, locationAsync.valueOrNull);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('שגיאה: $err')),
@@ -30,8 +38,15 @@ class POIDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, POI poi) {
-    return CustomScrollView(
+  Widget _buildContent(BuildContext context, POI poi,
+      ({double lat, double lng})? userLocation) {
+    // The detail screen renders Hebrew content — force RTL so text alignment,
+    // row direction, and widget mirroring all match the app's language direction.
+    // The SliverAppBar back button uses `leading` which in RTL sits on the right,
+    // matching the standard Israeli app convention (back arrow on the right).
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: CustomScrollView(
       slivers: [
         // 1. Hero Image App Bar
         SliverAppBar(
@@ -88,7 +103,7 @@ class POIDetailScreen extends ConsumerWidget {
                               AppTextStyles.headlineLg.copyWith(fontSize: 28),
                         ),
                       ),
-                      if (poi.isEmergency) _buildEmergencyBadge(),
+                      if (poi.effectiveIsEmergency) const EmergencyBadge(),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -103,8 +118,8 @@ class POIDetailScreen extends ConsumerWidget {
 
                   const SizedBox(height: 24),
 
-                  // Rating & Reviews
-                  _buildStats(poi),
+                  // Rating & Reviews — shows real distance once GPS resolves.
+                  _buildStats(poi, userLocation),
 
                   const SizedBox(height: 32),
 
@@ -125,13 +140,14 @@ class POIDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 32),
                   ],
 
-                  // Opening hours
-                  if (poi.open24h || poi.openingHours.isNotEmpty) ...[
-                    _buildSectionHeader('שעות פעילות'),
-                    const SizedBox(height: 12),
-                    _buildHoursSection(poi),
-                    const SizedBox(height: 32),
-                  ],
+                  // Opening hours — always shown so the user knows whether the
+                  // place has no hours set vs. just not being open that day.
+                  // Previously the entire section was silently skipped when
+                  // openingHours was empty, which was ambiguous.
+                  _buildSectionHeader('שעות פעילות'),
+                  const SizedBox(height: 12),
+                  _buildHoursSection(poi),
+                  const SizedBox(height: 32),
 
                   // Services / amenities
                   if (poi.services.isNotEmpty) ...[
@@ -146,27 +162,32 @@ class POIDetailScreen extends ConsumerWidget {
 
                   const SizedBox(height: 40),
 
-                  // Map Integration
-                  _buildSectionHeader('מיקום'),
-                  const SizedBox(height: 16),
-                  AppCard(
-                    padding: EdgeInsets.zero,
-                    child: ClipRRect(
-                      borderRadius: AppRadius.organicRadius,
-                      child: POIMapPlaceholder(
-                        latitude: poi.latitude,
-                        longitude: poi.longitude,
-                        address: poi.address,
+                  // Map section only renders when the admin entered coordinates.
+                  // If the POI has no lat/lng the section disappears entirely
+                  // rather than showing a broken or empty map placeholder.
+                  if (poi.latitude != null && poi.longitude != null) ...[
+                    _buildSectionHeader('מיקום'),
+                    const SizedBox(height: 16),
+                    AppCard(
+                      padding: EdgeInsets.zero,
+                      child: ClipRRect(
+                        borderRadius: AppRadius.organicRadius,
+                        child: POIMapPlaceholder(
+                          latitude: poi.latitude!,
+                          longitude: poi.longitude!,
+                          address: poi.address,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ]),
         ),
       ],
-    );
+    ), // CustomScrollView
+    ); // Directionality
   }
 
   String _getTypeName(POIType type) {
@@ -186,39 +207,15 @@ class POIDetailScreen extends ConsumerWidget {
       child: CircleAvatar(
         backgroundColor: Colors.white.withValues(alpha: 0.9),
         child: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
+          // In RTL the leading slot is on the right side of the AppBar.
+          // arrow_forward_ios points left (toward the start of the screen),
+          // which is the correct visual direction for "go back" in RTL.
+          icon: const Icon(Icons.arrow_forward_ios,
               size: 18, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
       ),
     );
-  }
-
-  Widget _buildEmergencyBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.error,
-        borderRadius: AppRadius.fullRadius,
-      ),
-      child: const Text(
-        'חירום 24/7',
-        style: TextStyle(
-            color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  double _calculateDistance(
-      double lat1, double lon1, double lat2, double lon2) {
-    const p = 0.017453292519943295;
-    final a = 0.5 -
-        math.cos((lat2 - lat1) * p) / 2 +
-        math.cos(lat1 * p) *
-            math.cos(lat2 * p) *
-            (1 - math.cos((lon2 - lon1) * p)) /
-            2;
-    return 12742 * math.asin(math.sqrt(a.clamp(0.0, 1.0))); // Distance in km
   }
 
   Widget _buildSectionHeader(String title) {
@@ -239,19 +236,20 @@ class POIDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStats(POI poi) {
-    // Default location (Tel Aviv) for demonstration
-    const double userLat = 32.0853;
-    const double userLng = 34.7818;
-    final distanceKm =
-        _calculateDistance(userLat, userLng, poi.latitude, poi.longitude);
-
-    final String distanceText;
-    if (distanceKm < 1.0) {
-      final meters = (distanceKm * 1000).round();
-      distanceText = "$meters מ' ממך";
+  // userLocation is null while GPS is loading; poi.latitude/longitude may be
+  // null when the admin didn't enter coordinates — hide distance in that case.
+  Widget _buildStats(POI poi, ({double lat, double lng})? userLocation) {
+    // Only compute distance when both the POI coords and device location exist.
+    final bool hasCoords = poi.latitude != null && poi.longitude != null;
+    final String? distanceText;
+    if (!hasCoords) {
+      distanceText = null; // no coords → no distance chip
+    } else if (userLocation == null) {
+      distanceText = '...'; // coords exist but GPS still loading
     } else {
-      distanceText = "${distanceKm.toStringAsFixed(1)} ק\"מ ממך";
+      final km = distanceKm(
+          userLocation.lat, userLocation.lng, poi.latitude!, poi.longitude!);
+      distanceText = formatDistance(km);
     }
 
     return AppCard(
@@ -270,11 +268,13 @@ class POIDetailScreen extends ConsumerWidget {
             '(${poi.reviewCount} חוות דעת)',
             style: AppTextStyles.labelMd,
           ),
-          const Spacer(),
-          const Icon(Icons.directions_walk,
-              color: AppColors.textMuted, size: 18),
-          const SizedBox(width: 4),
-          Text(distanceText, style: AppTextStyles.labelMd),
+          if (distanceText != null) ...[
+            const Spacer(),
+            const Icon(Icons.directions_walk,
+                color: AppColors.textMuted, size: 18),
+            const SizedBox(width: 4),
+            Text(distanceText, style: AppTextStyles.labelMd),
+          ],
         ],
       ),
     );
@@ -316,6 +316,26 @@ class POIDetailScreen extends ConsumerWidget {
         ),
       );
     }
+
+    // No hours data at all — show an explicit "not specified" state instead
+    // of a weekly table where every row says "סגור". This makes it clear that
+    // the admin hasn't entered hours yet, not that the place is always closed.
+    if (poi.openingHours.isEmpty) {
+      return AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: AppColors.textMuted, size: 20),
+            const SizedBox(width: 10),
+            Text(
+              'שעות פעילות לא צוינו',
+              style: AppTextStyles.bodyLg.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
+
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
@@ -402,11 +422,6 @@ class POIDetailScreen extends ConsumerWidget {
           label: 'אימייל',
           onTap: () => launchUrl(Uri.parse('mailto:${poi.email}')),
         ),
-      _buildActionBtn(
-        icon: Icons.share_outlined,
-        label: 'שתף',
-        onTap: () {},
-      ),
     ];
 
     return Wrap(

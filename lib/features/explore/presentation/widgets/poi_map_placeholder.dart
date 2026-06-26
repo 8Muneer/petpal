@@ -15,15 +15,19 @@ class POIMapPlaceholder extends StatelessWidget {
   });
 
   Future<void> _launchMaps() async {
-    final googleMapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
-    final appleMapsUrl = Uri.parse('https://maps.apple.com/?q=$latitude,$longitude');
+    final googleMapsUrl = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+    final appleMapsUrl =
+        Uri.parse('https://maps.apple.com/?q=$latitude,$longitude');
 
     if (await canLaunchUrl(googleMapsUrl)) {
       await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
     } else if (await canLaunchUrl(appleMapsUrl)) {
       await launchUrl(appleMapsUrl, mode: LaunchMode.externalApplication);
     } else {
-      throw 'Could not launch maps';
+      // Throw a typed Exception (not a bare String) so callers can catch it
+      // via `on Exception` and handle it gracefully.
+      throw Exception('No maps application is available on this device.');
     }
   }
 
@@ -77,7 +81,23 @@ class POIMapPlaceholder extends StatelessWidget {
             left: 16,
             right: 16,
             child: ElevatedButton(
-              onPressed: _launchMaps,
+              // Wrap _launchMaps so the Exception it throws is caught here,
+              // where we have a BuildContext to show a SnackBar. Without this
+              // wrapper, an unhandled async exception would silently crash the
+              // Future and produce a red error in the console with no user feedback.
+              onPressed: () async {
+                try {
+                  await _launchMaps();
+                } on Exception {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('לא ניתן לפתוח אפליקציית מפות'),
+                      ),
+                    );
+                  }
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
