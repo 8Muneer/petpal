@@ -96,22 +96,11 @@ service cloud.firestore {
       allow update: if request.auth != null &&
         // reporterUid is always immutable
         request.resource.data.reporterUid == resource.data.reporterUid &&
-        (
-          // Reporter can update any field on their own post
-          resource.data.reporterUid == request.auth.uid ||
-          // Matching service (runs client-side as the creating user) may update
-          // matches/matchingStatus on any post — guard by asserting the pet data
-          // and status are untouched.
-          (
-            request.resource.data.type == resource.data.type &&
-            request.resource.data.get('petName', '') == resource.data.get('petName', '') &&
-            request.resource.data.get('description', '') == resource.data.get('description', '') &&
-            request.resource.data.get('imageUrl', '') == resource.data.get('imageUrl', '') &&
-            request.resource.data.get('area', '') == resource.data.get('area', '') &&
-            request.resource.data.get('species', '') == resource.data.get('species', '') &&
-            request.resource.data.get('status', 'active') == resource.data.get('status', 'active')
-          )
-        );
+        // Only the reporter can update their own post from the client
+        resource.data.reporterUid == request.auth.uid &&
+        // matches and matchingStatus are written exclusively by Cloud Functions
+        // (Admin SDK bypasses these rules — server writes are always allowed)
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['matches', 'matchingStatus']);
       allow delete: if request.auth != null && resource.data.reporterUid == request.auth.uid;
     }
 

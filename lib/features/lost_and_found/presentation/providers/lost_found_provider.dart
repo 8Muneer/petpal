@@ -1,11 +1,10 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
-import 'package:petpal/features/lost_and_found/data/datasources/gemini_matching_service.dart';
-import 'package:petpal/features/lost_and_found/data/datasources/lost_found_match_service.dart';
 import 'package:petpal/features/lost_and_found/data/datasources/lost_found_remote_datasource.dart';
 import 'package:petpal/features/lost_and_found/data/models/lost_found_post_model.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
@@ -14,17 +13,6 @@ final lostFoundDatasourceProvider = Provider<LostFoundRemoteDatasource>((ref) {
   return LostFoundRemoteDatasource(
     firestore: FirebaseFirestore.instance,
     storage: FirebaseStorage.instance,
-  );
-});
-
-final geminiServiceProvider = Provider<GeminiMatchingService>((ref) {
-  return GeminiMatchingService();
-});
-
-final lostFoundMatchServiceProvider = Provider<LostFoundMatchService>((ref) {
-  return LostFoundMatchService(
-    datasource: ref.watch(lostFoundDatasourceProvider),
-    gemini: ref.watch(geminiServiceProvider),
   );
 });
 
@@ -51,70 +39,28 @@ final createLostFoundPostProvider =
     Provider<Future<void> Function(LostFoundPostModel, XFile)>((ref) {
   return (post, imageFile) async {
     final datasource = ref.read(lostFoundDatasourceProvider);
-    final matchService = ref.read(lostFoundMatchServiceProvider);
 
     // Generate a client-side document reference to get a secure ID first
     final docRef = FirebaseFirestore.instance.collection('lost_found_posts').doc();
     final docId = docRef.id;
 
-    // Upload image first
-    final imageUrl = await datasource.uploadImage(docId, imageFile);
+    // Upload image — path is lost_found/<uid>/<postId> (scoped per user)
+    final imageUrl = await datasource.uploadImage(post.reporterUid, docId, imageFile);
 
-    // Write full document atomically
+    // Write full document atomically — the onLostFoundCreate Cloud Function
+    // trigger handles matching automatically once this write lands.
     final firestoreData = post.toFirestore();
     firestoreData['imageUrl'] = imageUrl;
     await docRef.set(firestoreData);
-
-    final finalPost = LostFoundPostModel(
-      id: docId,
-      reporterUid: post.reporterUid,
-      reporterName: post.reporterName,
-      reporterPhotoUrl: post.reporterPhotoUrl,
-      type: post.type,
-      petName: post.petName,
-      species: post.species,
-      breed: post.breed,
-      color: post.color,
-      description: post.description,
-      area: post.area,
-      imageUrl: imageUrl,
-    );
-
-    // Run in background — status updates stream to detail screen automatically
-    matchService.runMatching(finalPost);
   };
 });
 
 final rerunMatchingProvider =
     Provider<Future<void> Function(LostFoundPost)>((ref) {
   return (post) async {
-    final matchService = ref.read(lostFoundMatchServiceProvider);
-
-    // Reset status to pending and clear old matches to prevent duplicate appends on rerun
-    await FirebaseFirestore.instance
-        .collection('lost_found_posts')
-        .doc(post.id)
-        .update({
-      'matchingStatus': 'pending',
-      'matches': [],
-    });
-
-    final model = LostFoundPostModel(
-      id: post.id,
-      reporterUid: post.reporterUid,
-      reporterName: post.reporterName,
-      reporterPhotoUrl: post.reporterPhotoUrl,
-      type: post.type,
-      petName: post.petName,
-      species: post.species,
-      breed: post.breed,
-      color: post.color,
-      description: post.description,
-      area: post.area,
-      imageUrl: post.imageUrl,
-    );
-
-    matchService.runMatching(model);
+    final callable = FirebaseFunctions.instance
+        .httpsCallable('rerunLostFoundMatching');
+    await callable.call({'postId': post.id});
   };
 });
 
