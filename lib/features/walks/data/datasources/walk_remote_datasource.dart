@@ -23,6 +23,7 @@ class WalkRemoteDatasource {
   Stream<List<WalkRequestModel>> watchAllOpenRequests() {
     return _requestsRef
         .where('status', isEqualTo: 'open')
+        .limit(50)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => WalkRequestModel.fromFirestore(doc))

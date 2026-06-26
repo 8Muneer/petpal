@@ -42,6 +42,7 @@ class SittingRemoteDatasource {
     return _requestsRef
         .where('status', isEqualTo: 'open')
         .where('isPublicJob', isEqualTo: true)
+        .limit(50)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => SittingRequestModel.fromFirestore(doc))
