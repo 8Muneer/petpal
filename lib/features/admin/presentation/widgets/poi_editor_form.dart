@@ -74,6 +74,12 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
   late bool _open24h;
   bool _isUploading = false;
 
+  // When the admin picks a photo for a NEW POI (no existing ID yet), we can't
+  // upload it immediately because we don't have a Firestore document ID to use
+  // as the Storage path. We store the file here and upload it during _save()
+  // after Firestore assigns the real ID.
+  XFile? _pendingImageFile;
+
   final List<String> _tags = [];
   final Set<String> _services = {};
 
@@ -92,8 +98,10 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
     _phoneController = TextEditingController(text: p?.phoneNumber ?? '');
     _websiteController = TextEditingController(text: p?.website ?? '');
     _emailController = TextEditingController(text: p?.email ?? '');
-    _latController = TextEditingController(text: p?.latitude.toString() ?? '');
-    _lngController = TextEditingController(text: p?.longitude.toString() ?? '');
+    _latController = TextEditingController(
+        text: p?.latitude != null ? p!.latitude.toString() : '');
+    _lngController = TextEditingController(
+        text: p?.longitude != null ? p!.longitude.toString() : '');
     _imageUrlController = TextEditingController(text: p?.imageUrl ?? '');
     _tagController = TextEditingController();
     _selectedType = p?.type ?? POIType.park;
@@ -159,17 +167,64 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Guard: block save if any open day has closing time ≤ opening time.
+    // The per-row warning already flags this visually; this prevents the bad
+    // data from reaching Firestore even if the admin ignores the warning.
+    if (!_open24h) {
+      for (final (key, label) in _weekDays) {
+        if (_isDayRangeInvalid(key)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('שגיאה בשעות יום $label: שעת הסגירה חייבת להיות אחרי שעת הפתיחה'),
+            ),
+          );
+          return;
+        }
+      }
+    }
+
     final adminRepo = ref.read(adminRepositoryProvider);
     String? clean(TextEditingController c) =>
         c.text.trim().isEmpty ? null : c.text.trim();
+
+    // Coordinates are optional — the admin may not know them yet.
+    // Rule: both fields must be either both empty or both filled with valid values.
+    // A partially filled pair (one empty, one not) is always a mistake.
+    final latText = _latController.text.trim();
+    final lngText = _lngController.text.trim();
+    final latEmpty = latText.isEmpty;
+    final lngEmpty = lngText.isEmpty;
+
+    if (latEmpty != lngEmpty) {
+      // One field has a value and the other doesn't — show a clear error.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('יש להזין גם קו רוחב וגם קו אורך, או להשאיר את שניהם ריקים')),
+      );
+      return;
+    }
+
+    // Both filled — parse and validate. Using tryParse guards against locale
+    // decimal-separator differences (e.g. "32,08" on some keyboards).
+    double? lat, lng;
+    if (!latEmpty) {
+      lat = double.tryParse(latText);
+      lng = double.tryParse(lngText);
+      if (lat == null || lng == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ערכי קו הרוחב / האורך אינם תקינים')),
+        );
+        return;
+      }
+    }
+    // If both empty → lat and lng remain null → no map shown on detail screen.
 
     final newPoi = POI(
       id: widget.poi?.id ?? '',
       name: _nameController.text.trim(),
       type: _selectedType,
       isEmergency: _selectedType == POIType.vet ? _isEmergency : false,
-      latitude: double.parse(_latController.text),
-      longitude: double.parse(_lngController.text),
+      latitude: lat,
+      longitude: lng,
       address: clean(_addressController),
       phoneNumber: clean(_phoneController),
       website: clean(_websiteController),
@@ -185,7 +240,20 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
     );
 
     try {
-      await adminRepo.savePOI(newPoi);
+      // savePOI now returns the real Firestore document ID (auto-generated for
+      // new POIs, or the existing ID for edits).
+      final savedId = await adminRepo.savePOI(newPoi);
+
+      // If the admin picked an image for a NEW POI, upload it now under the
+      // real document ID and patch the document with the resulting URL.
+      // This eliminates the orphaned-upload bug where images were stored under
+      // a temporary 'new_<timestamp>' path that never matched the final doc ID.
+      if (_pendingImageFile != null) {
+        final imageService = ref.read(adminImageServiceProvider);
+        final url = await imageService.uploadPOIImage(savedId, _pendingImageFile!);
+        await adminRepo.updatePOIImageUrl(savedId, url);
+      }
+
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
@@ -200,14 +268,27 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
     final imageService = ref.read(adminImageServiceProvider);
     final file = await imageService.pickImage(ImageSource.gallery);
     if (file == null) return;
-    setState(() => _isUploading = true);
-    try {
-      final poiId =
-          widget.poi?.id ?? 'new_${DateTime.now().millisecondsSinceEpoch}';
-      final url = await imageService.uploadPOIImage(poiId, file);
-      setState(() => _imageUrlController.text = url);
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
+
+    if (widget.poi != null) {
+      // Existing POI — we already have the Firestore document ID, so we can
+      // upload immediately under the correct Storage path.
+      setState(() => _isUploading = true);
+      try {
+        final url = await imageService.uploadPOIImage(widget.poi!.id, file);
+        if (mounted) setState(() => _imageUrlController.text = url);
+      } finally {
+        if (mounted) setState(() => _isUploading = false);
+      }
+    } else {
+      // New POI — no document ID exists yet. Store the file locally and defer
+      // the upload to _save(), where we can use the real Firestore-assigned ID.
+      // This prevents the image from being orphaned under a temporary path that
+      // never matches the final document ID.
+      setState(() {
+        _pendingImageFile = file;
+        // Clear any manually entered URL so the pending file takes priority.
+        _imageUrlController.text = '';
+      });
     }
   }
 
@@ -389,9 +470,15 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
                             decoration: _dec('0.0000'),
-                            validator: (v) => double.tryParse(v ?? '') == null
-                                ? 'לא תקין'
-                                : null,
+                            // Empty = no location (valid). Filled = must be
+                            // a parseable number in the geographic range.
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              final d = double.tryParse(v.trim());
+                              if (d == null) return 'יש להזין מספר';
+                              if (d < -90 || d > 90) return 'חייב להיות בין -90 ל-90';
+                              return null;
+                            },
                           ),
                         ],
                       ),
@@ -407,9 +494,13 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
                             decoration: _dec('0.0000'),
-                            validator: (v) => double.tryParse(v ?? '') == null
-                                ? 'לא תקין'
-                                : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              final d = double.tryParse(v.trim());
+                              if (d == null) return 'יש להזין מספר';
+                              if (d < -180 || d > 180) return 'חייב להיות בין -180 ל-180';
+                              return null;
+                            },
                           ),
                         ],
                       ),
@@ -425,11 +516,33 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
 
                 // Image
                 _label('תמונה'),
+                // For new POIs, when a photo is picked it is NOT uploaded yet —
+                // it waits until save. Show a "pending" hint so the admin knows
+                // the image will be attached on save.
+                if (_pendingImageFile != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline,
+                            color: Colors.green, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'תמונה נבחרה — תועלה בעת השמירה',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.green[700]),
+                        ),
+                      ],
+                    ),
+                  ),
                 Row(
                   children: [
                     Expanded(
                       child: TextFormField(
                         controller: _imageUrlController,
+                        // Disable manual URL entry while a local file is pending
+                        // upload to avoid the two sources conflicting.
+                        enabled: _pendingImageFile == null,
                         decoration: _dec('https://...'),
                       ),
                     ),
@@ -479,42 +592,72 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
     );
   }
 
+  /// Returns true when a day is marked open but its closing time is not
+  /// strictly after its opening time. Overnight spans (e.g. 22:00–02:00) are
+  /// not supported — the admin should split those across two calendar days.
+  bool _isDayRangeInvalid(String key) {
+    if (_dayOpen[key] != true) return false;
+    final from = _dayFrom[key];
+    final to = _dayTo[key];
+    if (from == null || to == null) return false;
+    final fromMins = from.hour * 60 + from.minute;
+    final toMins = to.hour * 60 + to.minute;
+    return toMins <= fromMins;
+  }
+
   Widget _buildDayRow(String key, String label) {
     final open = _dayOpen[key] ?? false;
+    final invalid = _isDayRangeInvalid(key);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 56,
-            child: Text(label,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+          Row(
+            children: [
+              SizedBox(
+                width: 56,
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              Switch(
+                value: open,
+                activeThumbColor: AppColors.primary,
+                onChanged: (v) => setState(() => _dayOpen[key] = v),
+              ),
+              const SizedBox(width: 4),
+              if (open) ...[
+                _timeChip(
+                  _dayFrom[key],
+                  'פתיחה',
+                  (t) => setState(() => _dayFrom[key] = t),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text('—'),
+                ),
+                _timeChip(
+                  _dayTo[key],
+                  'סגירה',
+                  (t) => setState(() => _dayTo[key] = t),
+                ),
+              ] else
+                const Text('סגור',
+                    style: TextStyle(
+                        color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+            ],
           ),
-          Switch(
-            value: open,
-            activeThumbColor: AppColors.primary,
-            onChanged: (v) => setState(() => _dayOpen[key] = v),
-          ),
-          const SizedBox(width: 4),
-          if (open) ...[
-            _timeChip(
-              _dayFrom[key],
-              'פתיחה',
-              (t) => setState(() => _dayFrom[key] = t),
+          // Inline warning — shown immediately when the admin picks invalid hours
+          // so they don't have to wait until the save button to discover the error.
+          if (invalid)
+            Padding(
+              padding: const EdgeInsets.only(right: 64, bottom: 4),
+              child: Text(
+                'שעת הסגירה חייבת להיות אחרי שעת הפתיחה',
+                style: TextStyle(fontSize: 11, color: Colors.red[700]),
+              ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Text('—'),
-            ),
-            _timeChip(
-              _dayTo[key],
-              'סגירה',
-              (t) => setState(() => _dayTo[key] = t),
-            ),
-          ] else
-            const Text('סגור',
-                style: TextStyle(
-                    color: AppColors.textMuted, fontWeight: FontWeight.w600)),
         ],
       ),
     );
