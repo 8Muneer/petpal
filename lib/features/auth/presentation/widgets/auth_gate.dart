@@ -24,21 +24,22 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   // Tracks UIDs that have already had their FCM token registered this session.
   final Set<String> _tokenRegisteredUids = {};
 
+  // Deliberately doesn't catch here — a Firestore/network failure should
+  // propagate to the FutureBuilder below and hit the `hasError` branch, not
+  // be swallowed into `null` and silently fall through to the pet-owner
+  // default. A user document that legitimately has no role is a different,
+  // non-error case (returns null below) from a read that actually failed.
   Future<String?> _fetchUserRole(String uid) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection(AppConstants.usersCollection)
-          .doc(uid)
-          .get();
-      final data = doc.data();
-      if (data == null) return null;
+    final doc = await FirebaseFirestore.instance
+        .collection(AppConstants.usersCollection)
+        .doc(uid)
+        .get();
+    final data = doc.data();
+    if (data == null) return null;
 
-      final role = (data['role'] ?? data['userType'])?.toString().trim();
-      if (role == null || role.isEmpty) return null;
-      return role;
-    } catch (_) {
-      return null;
-    }
+    final role = (data['role'] ?? data['userType'])?.toString().trim();
+    if (role == null || role.isEmpty) return null;
+    return role;
   }
 
   Future<String?> _roleFor(String uid) {
@@ -56,6 +57,12 @@ class _AuthGateState extends ConsumerState<AuthGate> {
       final prevUid = prev?.asData?.value?.uid;
       final nextUid = next.asData?.value?.uid;
       if (prevUid != null && nextUid == null) {
+        // Clear the registration marker too — otherwise signing back in as
+        // the same uid within this app session (this State object stays
+        // alive across the sign-out/sign-in) would skip registerToken below,
+        // since the uid would still be in this set from before the token was
+        // deregistered. No push notifications until the next app restart.
+        _tokenRegisteredUids.remove(prevUid);
         ref.read(notificationServiceProvider).deregisterToken(prevUid);
       }
     });
