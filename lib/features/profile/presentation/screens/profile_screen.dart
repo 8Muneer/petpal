@@ -182,6 +182,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ),
               icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
             ),
+            IconButton(
+              tooltip: 'תיקון הזמנות ישנות',
+              onPressed: () => _confirmAction(
+                context,
+                'תיקון הזמנות ישנות?',
+                'הזמנות שאושרו ויש להן ביקורת יסומנו כ"הושלם" כדי להתאים לזרימת הסיום החדשה.',
+                () async {
+                  final seedService =
+                      SeedService(firestore: FirebaseFirestore.instance);
+                  final count =
+                      await seedService.migrateAcceptedReviewedToCompleted();
+                  if (!context.mounted) return;
+                  _toast(context, 'עודכנו $count הזמנות');
+                },
+              ),
+              icon: const Icon(Icons.published_with_changes_rounded,
+                  color: Colors.white),
+            ),
           ],
         ),
         body: profileAsync.when(
