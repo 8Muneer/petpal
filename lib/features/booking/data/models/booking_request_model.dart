@@ -33,6 +33,12 @@ class BookingRequestModel extends BookingRequest {
       case 'accepted':
         status = BookingStatus.accepted;
         break;
+      case 'awaitingConfirmation':
+        status = BookingStatus.awaitingConfirmation;
+        break;
+      case 'completed':
+        status = BookingStatus.completed;
+        break;
       case 'declined':
         status = BookingStatus.declined;
         break;

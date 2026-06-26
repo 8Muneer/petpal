@@ -9,6 +9,16 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // The booking's effective end date: endDate for sitting bookings, requestedDate
+    // for walk bookings. Walk bookings store `endDate: null` explicitly (the key is
+    // present), so `.get('endDate', fallback)` would return that literal null instead
+    // of falling back — this ternary checks the value itself, not just key presence.
+    function bookingEffectiveDate(data) {
+      return data.get('endDate', null) != null
+        ? data.get('endDate', null)
+        : data.get('requestedDate', null);
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null;
       // role is restricted to non-privileged values on every create path —
@@ -182,16 +192,50 @@ service cloud.firestore {
         request.resource.data.ownerUid == resource.data.ownerUid &&
         request.resource.data.providerUid == resource.data.providerUid &&
         (
-          // Owner cancels a pending or accepted booking
+          // Owner cancels a pending, accepted, or awaiting-confirmation booking
           (request.auth.uid == resource.data.ownerUid &&
            request.resource.data.status == 'cancelled' &&
-           (resource.data.status == 'pending' || resource.data.status == 'accepted') &&
-           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+           request.resource.data.cancelledBy == 'owner' &&
+           (resource.data.status == 'pending' || resource.data.status == 'accepted' || resource.data.status == 'awaitingConfirmation') &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledBy'])) ||
+          // Provider cancels a booking they already accepted
+          (request.auth.uid == resource.data.providerUid &&
+           request.resource.data.status == 'cancelled' &&
+           request.resource.data.cancelledBy == 'provider' &&
+           resource.data.status == 'accepted' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledBy'])) ||
           // Provider accepts or declines a pending booking
           (request.auth.uid == resource.data.providerUid &&
            (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined') &&
            resource.data.status == 'pending' &&
-           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'providerNote']))
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'providerNote'])) ||
+          // Provider requests completion of an accepted booking (two-sided confirm),
+          // only on/after the service end date (or when no date was set)
+          (request.auth.uid == resource.data.providerUid &&
+           request.resource.data.status == 'awaitingConfirmation' &&
+           resource.data.status == 'accepted' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+           (bookingEffectiveDate(resource.data) == null ||
+            request.time >= bookingEffectiveDate(resource.data))) ||
+          // Owner confirms the service was completed
+          (request.auth.uid == resource.data.ownerUid &&
+           request.resource.data.status == 'completed' &&
+           resource.data.status == 'awaitingConfirmation' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+          // Owner marks an accepted booking complete directly (closes the
+          // "provider never requests completion" gap), only on/after the
+          // service end date (or when no date was set)
+          (request.auth.uid == resource.data.ownerUid &&
+           request.resource.data.status == 'completed' &&
+           resource.data.status == 'accepted' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+           (bookingEffectiveDate(resource.data) == null ||
+            request.time >= bookingEffectiveDate(resource.data))) ||
+          // Owner disputes completion: booking returns to accepted
+          (request.auth.uid == resource.data.ownerUid &&
+           request.resource.data.status == 'accepted' &&
+           resource.data.status == 'awaitingConfirmation' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
         );
       allow delete: if request.auth != null && resource.data.isMock == true;
     }
@@ -206,7 +250,7 @@ service cloud.firestore {
          request.resource.data.rating <= 5 &&
          get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.ownerUid == request.auth.uid &&
          get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.providerUid == request.resource.data.providerId &&
-         get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.status == 'accepted') ||
+         get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.status == 'completed') ||
         request.resource.data.isMock == true
       );
       allow update: if request.auth != null &&

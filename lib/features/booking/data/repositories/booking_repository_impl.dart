@@ -31,4 +31,12 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<void> cancelBooking(String bookingId) =>
       _datasource.cancelBooking(bookingId);
+
+  @override
+  Future<void> cancelBookingByProvider(String bookingId) =>
+      _datasource.cancelBookingByProvider(bookingId);
+
+  @override
+  Future<void> disputeCompletion(String bookingId) =>
+      _datasource.disputeCompletion(bookingId);
 }

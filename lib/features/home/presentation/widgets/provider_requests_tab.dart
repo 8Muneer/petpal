@@ -413,66 +413,86 @@ class _ProviderOfferSheetState extends ConsumerState<_ProviderOfferSheet> {
     super.dispose();
   }
 
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _send() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      _showSnack('יש להוסיף הודעה');
+      return;
+    }
     final me = FirebaseAuth.instance.currentUser;
     if (me == null) return;
 
     setState(() => _sending = true);
 
-    final req = widget.request;
-    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
-    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
-    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
+    try {
+      final req = widget.request;
+      final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+      final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+      final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
 
-    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
-    final convoId = await ds.getOrCreateConversation(
-      myUid: me.uid,
-      myName: me.displayName ?? me.email ?? 'מטפל',
-      otherUid: req.ownerUid,
-      otherName: req.ownerName,
-      myPhotoUrl: myPhotoUrl,
-      otherPhotoUrl: ownerPhotoUrl,
-    );
+      final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+      final convoId = await ds.getOrCreateConversation(
+        myUid: me.uid,
+        myName: me.displayName ?? me.email ?? 'מטפל',
+        otherUid: req.ownerUid,
+        otherName: req.ownerName,
+        myPhotoUrl: myPhotoUrl,
+        otherPhotoUrl: ownerPhotoUrl,
+      );
 
-    final dateStr = req.preferredDate != null
-        ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
-        : '';
-    await ds.sendContextMessage(
-      conversationId: convoId,
-      senderId: me.uid,
-      metadata: {
-        'requestType': 'walk',
-        'requestId': req.id,
-        'petName': req.petName,
-        'petImageUrl': req.petImageUrl ?? '',
-        'ownerName': req.ownerName,
-        'ownerPhotoUrl': ownerPhotoUrl,
-        'date': dateStr,
-        'time': req.preferredTime,
-        'area': req.area,
-        'budget': req.budget ?? '',
-      },
-    );
+      final dateStr = req.preferredDate != null
+          ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
+          : '';
+      await ds.sendContextMessage(
+        conversationId: convoId,
+        senderId: me.uid,
+        metadata: {
+          'requestType': 'walk',
+          'requestId': req.id,
+          'petName': req.petName,
+          'petImageUrl': req.petImageUrl ?? '',
+          'ownerName': req.ownerName,
+          'ownerPhotoUrl': ownerPhotoUrl,
+          'date': dateStr,
+          'time': req.preferredTime,
+          'area': req.area,
+          'budget': req.budget ?? '',
+        },
+      );
 
-    await ds.sendMessage(
-      conversationId: convoId,
-      senderId: me.uid,
-      senderName: me.displayName ?? me.email ?? 'מטפל',
-      senderPhotoUrl: myPhotoUrl,
-      text:
-          '${_priceController.text.trim().isNotEmpty ? "${withShekel(_priceController.text.trim())} — " : ""}$text',
-    );
+      await ds.sendMessage(
+        conversationId: convoId,
+        senderId: me.uid,
+        senderName: me.displayName ?? me.email ?? 'מטפל',
+        senderPhotoUrl: myPhotoUrl,
+        text:
+            '${_priceController.text.trim().isNotEmpty ? "${withShekel(_priceController.text.trim())} — " : ""}$text',
+      );
 
-    if (mounted) {
-      final router = GoRouter.of(context);
-      Navigator.pop(context);
-      router.push('/chat/$convoId', extra: {
-        'otherName': req.ownerName,
-        'otherPhotoUrl': ownerPhotoUrl,
-        'otherUid': req.ownerUid
-      });
+      if (mounted) {
+        final router = GoRouter.of(context);
+        Navigator.pop(context);
+        router.push('/chat/$convoId', extra: {
+          'otherName': req.ownerName,
+          'otherPhotoUrl': ownerPhotoUrl,
+          'otherUid': req.ownerUid
+        });
+      }
+    } catch (_) {
+      _showSnack('שגיאה בשליחת ההצעה, נסה שוב');
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -1041,72 +1061,92 @@ class _SittingProviderOfferSheetState
     super.dispose();
   }
 
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _send() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      _showSnack('יש להוסיף הודעה');
+      return;
+    }
     final me = FirebaseAuth.instance.currentUser;
     if (me == null) return;
 
     setState(() => _sending = true);
 
-    final req = widget.request;
-    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
-    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
-    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
+    try {
+      final req = widget.request;
+      final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+      final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
+      final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
 
-    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
-    final convoId = await ds.getOrCreateConversation(
-      myUid: me.uid,
-      myName: me.displayName ?? me.email ?? 'מטפל',
-      otherUid: req.ownerUid,
-      otherName: req.ownerName,
-      myPhotoUrl: myPhotoUrl,
-      otherPhotoUrl: ownerPhotoUrl,
-    );
+      final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+      final convoId = await ds.getOrCreateConversation(
+        myUid: me.uid,
+        myName: me.displayName ?? me.email ?? 'מטפל',
+        otherUid: req.ownerUid,
+        otherName: req.ownerName,
+        myPhotoUrl: myPhotoUrl,
+        otherPhotoUrl: ownerPhotoUrl,
+      );
 
-    final startStr = req.startDate != null
-        ? '${req.startDate!.day.toString().padLeft(2, '0')}/${req.startDate!.month.toString().padLeft(2, '0')}'
-        : '';
-    final endStr = req.endDate != null
-        ? '${req.endDate!.day.toString().padLeft(2, '0')}/${req.endDate!.month.toString().padLeft(2, '0')}'
-        : '';
+      final startStr = req.startDate != null
+          ? '${req.startDate!.day.toString().padLeft(2, '0')}/${req.startDate!.month.toString().padLeft(2, '0')}'
+          : '';
+      final endStr = req.endDate != null
+          ? '${req.endDate!.day.toString().padLeft(2, '0')}/${req.endDate!.month.toString().padLeft(2, '0')}'
+          : '';
 
-    await ds.sendContextMessage(
-      conversationId: convoId,
-      senderId: me.uid,
-      metadata: {
-        'requestType': 'sitting',
-        'requestId': req.id,
-        'petName': req.petName,
-        'petImageUrl': req.petImageUrl ?? '',
-        'ownerName': req.ownerName,
-        'ownerPhotoUrl': ownerPhotoUrl,
-        'date': startStr.isNotEmpty && endStr.isNotEmpty
-            ? '$startStr – $endStr'
-            : '',
-        'time': '${req.numberOfNights} לילות',
-        'area': req.area,
-        'budget': req.budget ?? '',
-      },
-    );
+      await ds.sendContextMessage(
+        conversationId: convoId,
+        senderId: me.uid,
+        metadata: {
+          'requestType': 'sitting',
+          'requestId': req.id,
+          'petName': req.petName,
+          'petImageUrl': req.petImageUrl ?? '',
+          'ownerName': req.ownerName,
+          'ownerPhotoUrl': ownerPhotoUrl,
+          'date': startStr.isNotEmpty && endStr.isNotEmpty
+              ? '$startStr – $endStr'
+              : '',
+          'time': '${req.numberOfNights} לילות',
+          'area': req.area,
+          'budget': req.budget ?? '',
+        },
+      );
 
-    await ds.sendMessage(
-      conversationId: convoId,
-      senderId: me.uid,
-      senderName: me.displayName ?? me.email ?? 'מטפל',
-      senderPhotoUrl: myPhotoUrl,
-      text:
-          '${_priceController.text.trim().isNotEmpty ? "${withShekel(_priceController.text.trim())} — " : ""}$text',
-    );
+      await ds.sendMessage(
+        conversationId: convoId,
+        senderId: me.uid,
+        senderName: me.displayName ?? me.email ?? 'מטפל',
+        senderPhotoUrl: myPhotoUrl,
+        text:
+            '${_priceController.text.trim().isNotEmpty ? "${withShekel(_priceController.text.trim())} — " : ""}$text',
+      );
 
-    if (mounted) {
-      final router = GoRouter.of(context);
-      Navigator.pop(context);
-      router.push('/chat/$convoId', extra: {
-        'otherName': req.ownerName,
-        'otherPhotoUrl': ownerPhotoUrl,
-        'otherUid': req.ownerUid,
-      });
+      if (mounted) {
+        final router = GoRouter.of(context);
+        Navigator.pop(context);
+        router.push('/chat/$convoId', extra: {
+          'otherName': req.ownerName,
+          'otherPhotoUrl': ownerPhotoUrl,
+          'otherUid': req.ownerUid,
+        });
+      }
+    } catch (_) {
+      _showSnack('שגיאה בשליחת ההצעה, נסה שוב');
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -1388,6 +1428,16 @@ class _IncomingBookingTileState extends ConsumerState<_IncomingBookingTile> {
       await ref
           .read(bookingRepositoryProvider)
           .updateBookingStatus(widget.booking.id, status, providerNote: note);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה בעדכון הבקשה, נסה שוב'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1395,46 +1445,99 @@ class _IncomingBookingTileState extends ConsumerState<_IncomingBookingTile> {
 
   Future<void> _showDeclineDialog() async {
     final noteCtrl = TextEditingController();
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('דחיית הזמנה'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('האם לדחות את הבקשה?'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'הסבר (אופציונלי)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    foregroundColor: Colors.white),
+                child: const Text('דחה'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (confirmed == true && mounted) {
+        await _updateStatus(BookingStatus.declined,
+            note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
+      }
+    } finally {
+      noteCtrl.dispose();
+    }
+  }
+
+  Future<void> _cancelByProvider() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('דחיית הזמנה'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('האם לדחות את הבקשה?'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'הסבר (אופציונלי)',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-            ],
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('ביטול הזמנה'),
+          content: const Text(
+            'לבטל את ההזמנה שאישרת? פעולה זו אינה ניתנת לשחזור ובעל החיה יקבל על כך הודעה.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('ביטול'),
+              child: const Text('חזרה'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.error,
                   foregroundColor: Colors.white),
-              child: const Text('דחה'),
+              child: const Text('בטל הזמנה'),
             ),
           ],
         ),
       ),
     );
-    if (confirmed == true && mounted) {
-      await _updateStatus(BookingStatus.declined,
-          note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
+    if (confirmed != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .cancelBookingByProvider(widget.booking.id);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה בביטול ההזמנה, נסה שוב'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -1443,9 +1546,14 @@ class _IncomingBookingTileState extends ConsumerState<_IncomingBookingTile> {
     final b = widget.booking;
     final isWalk = b.serviceType == BookingServiceType.walk;
     final isPending = b.status == BookingStatus.pending;
+    final isAccepted = b.status == BookingStatus.accepted;
+    final isAwaitingConfirmation =
+        b.status == BookingStatus.awaitingConfirmation;
     final (label, color) = switch (b.status) {
       BookingStatus.pending => ('ממתין', AppColors.warning),
       BookingStatus.accepted => ('אושר', AppColors.success),
+      BookingStatus.awaitingConfirmation => ('ממתין לאישור', AppColors.sapphire),
+      BookingStatus.completed => ('הושלם', AppColors.primary),
       BookingStatus.declined => ('נדחה', AppColors.error),
       BookingStatus.cancelled => ('בוטל', AppColors.textMuted),
     };
@@ -1561,9 +1669,133 @@ class _IncomingBookingTileState extends ConsumerState<_IncomingBookingTile> {
                     ],
                   ),
           ],
+          if (isAccepted) ...[
+            const SizedBox(height: 12),
+            if (_loading)
+              const Center(
+                  child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2)))
+            else if (b.serviceDateReached)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _requestCompletion,
+                  icon: const Icon(Icons.task_alt_rounded, size: 16),
+                  label: const Text('סיימתי את השירות'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_available_rounded,
+                        size: 16, color: AppColors.textMuted),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ניתן לסמן סיום החל מ-${b.completionAvailableFromLabel}',
+                        style: AppTextStyles.labelMd
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (!_loading) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _cancelByProvider,
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text('בטל הזמנה'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    textStyle: AppTextStyles.labelMd
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ],
+          if (isAwaitingConfirmation) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.sapphire.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border:
+                    Border.all(color: AppColors.sapphire.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.hourglass_top_rounded,
+                      size: 16, color: AppColors.sapphire),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ממתין לאישור בעל החיה שהשירות הושלם',
+                      style: AppTextStyles.labelMd
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _requestCompletion() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('סיום השירות'),
+          content: const Text(
+            'נשלח לבעל החיה בקשה לאשר שהשירות הושלם. לאחר אישורו הוא יוכל לדרג אותך. להמשיך?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white),
+              child: const Text('שלח לאישור'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _updateStatus(BookingStatus.awaitingConfirmation);
+    }
   }
 }
 

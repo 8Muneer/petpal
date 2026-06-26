@@ -1,6 +1,13 @@
 import 'package:equatable/equatable.dart';
 
-enum BookingStatus { pending, accepted, declined, cancelled }
+enum BookingStatus {
+  pending,
+  accepted,
+  awaitingConfirmation,
+  completed,
+  declined,
+  cancelled
+}
 
 enum BookingServiceType { walk, sitting }
 
@@ -58,6 +65,29 @@ class BookingRequest extends Equatable {
       return '${fmt(startDate!)} - ${fmt(endDate!)}';
     }
     return 'תאריך לא נקבע';
+  }
+
+  /// The service's effective end date — the single date for a walk, or the
+  /// last day for a multi-night sitting.
+  DateTime? get serviceEndDate => endDate ?? requestedDate;
+
+  /// Date-only check: the service's end date has arrived. Used to prevent a
+  /// provider marking a service complete before it could have happened.
+  /// Returns true when no date is set (nothing to gate on).
+  bool get serviceDateReached {
+    final end = serviceEndDate;
+    if (end == null) return true;
+    final now = DateTime.now();
+    final endDay = DateTime(end.year, end.month, end.day);
+    final today = DateTime(now.year, now.month, now.day);
+    return !today.isBefore(endDay);
+  }
+
+  /// Formatted date from which completion may be marked (the service end date).
+  String? get completionAvailableFromLabel {
+    final end = serviceEndDate;
+    if (end == null) return null;
+    return '${end.day.toString().padLeft(2, '0')}/${end.month.toString().padLeft(2, '0')}/${end.year}';
   }
 
   @override
