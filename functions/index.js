@@ -93,6 +93,69 @@ exports.onReviewWrite = functions.firestore
     return null;
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Chat push notifications (server-side, Blaze)
+//
+//  The client (notification_service.dart) has always registered each device's
+//  FCM token on login and kept it fresh on token refresh — but nothing ever
+//  sent a push through those tokens. A new message only ever produced an
+//  in-app `notifications` doc, invisible while the app is closed or
+//  backgrounded. This trigger is the missing other half: it reads the
+//  recipient's registered tokens and actually sends the push, the same way
+//  onReviewWrite owns the review notification.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onMessageCreate = functions.firestore
+  .document('conversations/{conversationId}/messages/{messageId}')
+  .onCreate(async (snap, context) => {
+    const msg = snap.data() || {};
+    // Context cards (offer-sheet previews) carry no human-readable text and
+    // never drive the in-app notification either — nothing to push.
+    if (msg.type === 'context' || !msg.text) return null;
+
+    const db = admin.firestore();
+    const conversationId = context.params.conversationId;
+    const convoSnap = await db.collection('conversations').doc(conversationId).get();
+    const convo = convoSnap.data();
+    if (!convo) return null;
+
+    const participants = convo.participants || [];
+    const recipientId = participants.find((uid) => uid !== msg.senderId);
+    if (!recipientId) return null;
+
+    const recipientSnap = await db.collection('users').doc(recipientId).get();
+    const tokens = recipientSnap.data()?.fcmTokens || [];
+    if (tokens.length === 0) return null;
+
+    const senderName = msg.senderName || 'משתמש';
+    const body = msg.text.length > 80 ? `${msg.text.slice(0, 80)}…` : msg.text;
+
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title: senderName, body },
+      // `otherName` is what NotificationShell/_navigateTo read to label the chat
+      // header on tap — from the recipient's side, the sender is the "other"
+      // person. Without it, tapping a push opened the chat with a blank name.
+      data: { type: 'newMessage', conversationId, otherName: senderName },
+    });
+
+    // Prune tokens FCM reports as dead (uninstalled app, expired registration)
+    // so they stop being retried on every future message.
+    const deadTokens = [];
+    response.responses.forEach((r, i) => {
+      const code = r.error?.code;
+      if (code === 'messaging/invalid-registration-token' ||
+          code === 'messaging/registration-token-not-registered') {
+        deadTokens.push(tokens[i]);
+      }
+    });
+    if (deadTokens.length > 0) {
+      await db.collection('users').doc(recipientId).update({
+        fcmTokens: admin.firestore.FieldValue.arrayRemove(...deadTokens),
+      });
+    }
+    return null;
+  });
+
 /**
  * Triggered when a post document is deleted.
  * Cleans up all comments in the nested subcollection in chunks of 100 docs.
