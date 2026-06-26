@@ -26,16 +26,13 @@ const MAX_CONCURRENT = 3;
 const MAX_RETRIES = 3;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Review rating aggregation (server-side, Blaze)
+//  Booking notifications (server-side, Blaze)
 //
-//  The provider's ratingAverage/reviewCount (on their /users doc and on every
-//  walk_services/sitting_services listing they own) used to be recomputed by
-//  the client inside a Firestore transaction. That required the security rules
-//  to allow any authenticated client to PATCH those aggregate fields directly,
-//  which meant any signed-in user could overwrite a provider's rating without
-//  ever writing a review. Recomputing here — where only the Admin SDK (which
-//  bypasses rules) can write the aggregates — closes that hole; the client now
-//  only ever writes the `reviews/{bookingId}` document itself.
+//  Notifications for the booking lifecycle are written here, on Firestore
+//  triggers, instead of client-side. This makes them reliable: they fire even
+//  if the app that made the change is killed mid-write, and they can't be
+//  forged by a client. The document schema matches what the app's
+//  AppNotificationModel.fromFirestore expects (see app_notification_model.dart).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Writes a single notification document, matching the app's schema. */
@@ -52,6 +49,114 @@ async function writeNotification(db, { userId, title, body, type, bookingId }) {
   });
 }
 
+/** New booking request → tell the provider. */
+exports.onBookingCreate = functions.firestore
+  .document('booking_requests/{bookingId}')
+  .onCreate(async (snap, context) => {
+    const d = snap.data() || {};
+    if (d.isMock === true) return null; // don't notify for seeded demo data
+    const ownerName = d.ownerName || 'משתמש';
+    await writeNotification(admin.firestore(), {
+      userId: d.providerUid,
+      title: 'בקשת הזמנה חדשה',
+      body: `${ownerName} שלח/ה אליך בקשת הזמנה`,
+      type: 'bookingNew',
+      bookingId: context.params.bookingId,
+    });
+    return null;
+  });
+
+/** Booking status change → tell the other party the right thing. */
+exports.onBookingStatusChange = functions.firestore
+  .document('booking_requests/{bookingId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data() || {};
+    const after = change.after.data() || {};
+    if (after.isMock === true) return null;
+    if (before.status === after.status) return null; // only act on status moves
+
+    const db = admin.firestore();
+    const bookingId = context.params.bookingId;
+    const ownerUid = after.ownerUid;
+    const providerUid = after.providerUid;
+    const ownerName = after.ownerName || 'בעל החיות';
+    const providerName = after.providerName || 'הנותן שירות';
+    const prev = before.status;
+    const next = after.status;
+
+    let n = null;
+    if (next === 'accepted' && prev === 'pending') {
+      n = {
+        userId: ownerUid,
+        title: 'הזמנה אושרה',
+        body: `${providerName} אישר/ה את ההזמנה שלך`,
+        type: 'bookingAccepted',
+      };
+    } else if (next === 'accepted' && prev === 'awaitingConfirmation') {
+      // owner disputed the provider's completion request
+      n = {
+        userId: providerUid,
+        title: 'השירות טרם הושלם',
+        body: `${ownerName} ציין/ה שהשירות עדיין לא בוצע`,
+        type: 'bookingCompletionDisputed',
+      };
+    } else if (next === 'awaitingConfirmation') {
+      n = {
+        userId: ownerUid,
+        title: 'אישור סיום שירות',
+        body: `${providerName} סימן/ה שהשירות הושלם. אשר/י כדי לדרג את החוויה`,
+        type: 'bookingCompletionRequested',
+      };
+    } else if (next === 'completed') {
+      n = {
+        userId: providerUid,
+        title: 'השירות אושר',
+        body: `${ownerName} אישר/ה שהשירות הושלם`,
+        type: 'bookingCompleted',
+      };
+    } else if (next === 'declined') {
+      n = {
+        userId: ownerUid,
+        title: 'הזמנה נדחתה',
+        body: `${providerName} דחה/תה את ההזמנה שלך`,
+        type: 'bookingDeclined',
+      };
+    } else if (next === 'cancelled') {
+      // Firestore triggers don't carry the identity of who made the write,
+      // so the client stamps `cancelledBy` (validated by firestore.rules to
+      // match the actual auth.uid's role) and we use it to notify whichever
+      // party didn't do the cancelling.
+      n = after.cancelledBy === 'provider'
+        ? {
+            userId: ownerUid,
+            title: 'הזמנה בוטלה',
+            body: `${providerName} ביטל/ה את ההזמנה`,
+            type: 'bookingCancelled',
+          }
+        : {
+            userId: providerUid,
+            title: 'הזמנה בוטלה',
+            body: `${ownerName} ביטל/ה את ההזמנה`,
+            type: 'bookingCancelled',
+          };
+    }
+
+    if (n) await writeNotification(db, { ...n, bookingId });
+    return null;
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Review rating aggregation (server-side, Blaze)
+//
+//  The provider's ratingAverage/reviewCount (on their /users doc and on every
+//  walk_services/sitting_services listing they own) used to be recomputed by
+//  the client inside a Firestore transaction. That required the security rules
+//  to allow any authenticated client to PATCH those aggregate fields directly,
+//  which meant any signed-in user could overwrite a provider's rating without
+//  ever writing a review. Recomputing here — where only the Admin SDK (which
+//  bypasses rules) can write the aggregates — closes that hole; the client now
+//  only ever writes the `reviews/{bookingId}` document itself.
+// ─────────────────────────────────────────────────────────────────────────────
 exports.onReviewWrite = functions.firestore
   .document('reviews/{reviewId}')
   .onWrite(async (change, context) => {
