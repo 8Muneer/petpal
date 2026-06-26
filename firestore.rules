@@ -253,7 +253,21 @@ service cloud.firestore {
     // ── notifications ─────────────────────────────────────────────────────────
     match /notifications/{notificationId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null; // client-side writes from app actions
+      // Every booking/review notification is written server-side by a Cloud
+      // Function (Admin SDK, which bypasses these rules). The ONLY notification a
+      // client legitimately writes is the 'newMessage' one for the other chat
+      // participant (the sender can't trigger a function for this) — so the
+      // client create path is scoped to exactly that: type must be 'newMessage',
+      // it must start unread, the requester must be a participant of the named
+      // conversation, and the recipient (userId) must be the *other* participant.
+      // This removes the previous "any signed-in user can forge any notification
+      // into anyone's feed" hole without affecting the server-written types.
+      allow create: if request.auth != null &&
+        request.resource.data.type == 'newMessage' &&
+        request.resource.data.isRead == false &&
+        request.auth.uid in get(/databases/$(database)/documents/conversations/$(request.resource.data.data.conversationId)).data.participants &&
+        request.resource.data.userId in get(/databases/$(database)/documents/conversations/$(request.resource.data.data.conversationId)).data.participants &&
+        request.resource.data.userId != request.auth.uid;
       allow update: if request.auth != null &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
@@ -271,10 +285,27 @@ service cloud.firestore {
     match /conversations/{conversationId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.participants;
       allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
-      allow update: if request.auth != null && request.auth.uid in resource.data.participants;
+      // Participants can update the conversation's live state (last-message
+      // preview, photo cache, unread counts) but cannot rewrite who the
+      // conversation belongs to or touch any other field — without this,
+      // a participant could silently swap the other party out of the thread.
+      allow update: if request.auth != null &&
+        request.auth.uid in resource.data.participants &&
+        request.resource.data.participants == resource.data.participants &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['lastMessage', 'lastMessageAt', 'participantPhotoUrls', 'unreadCounts']);
 
       match /messages/{messageId} {
-        allow read, create: if request.auth != null;
+        // Only a participant of the parent conversation may read its messages
+        // or post into it — the previous rule only checked "is signed in,"
+        // which let any authenticated user read or write into any
+        // conversation by ID. `senderId` must match the real caller so a
+        // message can't be forged as coming from someone else.
+        allow read: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants &&
+          request.resource.data.senderId == request.auth.uid;
         allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
       }
     }
