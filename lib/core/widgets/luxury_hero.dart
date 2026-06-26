@@ -405,7 +405,7 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                     ),
                     child: Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
@@ -413,7 +413,7 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
                               Colors.white,
                               AppColors.surface,
                             ],
-                            stops: const [0.0, 0.5, 1.0],
+                            stops: [0.0, 0.5, 1.0],
                           ),
                           boxShadow: [
                             BoxShadow(
