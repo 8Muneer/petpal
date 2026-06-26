@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -610,24 +609,18 @@ class _PetDetailSheetState extends State<_PetDetailSheet>
                   left: 16,
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.35),
-                                width: 1),
-                          ),
-                          child: const Icon(Icons.close_rounded,
-                              color: Colors.white, size: 18),
-                        ),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.30),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.45),
+                            width: 1),
                       ),
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white, size: 18),
                     ),
                   ),
                 ),
@@ -1370,7 +1363,7 @@ class _PetFormSheetState extends State<_PetFormSheet> {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + bottomInset),
       decoration: BoxDecoration(
-        color: AppColors.pureWhite,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(28),
       ),
       child: SingleChildScrollView(
@@ -1389,17 +1382,29 @@ class _PetFormSheetState extends State<_PetFormSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // Title
+            // Title + subtitle
             Text(
               _isEdit ? 'ערוך פרטי חיה' : 'הוסף חיה חדשה',
               style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary),
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 4),
+            Text(
+              _isEdit
+                  ? 'עדכן את הפרטים הרצויים ולחץ שמור'
+                  : 'הזן את פרטי החיה כדי להוסיפה לפרופיל שלך',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: 24),
 
             // Photo picker
             Center(
@@ -1408,40 +1413,72 @@ class _PetFormSheetState extends State<_PetFormSheet> {
                 child: Stack(
                   children: [
                     Container(
-                      width: 96,
-                      height: 96,
+                      width: 100,
+                      height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.surface,
+                        color: AppColors.pureWhite,
                         border: Border.all(color: AppColors.border, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.prussianBlue3.withValues(alpha: 0.08),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                         image: _avatarImage,
                       ),
                       child: _avatarImage == null
-                          ? const Icon(Icons.pets_rounded,
-                              size: 36, color: AppColors.textMuted)
+                          ? const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.pets_rounded,
+                                    size: 30, color: AppColors.textMuted),
+                                SizedBox(height: 4),
+                                Text(
+                                  'הוסף תמונה',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            )
                           : null,
                     ),
                     Positioned(
-                      bottom: 0,
-                      left: 0,
+                      bottom: 2,
+                      left: 2,
                       child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: const Icon(Icons.camera_alt_rounded,
-                            size: 14, color: Colors.white),
+                            size: 15, color: Colors.white),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 28),
 
-            // Type selector
-            const _FormLabel('סוג'),
+            // ── Section: basic info ───────────────────────────────────────
+            _sectionHeader('פרטים בסיסיים'),
+            const SizedBox(height: 14),
+
+            // Type
+            const _FormLabel('סוג חיה'),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -1452,27 +1489,39 @@ class _PetFormSheetState extends State<_PetFormSheet> {
                   onTap: () => setState(() => _type = t),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 9),
                     decoration: BoxDecoration(
-                      color: active ? AppColors.primary : AppColors.surface,
+                      color: active ? AppColors.primary : AppColors.pureWhite,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: active ? AppColors.primary : AppColors.border),
+                        color: active ? AppColors.primary : AppColors.border,
+                      ),
+                      boxShadow: active
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
                     ),
-                    child: Text(t,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: active ? Colors.white : AppColors.textMuted,
-                        )),
+                    child: Text(
+                      t,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: active ? Colors.white : AppColors.textMuted,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-            // Gender toggle
+            // Gender
             const _FormLabel('מין'),
             const SizedBox(height: 8),
             Row(
@@ -1483,131 +1532,261 @@ class _PetFormSheetState extends State<_PetFormSheet> {
                     onTap: () => setState(() => _gender = g),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      margin: EdgeInsets.only(left: g == _genders.last ? 0 : 8),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      margin:
+                          EdgeInsets.only(left: g == _genders.last ? 0 : 8),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
                       decoration: BoxDecoration(
-                        color: active ? AppColors.primary : AppColors.surface,
+                        color: active ? AppColors.primary : AppColors.pureWhite,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color:
-                                active ? AppColors.primary : AppColors.border),
+                          color: active ? AppColors.primary : AppColors.border,
+                        ),
                       ),
                       child: Center(
-                        child: Text(g,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color:
-                                  active ? Colors.white : AppColors.textMuted,
-                            )),
+                        child: Text(
+                          g,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: active ? Colors.white : AppColors.textMuted,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             // Name
-            _field(_nameCtrl, 'שם החיה', Icons.badge_outlined),
-            const SizedBox(height: 10),
+            _labeledField(
+              label: 'שם החיה',
+              ctrl: _nameCtrl,
+              hint: 'לדוגמה: בוב, לונה...',
+              icon: Icons.badge_outlined,
+            ),
+            const SizedBox(height: 12),
 
             // Breed
-            _field(_breedCtrl, 'גזע (אופציונלי)', Icons.category_outlined),
-            const SizedBox(height: 10),
+            _labeledField(
+              label: 'גזע',
+              ctrl: _breedCtrl,
+              hint: 'לברדור, מעורב... (אופציונלי)',
+              icon: Icons.category_outlined,
+            ),
+            const SizedBox(height: 26),
 
-            // Age + Weight in a row
+            // ── Section: measurements ─────────────────────────────────────
+            _sectionHeader('מידות ומראה'),
+            const SizedBox(height: 14),
+
             Row(
               children: [
                 Expanded(
-                  child: _field(_ageCtrl, 'גיל (שנים)', Icons.cake_outlined,
-                      numeric: true),
+                  child: _labeledField(
+                    label: 'גיל (שנים)',
+                    ctrl: _ageCtrl,
+                    hint: '3',
+                    icon: Icons.cake_outlined,
+                    numeric: true,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: _field(
-                      _weightCtrl, 'משקל (ק"ג)', Icons.monitor_weight_outlined,
-                      numeric: true),
+                  child: _labeledField(
+                    label: 'משקל (ק"ג)',
+                    ctrl: _weightCtrl,
+                    hint: '12.5',
+                    icon: Icons.monitor_weight_outlined,
+                    numeric: true,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-            // Color
-            _field(_colorCtrl, 'צבע / סימנים', Icons.palette_outlined),
-            const SizedBox(height: 10),
+            _labeledField(
+              label: 'צבע / סימנים',
+              ctrl: _colorCtrl,
+              hint: 'כחול, שחור ולבן...',
+              icon: Icons.palette_outlined,
+            ),
+            const SizedBox(height: 26),
 
-            // Microchip
-            _field(
-                _microchipCtrl, 'מספר שבב (אופציונלי)', Icons.memory_rounded),
-            const SizedBox(height: 10),
+            // ── Section: health ───────────────────────────────────────────
+            _sectionHeader('בריאות'),
+            const SizedBox(height: 14),
 
             // Vaccinated toggle
+            GestureDetector(
+              onTap: () => setState(() => _isVaccinated = !_isVaccinated),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: _isVaccinated
+                      ? AppColors.success.withValues(alpha: 0.07)
+                      : AppColors.pureWhite,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _isVaccinated
+                        ? AppColors.success.withValues(alpha: 0.35)
+                        : AppColors.border,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _isVaccinated
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.vaccines_rounded,
+                        size: 20,
+                        color: _isVaccinated
+                            ? AppColors.success
+                            : AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'מחוסן / מחוסנת',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: _isVaccinated
+                                  ? AppColors.success
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            _isVaccinated
+                                ? 'החיה מחוסנת'
+                                : 'לחץ לסימון כמחוסן',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isVaccinated,
+                      onChanged: (v) => setState(() => _isVaccinated = v),
+                      activeThumbColor: AppColors.success,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _labeledField(
+              label: 'מספר שבב',
+              ctrl: _microchipCtrl,
+              hint: '123456789 (אופציונלי)',
+              icon: Icons.memory_rounded,
+            ),
+            const SizedBox(height: 12),
+
+            // Notes
+            const _FormLabel('הערות רפואיות'),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.pureWhite,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.vaccines_rounded,
-                      color: AppColors.textMuted, size: 20),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text('מחוסן / מחוסנת',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        )),
-                  ),
-                  Switch(
-                    value: _isVaccinated,
-                    onChanged: (v) => setState(() => _isVaccinated = v),
-                    activeThumbColor: AppColors.success,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Medical notes
-            TextField(
-              controller: _notesCtrl,
-              textDirection: TextDirection.rtl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'הערות רפואיות (אופציונלי)',
-                hintTextDirection: TextDirection.rtl,
-                prefixIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 40),
-                  child: Icon(Icons.notes_rounded, color: AppColors.textMuted),
+              child: TextField(
+                controller: _notesCtrl,
+                textDirection: TextDirection.rtl,
+                maxLines: 3,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
                 ),
-                alignLabelWithHint: true,
+                decoration: const InputDecoration(
+                  hintText: 'אלרגיות, תרופות, מגבלות... (אופציונלי)',
+                  hintStyle: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  hintTextDirection: TextDirection.rtl,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                ),
               ),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 28),
 
             // Save button
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
-                      )
-                    : Text(
-                        _isEdit ? 'שמור שינויים' : 'הוסף חיה',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w800),
-                      ),
+            GestureDetector(
+              onTap: _saving ? null : _save,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: _saving ? null : AppColors.primaryGradient,
+                  color: _saving ? AppColors.border : null,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: _saving
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                ),
+                child: Center(
+                  child: _saving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isEdit
+                                  ? Icons.save_rounded
+                                  : Icons.add_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _isEdit ? 'שמור שינויים' : 'הוסף חיה',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ),
             ),
           ],
@@ -1616,23 +1795,71 @@ class _PetFormSheetState extends State<_PetFormSheet> {
     );
   }
 
-  Widget _field(
-    TextEditingController ctrl,
-    String hint,
-    IconData icon, {
+  Widget _sectionHeader(String title) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Divider(color: AppColors.divider, height: 1),
+        ),
+      ],
+    );
+  }
+
+  Widget _labeledField({
+    required String label,
+    required TextEditingController ctrl,
+    required String hint,
+    required IconData icon,
     bool numeric = false,
   }) {
-    return TextField(
-      controller: ctrl,
-      textDirection: TextDirection.rtl,
-      keyboardType: numeric
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintTextDirection: TextDirection.rtl,
-        prefixIcon: Icon(icon, color: AppColors.textMuted),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormLabel(label),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.pureWhite,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: TextField(
+            controller: ctrl,
+            textDirection: TextDirection.rtl,
+            keyboardType: numeric
+                ? const TextInputType.numberWithOptions(decimal: true)
+                : TextInputType.text,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+              ),
+              hintTextDirection: TextDirection.rtl,
+              prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,9 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:petpal/features/booking/data/models/booking_request_model.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
-import 'package:petpal/features/notifications/data/datasources/notification_writer.dart';
 
+/// Firestore CRUD for booking requests.
+///
+/// Notifications for the booking lifecycle are NOT written here — they are
+/// written server-side by the `onBookingCreate` and `onBookingStatusChange`
+/// Cloud Functions (see functions/index.js). Writing them client-side too
+/// would double every notification, so this layer only mutates the booking
+/// document and lets the triggers fan out the notifications.
 class BookingRemoteDatasource {
   final FirebaseFirestore _firestore;
 
@@ -34,21 +39,6 @@ class BookingRemoteDatasource {
 
   Future<String> createBooking(Map<String, dynamic> data) async {
     final doc = await _col.add(data);
-    try {
-      await writeClientNotification(
-        _firestore,
-        userId: (data['providerUid'] as String?) ?? '',
-        title: 'בקשת הזמנה חדשה',
-        body: '${data['ownerName'] ?? 'משתמש'} שלח/ה אליך בקשת הזמנה',
-        type: 'bookingNew',
-        data: {'bookingId': doc.id},
-      );
-    } catch (e, st) {
-      assert(() {
-        debugPrint('[BookingRemoteDatasource] FAILED to write new booking notification: $e\n$st');
-        return true;
-      }());
-    }
     return doc.id;
   }
 
@@ -60,69 +50,28 @@ class BookingRemoteDatasource {
     final update = <String, dynamic>{'status': status.name};
     if (providerNote != null) update['providerNote'] = providerNote;
     await _col.doc(bookingId).update(update);
-    _sendStatusNotification(bookingId, status).ignore();
   }
 
+  /// Owner cancels — `cancelledBy` lets the onBookingStatusChange Cloud Function
+  /// notify the right party, since a Firestore trigger has no way to know which
+  /// authenticated user made the write that fired it.
   Future<void> cancelBooking(String bookingId) async {
-    await _col.doc(bookingId).update({'status': BookingStatus.cancelled.name});
-    _sendStatusNotification(bookingId, BookingStatus.cancelled).ignore();
+    await _col.doc(bookingId).update({
+      'status': BookingStatus.cancelled.name,
+      'cancelledBy': 'owner',
+    });
   }
 
-  Future<void> _sendStatusNotification(
-      String bookingId, BookingStatus status) async {
-    debugPrint('[BookingRemoteDatasource] _sendStatusNotification called: bookingId=$bookingId, status=$status');
-    try {
-      final snap = await _col.doc(bookingId).get();
-      final d = snap.data() as Map<String, dynamic>?;
-      if (d == null) {
-        debugPrint('[BookingRemoteDatasource] _sendStatusNotification ABORTED: document data is null');
-        return;
-      }
-      debugPrint('[BookingRemoteDatasource] booking doc ownerUid=${d['ownerUid']}, providerUid=${d['providerUid']}');
+  /// Provider backs out of a booking they already accepted.
+  Future<void> cancelBookingByProvider(String bookingId) async {
+    await _col.doc(bookingId).update({
+      'status': BookingStatus.cancelled.name,
+      'cancelledBy': 'provider',
+    });
+  }
 
-      switch (status) {
-        case BookingStatus.accepted:
-          final targetUserId = (d['ownerUid'] as String?) ?? '';
-          debugPrint('[BookingRemoteDatasource] Attempting to send accepted notification to owner: $targetUserId');
-          await writeClientNotification(
-            _firestore,
-            userId: targetUserId,
-            title: 'הזמנה אושרה',
-            body: '${d['providerName'] ?? 'הנותן שירות'} אישר/ה את ההזמנה שלך',
-            type: 'bookingAccepted',
-            data: {'bookingId': bookingId},
-          );
-          break;
-        case BookingStatus.declined:
-          final targetUserId = (d['ownerUid'] as String?) ?? '';
-          debugPrint('[BookingRemoteDatasource] Attempting to send declined notification to owner: $targetUserId');
-          await writeClientNotification(
-            _firestore,
-            userId: targetUserId,
-            title: 'הזמנה נדחתה',
-            body: '${d['providerName'] ?? 'הנותן שירות'} דחה/תה את ההזמנה שלך',
-            type: 'bookingDeclined',
-            data: {'bookingId': bookingId},
-          );
-          break;
-        case BookingStatus.cancelled:
-          final targetUserId = (d['providerUid'] as String?) ?? '';
-          debugPrint('[BookingRemoteDatasource] Attempting to send cancelled notification to provider: $targetUserId');
-          await writeClientNotification(
-            _firestore,
-            userId: targetUserId,
-            title: 'הזמנה בוטלה',
-            body: '${d['ownerName'] ?? 'בעל החיות'} ביטל/ה את ההזמנה',
-            type: 'bookingCancelled',
-            data: {'bookingId': bookingId},
-          );
-          break;
-        default:
-          debugPrint('[BookingRemoteDatasource] _sendStatusNotification: Unhandled status: $status');
-          break;
-      }
-    } catch (e, st) {
-      debugPrint('[BookingRemoteDatasource] FAILED to send status notification ($status): $e\n$st');
-    }
+  /// Owner rejects the provider's completion request — status returns to `accepted`.
+  Future<void> disputeCompletion(String bookingId) async {
+    await _col.doc(bookingId).update({'status': BookingStatus.accepted.name});
   }
 }

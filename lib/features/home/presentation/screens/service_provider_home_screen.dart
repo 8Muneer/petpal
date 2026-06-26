@@ -30,7 +30,6 @@ import 'package:petpal/features/reviews/domain/entities/review.dart';
 import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
 import 'package:petpal/features/home/presentation/widgets/provider_requests_tab.dart';
 import 'package:petpal/features/home/presentation/widgets/provider_services_tab.dart';
-import 'package:petpal/features/messaging/presentation/widgets/chat_tab.dart';
 
 class ServiceProviderHomeScreen extends ConsumerStatefulWidget {
   const ServiceProviderHomeScreen({super.key});
@@ -64,6 +63,7 @@ class _ServiceProviderHomeScreenState
   @override
   Widget build(BuildContext context) {
     final showMyServices = ref.watch(showProviderServicesProvider);
+    final pendingCount = ref.watch(pendingBookingCountProvider);
     final tabs = <Widget>[
       _ProviderHomeTab(
         onAction: (msg) => _toast(msg),
@@ -72,7 +72,6 @@ class _ServiceProviderHomeScreenState
       const FeedScreen(),
       const LostFoundFeedScreen(),
       const ProviderRequestsTab(),
-      const ChatTab(isProvider: true),
     ];
 
     final body =
@@ -97,27 +96,24 @@ class _ServiceProviderHomeScreenState
         bottomNavigationBar: AppBottomNav(
           currentIndex: showMyServices ? -1 : _currentIndex,
           onChanged: _onNavChanged,
-          items: const [
-            AppNavItem(
+          items: [
+            const AppNavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
                 label: 'בית'),
-            AppNavItem(
+            const AppNavItem(
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
-                label: 'פיד'),
-            AppNavItem(
+                label: 'קהילה'),
+            const AppNavItem(
                 icon: Icons.pets_outlined,
                 activeIcon: Icons.pets_rounded,
                 label: 'אבודים'),
             AppNavItem(
                 icon: Icons.assignment_outlined,
                 activeIcon: Icons.assignment_rounded,
-                label: 'הבקשות'),
-            AppNavItem(
-                icon: Icons.chat_bubble_outline,
-                activeIcon: Icons.chat_bubble_rounded,
-                label: 'צ׳אט'),
+                label: 'הבקשות',
+                badgeCount: pendingCount),
           ],
         ),
       ),
@@ -473,8 +469,11 @@ class _ProviderHomeTab extends ConsumerWidget {
       return false;
     }
 
-    final accepted =
-        incoming.where((b) => b.status == BookingStatus.accepted).toList();
+    final accepted = incoming
+        .where((b) =>
+            b.status == BookingStatus.accepted ||
+            b.status == BookingStatus.awaitingConfirmation)
+        .toList();
     final todayJobs = accepted.where(coversToday).toList();
     final upcomingCount = accepted.where((b) {
       final d = b.requestedDate ?? b.startDate;
@@ -584,6 +583,32 @@ class _ProviderHomeTab extends ConsumerWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push('/chat'),
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.30),
+                                  width: 1),
+                            ),
+                            child: const Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     NotificationBellButton(
@@ -721,10 +746,15 @@ class _ProviderHomeTab extends ConsumerWidget {
 
         const SizedBox(height: 12),
 
-        // --- Open opportunities near the provider (horizontal) ---
+        // --- Open opportunities (horizontal) ---
+        // Note: not actually area-filtered — openWalkRequestsProvider/
+        // openSittingRequestsProvider return every open request nationwide.
+        // Title intentionally doesn't claim "near you" until real geo-filtering
+        // exists (would need a provider-level area/location field, which the
+        // profile doesn't have today).
         if (opportunities.isNotEmpty) ...[
           HomeTopRatedSection(
-            title: 'הזדמנויות חדשות באזורך',
+            title: 'הזדמנויות חדשות',
             itemHeight: 165,
             onMoreTap: () => onSelectTab(3),
             itemCount: opportunities.length,

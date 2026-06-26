@@ -18,8 +18,18 @@ class ModerationRepository {
             .toList());
   }
 
+  /// Writes with a deterministic id (`type_targetId_reporterId`) instead of
+  /// `.add()` — a second report by the same user on the same target
+  /// overwrites the first instead of creating a duplicate document. This is
+  /// what makes AI triage actually O(distinct targets): without it, rapid
+  /// re-taps or resubmits each became a separate report and a separate
+  /// Gemini call on identical content. Overwriting (not merging) is
+  /// intentional: if the prior report on this id was already resolved, a
+  /// fresh report on the same content should reopen it as a new `open` case
+  /// rather than silently staying closed.
   Future<void> submitReport(ContentReport report) async {
-    await _firestore.collection('reports').add(report.toFirestore());
+    final id = '${report.type.name}_${report.targetId}_${report.reporterId}';
+    await _firestore.collection('reports').doc(id).set(report.toFirestore());
   }
 
   /// Best-effort fetch of the actual reported content, so the AI can judge the
@@ -66,6 +76,31 @@ class ModerationRepository {
       'aiAction': action,
       'aiRationale': rationale,
     });
+  }
+
+  /// Same as [saveReportAnalysis], applied to every report in [reportIds] in
+  /// one batch. All reports targeting the same content share a single
+  /// Gemini analysis (see ModerationQueueScreen._ensureAnalyzed), so the
+  /// result is fanned out to the whole cluster instead of one report at a
+  /// time — keeps every report on a target carrying the same severity, and
+  /// is one write instead of N round trips.
+  Future<void> saveReportAnalysisForCluster({
+    required List<String> reportIds,
+    required int severity,
+    required String category,
+    required String action,
+    required String rationale,
+  }) async {
+    final batch = _firestore.batch();
+    for (final reportId in reportIds) {
+      batch.update(_firestore.collection('reports').doc(reportId), {
+        'aiSeverity': severity,
+        'aiCategory': category,
+        'aiAction': action,
+        'aiRationale': rationale,
+      });
+    }
+    await batch.commit();
   }
 
   Future<void> resolveReport({

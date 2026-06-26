@@ -1,12 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/validators.dart';
-import 'package:petpal/core/widgets/app_button.dart';
-import 'package:petpal/core/widgets/app_input.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -15,39 +13,57 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
-  bool _isLoading = false;
+  late final AnimationController _animCtrl;
+  late final Animation<double>   _fadeAnim;
+  late final Animation<Offset>   _slideAnim;
+
+  bool    _isLoading     = false;
   String? _emailError;
   String? _passwordError;
+  String? _serverError;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _fadeAnim  = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end:   Offset.zero,
+    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
+    _animCtrl.forward();
+  }
 
   @override
   void dispose() {
+    _animCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
-  void _validateEmail(String value) {
-    setState(() {
-      if (value.trim().isEmpty) {
-        _emailError = 'אנא הזן/י כתובת אימייל';
-      } else if (!Validators.isValidEmail(value.trim())) {
-        _emailError = 'כתובת אימייל לא תקינה';
-      } else {
-        _emailError = null;
-      }
-    });
-  }
+  // ── Validation ───────────────────────────────────────────────────────────────
 
-  void _validatePassword(String value) {
-    setState(() {
-      _passwordError = value.isEmpty ? 'אנא הזן/י סיסמה' : null;
-    });
-  }
+  void _validateEmail(String v) => setState(() {
+        if (v.trim().isEmpty) {
+          _emailError = 'אנא הזן/י כתובת אימייל';
+        } else if (!Validators.isValidEmail(v.trim())) {
+          _emailError = 'כתובת אימייל לא תקינה';
+        } else {
+          _emailError = null;
+        }
+      });
+
+  void _validatePassword(String v) =>
+      setState(() => _passwordError = v.isEmpty ? 'אנא הזן/י סיסמה' : null);
 
   bool get _formValid =>
       _emailError == null &&
@@ -55,29 +71,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _emailCtrl.text.isNotEmpty &&
       _passwordCtrl.text.isNotEmpty;
 
-  String _authError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'invalid-email':
-        return 'כתובת אימייל לא תקינה';
-      case 'user-disabled':
-        return 'המשתמש חסום';
-      case 'user-not-found':
-      case 'wrong-password':
-      case 'invalid-credential':
-      case 'INVALID_LOGIN_CREDENTIALS':
-        return 'אימייל או סיסמה שגויים';
-      case 'network-request-failed':
-        return 'בעיית רשת. בדוק/י את החיבור ונסה/י שוב';
-      case 'too-many-requests':
-        return 'יותר מדי ניסיונות. נסה/י שוב מאוחר יותר';
-      default:
-        return 'שגיאה בהתחברות: ${e.message ?? e.code}';
-    }
-  }
+  // ── Auth helpers ─────────────────────────────────────────────────────────────
 
-  void _showSnack(String msg, {bool isError = false}) {
+  String _authError(FirebaseAuthException e) => switch (e.code) {
+        'invalid-email'             => 'כתובת אימייל לא תקינה',
+        'user-disabled'             => 'המשתמש חסום',
+        'user-not-found'            ||
+        'wrong-password'            ||
+        'invalid-credential'        ||
+        'INVALID_LOGIN_CREDENTIALS' => 'אימייל או סיסמה שגויים',
+        'network-request-failed'    => 'בעיית רשת. בדוק/י את החיבור ונסה/י שוב',
+        'too-many-requests'         => 'יותר מדי ניסיונות. נסה/י שוב מאוחר יותר',
+        _                           => 'שגיאה בהתחברות: ${e.message ?? e.code}',
+      };
+
+  void _snack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         content: Text(msg),
         backgroundColor: isError ? AppColors.danger : AppColors.primary,
       ),
@@ -85,6 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    setState(() => _serverError = null);
     _validateEmail(_emailCtrl.text);
     _validatePassword(_passwordCtrl.text);
     if (!_formValid) return;
@@ -92,17 +107,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
+        email:    _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
       );
       if (!mounted) return;
       context.go('/');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _showSnack(_authError(e), isError: true);
+      final msg = _authError(e);
+      setState(() => _serverError = msg);
+      _snack(msg, isError: true);
     } catch (_) {
       if (!mounted) return;
-      _showSnack('שגיאה לא צפויה. נסה/י שוב.', isError: true);
+      const msg = 'שגיאה לא צפויה. נסה/י שוב.';
+      setState(() => _serverError = msg);
+      _snack(msg, isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -111,299 +130,592 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleForgotPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty || !Validators.isValidEmail(email)) {
-      _showSnack('אנא הזן/י כתובת אימייל תקינה לאיפוס סיסמה', isError: true);
+      _snack('אנא הזן/י כתובת אימייל תקינה לאיפוס סיסמה', isError: true);
       return;
     }
     setState(() => _isLoading = true);
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (!mounted) return;
-      _showSnack('קישור לאיפוס סיסמה נשלח לאימייל');
+      _snack('קישור לאיפוס סיסמה נשלח לאימייל');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _showSnack(_authError(e), isError: true);
+      _snack(_authError(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final topPadding = MediaQuery.of(context).padding.top;
+    final topPadding     = MediaQuery.of(context).padding.top;
+    final bottomPadding  = MediaQuery.of(context).padding.bottom;
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: Container(
-          width: size.width,
-          height: size.height,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: const NetworkImage(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // ── Full-screen background image ──────────────────────────────
+            Positioned.fill(
+              child: Image.network(
                 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2000',
-              ),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Colors.black.withValues(alpha: 0.3),
-                BlendMode.darken,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
               ),
             ),
-          ),
-          child: Stack(
-            children: [
-              // --- HEADER SECTION (Above the card) ---
-              Positioned(
-                top: topPadding + 40,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    // Back button (Floating top right)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: _BackButton(
-                          onTap: () => context.pop(),
-                          color: Colors.white.withValues(alpha: 0.2),
-                          iconColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Paw Icon
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: AppRadius.xxlRadius,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.pets_rounded,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'שמחים שחזרת!',
-                      style: AppTextStyles.h1.copyWith(
-                        color: Colors.white,
-                        fontSize: 28,
-                        letterSpacing: -0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'התחבר/י כדי להמשיך',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
 
-              // --- FLOATING FORM CARD ---
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: size.height * 0.62,
-                  decoration: BoxDecoration(
-                    color: AppColors.pureWhite,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(40),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 40,
-                        offset: const Offset(0, -10),
-                      ),
+            // ── Dark gradient overlay ─────────────────────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.0, 0.28, 0.58, 1.0],
+                    colors: [
+                      Colors.black.withValues(alpha: 0.62),
+                      Colors.black.withValues(alpha: 0.28),
+                      Colors.black.withValues(alpha: 0.58),
+                      Colors.black.withValues(alpha: 0.82),
                     ],
                   ),
+                ),
+              ),
+            ),
+
+            // ── Radial vignette ───────────────────────────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.1,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.35),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Scrollable content ────────────────────────────────────────
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: SlideTransition(
+                  position: _slideAnim,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Email field
-                          AppInput(
-                            controller: _emailCtrl,
-                            label: 'אימייל',
-                            hint: 'name@example.com',
-                            icon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            textDirection: TextDirection.ltr,
-                            errorText: _emailError,
-                            onChanged: _validateEmail,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Password field
-                          AppInput(
-                            controller: _passwordCtrl,
-                            label: 'סיסמה',
-                            icon: Icons.lock_outline_rounded,
-                            isPassword: true,
-                            textInputAction: TextInputAction.done,
-                            textDirection: TextDirection.ltr,
-                            errorText: _passwordError,
-                            onChanged: _validatePassword,
-                            onEditingComplete: _isLoading ? null : _handleLogin,
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          // Forgot password
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              onPressed:
-                                  _isLoading ? null : _handleForgotPassword,
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      topPadding + 76,
+                      24,
+                      24 + keyboardHeight + bottomPadding,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── Title ────────────────────────────────────────
+                        Text(
+                          'שמחים שחזרת!',
+                          style: AppTextStyles.h1.copyWith(
+                            color: Colors.white,
+                            fontSize: 30,
+                            letterSpacing: -0.5,
+                            shadows: [
+                              Shadow(
+                                color:      Colors.black.withValues(alpha: 0.55),
+                                blurRadius: 18,
+                                offset:     const Offset(0, 3),
                               ),
-                              child: Text(
-                                'שכחת סיסמה?',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Login Button
-                          AppButton(
-                            label: 'התחברות',
-                            onTap: _isLoading ? null : _handleLogin,
-                            isLoading: _isLoading,
-                            leadingIcon: Icons.login_rounded,
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Divider
-                          Row(
-                            children: [
-                              const Expanded(child: Divider()),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'או',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.textMuted,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const Expanded(child: Divider()),
                             ],
                           ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'התחבר/י כדי להמשיך',
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 14,
+                            shadows: [
+                              Shadow(
+                                color:      Colors.black.withValues(alpha: 0.45),
+                                blurRadius: 10,
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
 
-                          const SizedBox(height: 24),
+                        const SizedBox(height: 36),
 
-                          // Social Login (Google)
-                          OutlinedButton(
-                            onPressed: () {
-                              _showSnack('התחברות עם Google תהיה זמינה בקרוב');
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: const BorderSide(color: AppColors.border),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.fullRadius,
+                        // ── Email ─────────────────────────────────────────
+                        _GlassInput(
+                          controller: _emailCtrl,
+                          label: 'אימייל',
+                          hint: 'name@example.com',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          textDirection: TextDirection.ltr,
+                          errorText: _emailError,
+                          onChanged: _validateEmail,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // ── Password ──────────────────────────────────────
+                        _GlassInput(
+                          controller: _passwordCtrl,
+                          label: 'סיסמה',
+                          icon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          textDirection: TextDirection.ltr,
+                          errorText: _passwordError,
+                          onChanged: _validatePassword,
+                          onEditingComplete:
+                              _isLoading ? null : _handleLogin,
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // ── Forgot password ───────────────────────────────
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _isLoading ? null : _handleForgotPassword,
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'שכחת סיסמה?',
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.white.withValues(alpha: 0.80),
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Login button ──────────────────────────────────
+                        _GradientButton(
+                          label: 'התחברות',
+                          icon: Icons.login_rounded,
+                          isLoading: _isLoading,
+                          onTap: _isLoading ? null : _handleLogin,
+                        ),
+
+                        if (_serverError != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                  color: AppColors.danger.withValues(alpha: 0.45)),
+                            ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Image.network(
-                                  'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
-                                  height: 22,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(
-                                    Icons.person_outline,
-                                    size: 20,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'המשך עם Google',
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: AppColors.textPrimary,
+                                const Icon(Icons.error_outline_rounded,
+                                    color: AppColors.danger, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _serverError!,
+                                    style: const TextStyle(
+                                      color: AppColors.danger,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-
-                          const SizedBox(height: 32),
-
-                          // Sign-up link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'אין לך חשבון?',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () => context.push('/signup'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: Text(
-                                  'הרשמה',
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: AppColors.primary,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
                         ],
-                      ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Divider ───────────────────────────────────────
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Divider(
+                                color: Colors.white.withValues(alpha: 0.22),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              child: Text(
+                                'או',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Divider(
+                                color: Colors.white.withValues(alpha: 0.22),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Google button ─────────────────────────────────
+                        _GlassGoogleButton(
+                          onTap: () =>
+                              _snack('התחברות עם Google תהיה זמינה בקרוב'),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── Sign-up link ──────────────────────────────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'אין לך חשבון?',
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.white.withValues(alpha: 0.70),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: _isLoading
+                                  ? null
+                                  : () => context.push('/signup'),
+                              child: Text(
+                                'הרשמה עכשיו',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
+
+            // ── Back button (on top so it receives taps) ──────────────────
+            Positioned(
+              top: topPadding + 16,
+              right: 20,
+              child: _CircleBackButton(onTap: () => context.pop()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Glass text input ──────────────────────────────────────────────────────────
+
+class _GlassInput extends StatefulWidget {
+  final TextEditingController controller;
+  final String                label;
+  final String?               hint;
+  final IconData              icon;
+  final bool                  isPassword;
+  final TextInputType?        keyboardType;
+  final TextInputAction?      textInputAction;
+  final TextDirection?        textDirection;
+  final String?               errorText;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback?         onEditingComplete;
+
+  const _GlassInput({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    this.hint,
+    this.isPassword          = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.textDirection,
+    this.errorText,
+    this.onChanged,
+    this.onEditingComplete,
+  });
+
+  @override
+  State<_GlassInput> createState() => _GlassInputState();
+}
+
+class _GlassInputState extends State<_GlassInput> {
+  final _focus = FocusNode();
+  bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focused  = _focus.hasFocus;
+    final hasError = widget.errorText != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.label,
+          style: TextStyle(
+            color: hasError
+                ? AppColors.danger
+                : focused
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.72),
+            fontSize:    13,
+            fontWeight:  FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: hasError
+                  ? AppColors.danger
+                  : focused
+                      ? Colors.white.withValues(alpha: 0.85)
+                      : Colors.white.withValues(alpha: 0.22),
+              width: focused ? 1.5 : 1.0,
+            ),
+          ),
+          child: TextField(
+            controller:        widget.controller,
+            focusNode:         _focus,
+            obscureText:       widget.isPassword && _obscure,
+            keyboardType:      widget.keyboardType,
+            textInputAction:   widget.textInputAction,
+            textDirection:     widget.textDirection,
+            onChanged:         widget.onChanged,
+            onEditingComplete: widget.onEditingComplete,
+            cursorColor:       Colors.white,
+            style: const TextStyle(
+              color:      Colors.white,
+              fontSize:   15,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              hintText:  widget.hint,
+              hintStyle: TextStyle(
+                color:    Colors.white.withValues(alpha: 0.45),
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(
+                widget.icon,
+                color: focused
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.60),
+                size: 20,
+              ),
+              suffixIcon: widget.isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: Colors.white.withValues(alpha: 0.60),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    )
+                  : null,
+              filled:    true,
+              fillColor: Colors.transparent,
+              border:         InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical:   15,
+              ),
+            ),
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, right: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    size: 12, color: AppColors.danger),
+                const SizedBox(width: 4),
+                Text(
+                  widget.errorText!,
+                  style: const TextStyle(
+                    color:      AppColors.danger,
+                    fontSize:   11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Glass Google button ───────────────────────────────────────────────────────
+
+class _GlassGoogleButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _GlassGoogleButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 58,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.28),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.22),
+            width: 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'המשך עם Google',
+              style: AppTextStyles.bodyBold.copyWith(
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Image.network(
+              'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
+              height: 22,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.person_outline,
+                size: 22,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Gradient login button ─────────────────────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  final String        label;
+  final IconData      icon;
+  final bool          isLoading;
+  final VoidCallback? onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.icon,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: isLoading
+            ? null
+            : const LinearGradient(
+                colors: [AppColors.primary, AppColors.regalNavy],
+                begin:  Alignment.centerRight,
+                end:    Alignment.centerLeft,
+              ),
+        color: isLoading ? AppColors.primary : null,
+        boxShadow: isLoading
+            ? null
+            : [
+                BoxShadow(
+                  color:      AppColors.primary.withValues(alpha: 0.50),
+                  blurRadius: 28,
+                  spreadRadius: 0,
+                  offset:     const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color:      AppColors.primary.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset:     const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width:  24,
+                    height: 24,
+                    child:  CircularProgressIndicator(
+                      color:       Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color:        Colors.white,
+                          fontWeight:   FontWeight.w800,
+                          fontSize:     16,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(icon, color: Colors.white, size: 20),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -411,32 +723,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-class _BackButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final Color? color;
-  final Color? iconColor;
+// ── Circle back button ────────────────────────────────────────────────────────
 
-  const _BackButton({
-    required this.onTap,
-    this.color,
-    this.iconColor,
-  });
+class _CircleBackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CircleBackButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 42,
+        height: 42,
         decoration: BoxDecoration(
-          color: color ?? AppColors.surfaceBase,
+          color: Colors.white.withValues(alpha: 0.18),
           borderRadius: AppRadius.mdRadius,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.30),
+            width: 1,
+          ),
         ),
-        child: Icon(
-          Icons.arrow_forward_rounded,
-          size: 22,
-          color: iconColor ?? AppColors.textSecondary,
+        child: const Icon(
+          Icons.arrow_back_rounded,
+          size: 20,
+          color: Colors.white,
         ),
       ),
     );

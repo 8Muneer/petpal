@@ -6,7 +6,7 @@ part of 'poi_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$nearbyPOIsHash() => r'a03b4606783ed9a12cb410e070b681bcf23d2a99';
+String _$nearbyPOIsHash() => r'58e5d316bdb33ca74510305740795185045a7c79';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -173,7 +173,7 @@ final allPOIsProvider = AutoDisposeStreamProvider<List<POI>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AllPOIsRef = AutoDisposeStreamProviderRef<List<POI>>;
-String _$poiByIdHash() => r'54335341440dc1e6470b6ac9c4681196226b1ef9';
+String _$poiByIdHash() => r'1abbb4c5611d03bb7dfd6f36dbe958cbe1c605fa';
 
 /// See also [poiById].
 @ProviderFor(poiById)

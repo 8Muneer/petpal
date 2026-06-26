@@ -20,7 +20,6 @@ import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_f
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
 import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
 import 'package:petpal/features/home/presentation/widgets/services_tab.dart';
-import 'package:petpal/features/messaging/presentation/widgets/chat_tab.dart';
 import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
 import 'package:petpal/features/explore/presentation/widgets/poi_card.dart';
@@ -78,7 +77,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               3 => const LostFoundFeedScreen(),
               4 => const ServicesTab(),
               5 => const MyRequestsTab(),
-              6 => const ChatTab(),
               _ => const SizedBox.shrink(),
             });
   }
@@ -129,7 +127,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             AppNavItem(
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
-                label: 'פיד'),
+                label: 'קהילה'),
             AppNavItem(
                 icon: Icons.explore_outlined,
                 activeIcon: Icons.explore_rounded,
@@ -145,11 +143,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             AppNavItem(
                 icon: Icons.assignment_outlined,
                 activeIcon: Icons.assignment_rounded,
-                label: 'הזמנות'),
-            AppNavItem(
-                icon: Icons.chat_bubble_outline_rounded,
-                activeIcon: Icons.chat_bubble_rounded,
-                label: 'צ׳אט'),
+                label: 'בקשות'),
           ],
         ),
       ),
@@ -248,6 +242,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               profileImageUrl: profile?.photoUrl,
               userName: profile?.name,
               onNotificationTap: () => context.push('/notifications'),
+              onChatTap: () => context.push('/chat'),
               profileMenuItems: buildProfileMenuItems(context),
             ),
 
@@ -301,7 +296,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                       ),
                       const SizedBox(width: 12),
                       DiscoveryChip(
-                        label: 'פיד',
+                        label: 'קהילה',
                         icon: Icons.feed_outlined,
                         onTap: () => widget.onTabChange(1),
                       ),
@@ -311,90 +306,90 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               ),
             ),
 
-            // 3. My Sitting Requests
-            SliverToBoxAdapter(
-              child: sittingReqAsync.when(
-                data: (requests) {
-                  if (requests.isEmpty) return const SizedBox.shrink();
-                  return HomeTopRatedSection(
-                    title: 'בקשות השמירה שלי',
-                    itemHeight: 180,
-                    onMoreTap: () => widget.onTabChange(5),
-                    itemCount: requests.take(10).length,
-                    itemBuilder: (context, index) {
-                      final req = requests[index];
-                      return SittingRequestHomeCard(
-                        request: req,
-                        statusColor: _sittingStatusColor(req.status),
-                        statusLabel: _sittingStatusLabel(req.status),
-                        onTap: () =>
-                            context.push('/sitting/detail', extra: req),
-                      );
-                    },
-                  );
-                },
-                loading: () => const SizedBox(
-                    height: 180,
-                    child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (e, _) => Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          size: 16, color: AppColors.error),
-                      const SizedBox(width: 8),
-                      Text('שגיאה בטעינה',
-                          style: AppTextStyles.labelMd
-                              .copyWith(color: AppColors.error)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // // 3. My Sitting Requests
+            // SliverToBoxAdapter(
+            //   child: sittingReqAsync.when(
+            //     data: (requests) {
+            //       if (requests.isEmpty) return const SizedBox.shrink();
+            //       return HomeTopRatedSection(
+            //         title: 'בקשות השמירה שלי',
+            //         itemHeight: 180,
+            //         onMoreTap: () => widget.onTabChange(5),
+            //         itemCount: requests.take(10).length,
+            //         itemBuilder: (context, index) {
+            //           final req = requests[index];
+            //           return SittingRequestHomeCard(
+            //             request: req,
+            //             statusColor: _sittingStatusColor(req.status),
+            //             statusLabel: _sittingStatusLabel(req.status),
+            //             onTap: () =>
+            //                 context.push('/sitting/detail', extra: req),
+            //           );
+            //         },
+            //       );
+            //     },
+            //     loading: () => const SizedBox(
+            //         height: 180,
+            //         child: Center(
+            //             child: CircularProgressIndicator(strokeWidth: 2))),
+            //     error: (e, _) => Padding(
+            //       padding:
+            //           const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            //       child: Row(
+            //         children: [
+            //           const Icon(Icons.error_outline_rounded,
+            //               size: 16, color: AppColors.error),
+            //           const SizedBox(width: 8),
+            //           Text('שגיאה בטעינה',
+            //               style: AppTextStyles.labelMd
+            //                   .copyWith(color: AppColors.error)),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 5)),
+            // const SliverToBoxAdapter(child: SizedBox(height: 5)),
 
-            // 4. My Walk Requests
-            SliverToBoxAdapter(
-              child: walkReqAsync.when(
-                data: (requests) {
-                  if (requests.isEmpty) return const SizedBox.shrink();
-                  return HomeTopRatedSection(
-                    title: 'בקשות הטיול שלי',
-                    itemHeight: 180,
-                    onMoreTap: () => widget.onTabChange(5),
-                    itemCount: requests.take(10).length,
-                    itemBuilder: (context, index) {
-                      final req = requests[index];
-                      return WalkRequestHomeCard(
-                        request: req,
-                        onTap: () => context.push('/walks/detail', extra: req),
-                      );
-                    },
-                  );
-                },
-                loading: () => const SizedBox(
-                    height: 180,
-                    child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (e, _) => Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          size: 16, color: AppColors.error),
-                      const SizedBox(width: 8),
-                      Text('שגיאה בטעינה',
-                          style: AppTextStyles.labelMd
-                              .copyWith(color: AppColors.error)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // // 4. My Walk Requests
+            // SliverToBoxAdapter(
+            //   child: walkReqAsync.when(
+            //     data: (requests) {
+            //       if (requests.isEmpty) return const SizedBox.shrink();
+            //       return HomeTopRatedSection(
+            //         title: 'בקשות הטיול שלי',
+            //         itemHeight: 180,
+            //         onMoreTap: () => widget.onTabChange(5),
+            //         itemCount: requests.take(10).length,
+            //         itemBuilder: (context, index) {
+            //           final req = requests[index];
+            //           return WalkRequestHomeCard(
+            //             request: req,
+            //             onTap: () => context.push('/walks/detail', extra: req),
+            //           );
+            //         },
+            //       );
+            //     },
+            //     loading: () => const SizedBox(
+            //         height: 180,
+            //         child: Center(
+            //             child: CircularProgressIndicator(strokeWidth: 2))),
+            //     error: (e, _) => Padding(
+            //       padding:
+            //           const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            //       child: Row(
+            //         children: [
+            //           const Icon(Icons.error_outline_rounded,
+            //               size: 16, color: AppColors.error),
+            //           const SizedBox(width: 8),
+            //           Text('שגיאה בטעינה',
+            //               style: AppTextStyles.labelMd
+            //                   .copyWith(color: AppColors.error)),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 2)),
 

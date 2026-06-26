@@ -1,5 +1,4 @@
-﻿import 'dart:ui';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 
 /// A premium glassmorphic container with high-blur and soft borders.
@@ -40,9 +39,7 @@ class GlassCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: effectiveRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Material(
+        child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: onTap,
@@ -63,7 +60,6 @@ class GlassCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

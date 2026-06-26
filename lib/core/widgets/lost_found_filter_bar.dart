@@ -1,5 +1,4 @@
-﻿import 'dart:ui';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/lost_and_found/presentation/providers/lost_found_controller.dart';
 
@@ -21,9 +20,7 @@ class LostFoundFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
+      child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.9),
@@ -60,7 +57,6 @@ class LostFoundFilterBar extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 

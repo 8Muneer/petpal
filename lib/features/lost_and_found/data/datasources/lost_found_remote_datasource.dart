@@ -101,8 +101,8 @@ class LostFoundRemoteDatasource {
     await _col.doc(postId).update({'status': 'resolved'});
   }
 
-  Future<String> uploadImage(String postId, XFile file) async {
-    final ref = _storage.ref().child('lost_found/$postId');
+  Future<String> uploadImage(String uid, String postId, XFile file) async {
+    final ref = _storage.ref().child('lost_found/$uid/$postId');
     await ref.putData(
       await file.readAsBytes(),
       SettableMetadata(contentType: 'image/jpeg'),

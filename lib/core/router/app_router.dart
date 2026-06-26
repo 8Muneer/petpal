@@ -377,6 +377,15 @@ class AppRouter {
       // If not logged in, redirect to onboarding
       if (user == null) return '/onboarding';
 
+      // Admin routes are also enforced server-side by isAdmin() in
+      // firestore.rules for every actual write — this check is the
+      // client-side defense-in-depth layer, so a non-admin can't even open
+      // the admin shell via a deep link or context.go('/admin').
+      if (location.startsWith('/admin')) {
+        final role = await fetchUserRole(user.uid);
+        if (role?.toLowerCase() != 'admin') return '/';
+      }
+
       return null;
     },
   );

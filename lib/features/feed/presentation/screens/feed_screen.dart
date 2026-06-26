@@ -9,6 +9,8 @@ import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/time_ago_text.dart';
+import 'package:petpal/core/widgets/report_content_dialog.dart';
+import 'package:petpal/features/admin/domain/entities/report_model.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
@@ -67,12 +69,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ),
             slivers: [
               // Shared app header (avatar · title · bell)
-              AppHeaderBar.sliver(title: 'פיד', subtitle: 'קהילת PetPal'),
+              AppHeaderBar.sliver(title: 'קהילה', subtitle: 'קהילת PetPal'),
 
               // Sticky filter bar
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _SliverFeedFilterDelegate(
+                  selectedFilter: selectedFilter,
                   child: Container(
                     color: AppColors.surface,
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -194,9 +197,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                   _showLoginDialog(context);
                                   return;
                                 }
+                                final isLiked = post.isLikedBy(uid);
+                                ref
+                                    .read(paginatedFeedProvider.notifier)
+                                    .localToggleLike(post.id, uid);
                                 ref
                                     .read(feedRepositoryProvider)
-                                    .toggleLike(post.id, uid);
+                                    .toggleLike(post.id, uid,
+                                        isCurrentlyLiked: isLiked);
                               },
                               onEdit: () => context.push(
                                 '/feed/edit',
@@ -229,7 +237,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
 class _SliverFeedFilterDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
-  const _SliverFeedFilterDelegate({required this.child});
+  final String selectedFilter;
+  const _SliverFeedFilterDelegate({required this.child, required this.selectedFilter});
 
   @override
   double get minExtent => 72;
@@ -243,7 +252,8 @@ class _SliverFeedFilterDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _SliverFeedFilterDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _SliverFeedFilterDelegate oldDelegate) =>
+      oldDelegate.selectedFilter != selectedFilter;
 }
 
 // ─── Filter bar ───────────────────────────────────────────────────────────────
@@ -599,6 +609,20 @@ class _PostCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.flag_outlined,
+                        size: 20, color: AppColors.textSecondary),
+                    tooltip: 'דווח על הפוסט',
+                    onPressed: () {
+                      if (currentUid.isEmpty) {
+                        _showLoginDialog(context);
+                        return;
+                      }
+                      showReportDialog(context,
+                          targetId: post.id, type: ReportType.post);
+                    },
                   ),
               ],
             ),

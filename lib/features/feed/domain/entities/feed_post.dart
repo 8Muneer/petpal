@@ -32,6 +32,21 @@ class FeedPost extends Equatable {
 
   bool isLikedBy(String uid) => likes.contains(uid);
 
+  FeedPost copyWith({List<String>? likes, int? commentCount}) {
+    return FeedPost(
+      id: id,
+      authorUid: authorUid,
+      authorName: authorName,
+      authorPhotoUrl: authorPhotoUrl,
+      type: type,
+      content: content,
+      imageUrls: imageUrls,
+      likes: likes ?? this.likes,
+      commentCount: commentCount ?? this.commentCount,
+      createdAt: createdAt,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,

@@ -27,21 +27,25 @@ class FeedRemoteDatasource {
     return doc.id;
   }
 
-  Future<void> toggleLike(String postId, String uid) async {
+  Future<void> toggleLike(String postId, String uid,
+      {bool? isCurrentlyLiked}) async {
     final doc = _postsRef.doc(postId);
-    final snap = await doc.get();
-    final likes = List<String>.from(
-        (snap.data() as Map<String, dynamic>?)?['likes'] ?? []);
+    final bool shouldRemove;
 
-    if (likes.contains(uid)) {
-      await doc.update({
-        'likes': FieldValue.arrayRemove([uid]),
-      });
+    if (isCurrentlyLiked != null) {
+      shouldRemove = isCurrentlyLiked;
     } else {
-      await doc.update({
-        'likes': FieldValue.arrayUnion([uid]),
-      });
+      final snap = await doc.get();
+      final likes = List<String>.from(
+          (snap.data() as Map<String, dynamic>?)?['likes'] ?? []);
+      shouldRemove = likes.contains(uid);
     }
+
+    await doc.update({
+      'likes': shouldRemove
+          ? FieldValue.arrayRemove([uid])
+          : FieldValue.arrayUnion([uid]),
+    });
   }
 
   Future<void> addComment(String postId, Map<String, dynamic> data) async {

@@ -1,12 +1,27 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/features/lost_and_found/data/datasources/gemini_matching_service.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
-import 'package:petpal/features/lost_and_found/presentation/providers/lost_found_provider.dart';
+
+/// Local result type — replaces the removed client-side GeminiMatchResult.
+class _MatchResult {
+  final int confidence;
+  final String reason;
+  final List<MatchFeature> comparisonTable;
+
+  const _MatchResult({
+    required this.confidence,
+    required this.reason,
+    required this.comparisonTable,
+  });
+
+  /// Single source of truth: mirrors MATCH_THRESHOLD = 50 in functions/index.js
+  bool get isMatch => confidence >= 50;
+}
 
 class AiCompareScreen extends ConsumerStatefulWidget {
   final LostFoundPost post1;
@@ -27,7 +42,7 @@ enum _CompareState { idle, loading, result }
 class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
     with TickerProviderStateMixin {
   _CompareState _state = _CompareState.idle;
-  GeminiMatchResult? _result;
+  _MatchResult? _result;
   late AnimationController _pulseController;
   late AnimationController _resultController;
   late Animation<double> _confidenceAnim;
@@ -58,16 +73,10 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
     // Pre-populate with cached match result if it exists in post1's matches list
     final cachedMatch = widget.post1.matches.firstWhereOrNull((m) => m.postId == widget.post2.id);
     if (cachedMatch != null) {
-      _result = GeminiMatchResult(
-        isMatch: cachedMatch.confidence >= 50,
+      _result = _MatchResult(
         confidence: cachedMatch.confidence,
         reason: cachedMatch.reason,
-        comparisonTable: cachedMatch.features.map((f) => GeminiMatchFeature(
-          featureName: f.featureName,
-          pet1Value: f.pet1Value,
-          pet2Value: f.pet2Value,
-          status: f.status,
-        )).toList(),
+        comparisonTable: cachedMatch.features, // already List<MatchFeature>
       );
       _state = _CompareState.result;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,18 +98,42 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
       _result = null;
     });
 
-    final gemini = ref.read(geminiServiceProvider);
-    final result = await gemini.compareImages(
-      widget.post1.imageUrl,
-      widget.post2.imageUrl,
-    );
+    try {
+      final callable = FirebaseFunctions.instance
+          .httpsCallable('compareLostFoundPair');
+      final response = await callable.call({
+        'postId1': widget.post1.id,
+        'postId2': widget.post2.id,
+      });
 
-    if (!mounted) return;
-    setState(() {
-      _result = result;
-      _state = _CompareState.result;
-    });
-    _resultController.forward(from: 0);
+      if (!mounted) return;
+
+      final data = Map<String, dynamic>.from(response.data as Map);
+      final rawTable = data['comparisonTable'] as List? ?? [];
+      final table = rawTable.map((f) {
+        final m = Map<String, dynamic>.from(f as Map);
+        return MatchFeature(
+          featureName: m['featureName'] as String? ?? '',
+          pet1Value: m['pet1Value'] as String? ?? '',
+          pet2Value: m['pet2Value'] as String? ?? '',
+          status: m['status'] as String? ?? 'CANNOT_DETERMINE',
+        );
+      }).toList();
+
+      setState(() {
+        _result = _MatchResult(
+          confidence: (data['confidence'] as num?)?.toInt() ?? 0,
+          reason: data['reason'] as String? ?? '',
+          comparisonTable: table,
+        );
+        _state = _CompareState.result;
+      });
+      _resultController.forward(from: 0);
+    } catch (_) {
+      if (!mounted) return;
+      // _result stays null → _buildResultState shows _buildErrorState
+      setState(() => _state = _CompareState.result);
+    }
   }
 
   Color get _confidenceColor {
@@ -313,7 +346,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
       return _buildErrorState();
     }
 
-    final isMatch = _result!.isMatch && _result!.confidence >= 60;
+    final isMatch = _result!.isMatch; // confidence >= 50, mirrors MATCH_THRESHOLD in functions/index.js
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -431,7 +464,7 @@ class _AiCompareScreenState extends ConsumerState<AiCompareScreen>
     );
   }
 
-  Widget _buildComparisonTable(List<GeminiMatchFeature> features) {
+  Widget _buildComparisonTable(List<MatchFeature> features) {
     if (features.isEmpty) return const SizedBox.shrink();
 
     return Column(

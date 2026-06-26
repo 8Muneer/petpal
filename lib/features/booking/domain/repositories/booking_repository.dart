@@ -6,4 +6,6 @@ abstract class BookingRepository {
   Future<String> createBooking(Map<String, dynamic> data);
   Future<void> updateBookingStatus(String bookingId, BookingStatus status, {String? providerNote});
   Future<void> cancelBooking(String bookingId);
+  Future<void> cancelBookingByProvider(String bookingId);
+  Future<void> disputeCompletion(String bookingId);
 }

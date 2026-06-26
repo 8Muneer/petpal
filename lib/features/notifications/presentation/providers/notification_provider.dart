@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/features/notifications/data/datasources/notification_remote_datasource.dart';
@@ -16,25 +15,26 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
 
 /// Real-time stream of notifications for the current user.
 final notificationsProvider = StreamProvider<List<AppNotification>>((ref) {
-  final authState = ref.watch(authStateChangesProvider);
-  final uid = authState.asData?.value?.uid ?? '';
-  debugPrint('[notificationsProvider] authState: $authState, uid: $uid');
-  if (uid.isEmpty) {
-    debugPrint('[notificationsProvider] Return empty stream because uid is empty');
-    return const Stream.empty();
-  }
+  final uid = ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
+  if (uid.isEmpty) return const Stream.empty();
   return ref.watch(notificationRepositoryProvider).watchNotifications(uid);
 });
 
-/// Unread count — drives the bell badge in LuxuryHero.
+/// Live unread count (capped at 10), independent of the 50-doc display window.
+/// Driving the badge off this dedicated query — rather than counting unread
+/// items inside notificationsProvider's most-recent-50 stream — fixes the
+/// undercount where unread notifications older than the latest 50 were missed.
+final _unreadNotificationCountStreamProvider = StreamProvider<int>((ref) {
+  final uid = ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
+  if (uid.isEmpty) return Stream.value(0);
+  return ref.watch(notificationDatasourceProvider).watchUnreadCount(uid);
+});
+
+/// Unread count — drives the bell badge in LuxuryHero. Stays a synchronous
+/// `Provider<int>` so existing consumers don't change; unwraps the stream and
+/// falls back to 0 while it's still loading.
 final unreadNotificationCountProvider = Provider<int>((ref) {
-  return ref
-          .watch(notificationsProvider)
-          .asData
-          ?.value
-          .where((n) => !n.isRead)
-          .length ??
-      0;
+  return ref.watch(_unreadNotificationCountStreamProvider).asData?.value ?? 0;
 });
 
 /// Actions: markAsRead, markAllAsRead, delete.

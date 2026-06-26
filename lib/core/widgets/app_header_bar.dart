@@ -136,18 +136,45 @@ class _HeaderContent extends StatelessWidget {
               ],
             ),
           ),
-          // Trailing (left in RTL): notification bell.
-          SizedBox(
-            width: 48,
-            child: isLoggedIn
-                ? Center(
-                    child: NotificationBellButton(
-                      onLight: true,
-                      onTap: () => context.push('/notifications'),
+          // Trailing (left in RTL): chat + notification bell.
+          if (isLoggedIn)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () => context.push('/chat'),
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.20),
+                              width: 1),
+                        ),
+                        child: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: AppColors.textPrimary,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                  )
-                : null,
-          ),
+                  ),
+                ),
+                NotificationBellButton(
+                  onLight: true,
+                  onTap: () => context.push('/notifications'),
+                ),
+              ],
+            )
+          else
+            const SizedBox(width: 48),
         ],
       ),
     );

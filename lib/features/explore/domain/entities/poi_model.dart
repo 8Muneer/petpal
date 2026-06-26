@@ -17,8 +17,8 @@ class POI with _$POI {
     required String name,
     required POIType type,
     @Default(false) bool isEmergency,
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     @Default(0.0) double rating,
     @Default(0) int reviewCount,
     String? imageUrl,
@@ -45,10 +45,28 @@ class POI with _$POI {
   factory POI.fromJson(Map<String, dynamic> json) => _$POIFromJson(json);
 
   factory POI.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    // doc.data() returns null when a document is deleted between the snapshot
+    // emission and the time we iterate — guard against that to avoid CastError.
+    final data = (doc.data() as Map<String, dynamic>?) ?? {};
     return POI.fromJson({
       ...data,
       'id': doc.id,
     });
   }
+}
+
+/// Extension instead of an in-class getter so that the Freezed-generated
+/// _$POIImpl concrete class does not need to implement this method.
+///
+/// Placing a getter inside the @freezed class body requires the private
+/// `const POI._()` constructor AND a build_runner regeneration to include
+/// the getter in _$POIImpl. An extension achieves identical call-site syntax
+/// (`poi.effectiveIsEmergency`) without touching the generated file at all.
+extension POIBadgeX on POI {
+  /// Whether this POI should display the emergency badge.
+  ///
+  /// `isEmergency` is only semantically valid for vets — this enforces that
+  /// invariant at read time so stale Firestore documents with
+  /// `isEmergency: true` on a park or store never show the badge.
+  bool get effectiveIsEmergency => type == POIType.vet && isEmergency;
 }

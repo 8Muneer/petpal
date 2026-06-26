@@ -5,10 +5,7 @@ import 'package:petpal/features/auth/data/repositories/auth_repository_impl.dart
 import 'package:petpal/features/auth/domain/repositories/auth_repository.dart';
 
 final authRemoteDatasourceProvider = Provider<AuthRemoteDatasource>((ref) {
-  return AuthRemoteDatasource(
-    auth: ref.watch(firebaseAuthProvider),
-    firestore: ref.watch(firebaseFirestoreProvider),
-  );
+  return AuthRemoteDatasource(auth: ref.watch(firebaseAuthProvider));
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
