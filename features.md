@@ -1,1 +1,0 @@
- feedback and ratings, closest dog park, emergency vet clinic,  vet ratings, pet stores, notification of new matches.  forums management (outings, advice, recommendations, gallery by topic), picture of the day,  warnings: poison, food recalls, rabies alert,  wild animals.

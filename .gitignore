@@ -74,4 +74,14 @@ analyze_results.txt
 PRODUCT.md
 design.md
 
+# Final Presentation
+final_presentation/
+
+# College report drafts & personal review tooling (not app code)
+/report.docx
+/report.md
+/reports/
+/tools/
+
+
 
