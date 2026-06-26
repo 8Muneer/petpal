@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
@@ -175,6 +176,57 @@ class _MyRequestsTabState extends ConsumerState<MyRequestsTab> {
 
   static const _filters = ['הכל', 'בקשות טיולים', 'בקשות שמירה'];
 
+  Widget _buildTabButton(int index, String label) {
+    final isSelected = _selected == index;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _selected = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.2)
+                : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isSelected ? AppColors.primary : AppColors.textMuted,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabSeparator() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 2),
+      child: Text(
+        '|',
+        style: TextStyle(
+          color: AppColors.border,
+          fontSize: 16,
+          fontWeight: FontWeight.w300,
+        ),
+      ),
+    );
+  }
+
   void _showCreateSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -248,44 +300,34 @@ class _MyRequestsTabState extends ConsumerState<MyRequestsTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Feed-style filter bar ────────────────────────────────────────
-              Container(
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.divider)),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.pureWhite,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: AppColors.border.withValues(alpha: 0.4),
+                        blurRadius: 1,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(4),
                   child: Row(
-                    children: List.generate(_filters.length, (i) {
-                      final selected = _selected == i;
-                      return GestureDetector(
-                        onTap: () => setState(() => _selected = i),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 14),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: selected
-                                    ? AppColors.primary
-                                    : Colors.transparent,
-                                width: 2.5,
-                              ),
-                            ),
-                          ),
-                          child: Text(
-                            _filters[i],
-                            style: AppTextStyles.bodyMd.copyWith(
-                              color: selected
-                                  ? AppColors.primary
-                                  : AppColors.textMuted,
-                              fontWeight:
-                                  selected ? FontWeight.w800 : FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+                    children: [
+                      Expanded(child: _buildTabButton(0, _filters[0])),
+                      _buildTabSeparator(),
+                      Expanded(child: _buildTabButton(1, _filters[1])),
+                      _buildTabSeparator(),
+                      Expanded(child: _buildTabButton(2, _filters[2])),
+                    ],
                   ),
                 ),
               ),

@@ -306,90 +306,90 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               ),
             ),
 
-            // 3. My Sitting Requests
-            SliverToBoxAdapter(
-              child: sittingReqAsync.when(
-                data: (requests) {
-                  if (requests.isEmpty) return const SizedBox.shrink();
-                  return HomeTopRatedSection(
-                    title: 'בקשות השמירה שלי',
-                    itemHeight: 180,
-                    onMoreTap: () => widget.onTabChange(5),
-                    itemCount: requests.take(10).length,
-                    itemBuilder: (context, index) {
-                      final req = requests[index];
-                      return SittingRequestHomeCard(
-                        request: req,
-                        statusColor: _sittingStatusColor(req.status),
-                        statusLabel: _sittingStatusLabel(req.status),
-                        onTap: () =>
-                            context.push('/sitting/detail', extra: req),
-                      );
-                    },
-                  );
-                },
-                loading: () => const SizedBox(
-                    height: 180,
-                    child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (e, _) => Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          size: 16, color: AppColors.error),
-                      const SizedBox(width: 8),
-                      Text('שגיאה בטעינה',
-                          style: AppTextStyles.labelMd
-                              .copyWith(color: AppColors.error)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // // 3. My Sitting Requests
+            // SliverToBoxAdapter(
+            //   child: sittingReqAsync.when(
+            //     data: (requests) {
+            //       if (requests.isEmpty) return const SizedBox.shrink();
+            //       return HomeTopRatedSection(
+            //         title: 'בקשות השמירה שלי',
+            //         itemHeight: 180,
+            //         onMoreTap: () => widget.onTabChange(5),
+            //         itemCount: requests.take(10).length,
+            //         itemBuilder: (context, index) {
+            //           final req = requests[index];
+            //           return SittingRequestHomeCard(
+            //             request: req,
+            //             statusColor: _sittingStatusColor(req.status),
+            //             statusLabel: _sittingStatusLabel(req.status),
+            //             onTap: () =>
+            //                 context.push('/sitting/detail', extra: req),
+            //           );
+            //         },
+            //       );
+            //     },
+            //     loading: () => const SizedBox(
+            //         height: 180,
+            //         child: Center(
+            //             child: CircularProgressIndicator(strokeWidth: 2))),
+            //     error: (e, _) => Padding(
+            //       padding:
+            //           const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            //       child: Row(
+            //         children: [
+            //           const Icon(Icons.error_outline_rounded,
+            //               size: 16, color: AppColors.error),
+            //           const SizedBox(width: 8),
+            //           Text('שגיאה בטעינה',
+            //               style: AppTextStyles.labelMd
+            //                   .copyWith(color: AppColors.error)),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 5)),
+            // const SliverToBoxAdapter(child: SizedBox(height: 5)),
 
-            // 4. My Walk Requests
-            SliverToBoxAdapter(
-              child: walkReqAsync.when(
-                data: (requests) {
-                  if (requests.isEmpty) return const SizedBox.shrink();
-                  return HomeTopRatedSection(
-                    title: 'בקשות הטיול שלי',
-                    itemHeight: 180,
-                    onMoreTap: () => widget.onTabChange(5),
-                    itemCount: requests.take(10).length,
-                    itemBuilder: (context, index) {
-                      final req = requests[index];
-                      return WalkRequestHomeCard(
-                        request: req,
-                        onTap: () => context.push('/walks/detail', extra: req),
-                      );
-                    },
-                  );
-                },
-                loading: () => const SizedBox(
-                    height: 180,
-                    child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2))),
-                error: (e, _) => Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          size: 16, color: AppColors.error),
-                      const SizedBox(width: 8),
-                      Text('שגיאה בטעינה',
-                          style: AppTextStyles.labelMd
-                              .copyWith(color: AppColors.error)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // // 4. My Walk Requests
+            // SliverToBoxAdapter(
+            //   child: walkReqAsync.when(
+            //     data: (requests) {
+            //       if (requests.isEmpty) return const SizedBox.shrink();
+            //       return HomeTopRatedSection(
+            //         title: 'בקשות הטיול שלי',
+            //         itemHeight: 180,
+            //         onMoreTap: () => widget.onTabChange(5),
+            //         itemCount: requests.take(10).length,
+            //         itemBuilder: (context, index) {
+            //           final req = requests[index];
+            //           return WalkRequestHomeCard(
+            //             request: req,
+            //             onTap: () => context.push('/walks/detail', extra: req),
+            //           );
+            //         },
+            //       );
+            //     },
+            //     loading: () => const SizedBox(
+            //         height: 180,
+            //         child: Center(
+            //             child: CircularProgressIndicator(strokeWidth: 2))),
+            //     error: (e, _) => Padding(
+            //       padding:
+            //           const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            //       child: Row(
+            //         children: [
+            //           const Icon(Icons.error_outline_rounded,
+            //               size: 16, color: AppColors.error),
+            //           const SizedBox(width: 8),
+            //           Text('שגיאה בטעינה',
+            //               style: AppTextStyles.labelMd
+            //                   .copyWith(color: AppColors.error)),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 2)),
 

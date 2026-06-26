@@ -63,6 +63,7 @@ class _ServiceProviderHomeScreenState
   @override
   Widget build(BuildContext context) {
     final showMyServices = ref.watch(showProviderServicesProvider);
+    final pendingCount = ref.watch(pendingBookingCountProvider);
     final tabs = <Widget>[
       _ProviderHomeTab(
         onAction: (msg) => _toast(msg),
@@ -95,23 +96,24 @@ class _ServiceProviderHomeScreenState
         bottomNavigationBar: AppBottomNav(
           currentIndex: showMyServices ? -1 : _currentIndex,
           onChanged: _onNavChanged,
-          items: const [
-            AppNavItem(
+          items: [
+            const AppNavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
                 label: 'בית'),
-            AppNavItem(
+            const AppNavItem(
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
                 label: 'קהילה'),
-            AppNavItem(
+            const AppNavItem(
                 icon: Icons.pets_outlined,
                 activeIcon: Icons.pets_rounded,
                 label: 'אבודים'),
             AppNavItem(
                 icon: Icons.assignment_outlined,
                 activeIcon: Icons.assignment_rounded,
-                label: 'הבקשות'),
+                label: 'הבקשות',
+                badgeCount: pendingCount),
           ],
         ),
       ),
@@ -467,8 +469,11 @@ class _ProviderHomeTab extends ConsumerWidget {
       return false;
     }
 
-    final accepted =
-        incoming.where((b) => b.status == BookingStatus.accepted).toList();
+    final accepted = incoming
+        .where((b) =>
+            b.status == BookingStatus.accepted ||
+            b.status == BookingStatus.awaitingConfirmation)
+        .toList();
     final todayJobs = accepted.where(coversToday).toList();
     final upcomingCount = accepted.where((b) {
       final d = b.requestedDate ?? b.startDate;
@@ -741,10 +746,15 @@ class _ProviderHomeTab extends ConsumerWidget {
 
         const SizedBox(height: 12),
 
-        // --- Open opportunities near the provider (horizontal) ---
+        // --- Open opportunities (horizontal) ---
+        // Note: not actually area-filtered — openWalkRequestsProvider/
+        // openSittingRequestsProvider return every open request nationwide.
+        // Title intentionally doesn't claim "near you" until real geo-filtering
+        // exists (would need a provider-level area/location field, which the
+        // profile doesn't have today).
         if (opportunities.isNotEmpty) ...[
           HomeTopRatedSection(
-            title: 'הזדמנויות חדשות באזורך',
+            title: 'הזדמנויות חדשות',
             itemHeight: 165,
             onMoreTap: () => onSelectTab(3),
             itemCount: opportunities.length,
