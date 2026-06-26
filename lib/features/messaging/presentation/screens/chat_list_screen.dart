@@ -87,6 +87,10 @@ class ChatListScreen extends ConsumerWidget {
                         final timeStr = ts != null
                             ? _formatTime(ts.toDate())
                             : '';
+                        final unreadCounts = Map<String, dynamic>.from(
+                            c['unreadCounts'] ?? {});
+                        final unread =
+                            (unreadCounts[myUid] as num?)?.toInt() ?? 0;
 
                         return Padding(
                           padding:
@@ -124,8 +128,13 @@ class ChatListScreen extends ConsumerWidget {
                                             : lastMsg,
                                         style: AppTextStyles.caption
                                             .copyWith(
-                                                color: AppColors
-                                                    .textSecondary),
+                                                color: unread > 0
+                                                    ? AppColors.textPrimary
+                                                    : AppColors
+                                                        .textSecondary,
+                                                fontWeight: unread > 0
+                                                    ? FontWeight.w700
+                                                    : null),
                                         maxLines: 1,
                                         overflow:
                                             TextOverflow.ellipsis,
@@ -133,12 +142,40 @@ class ChatListScreen extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
-                                if (timeStr.isNotEmpty)
-                                  Text(timeStr,
-                                      style: AppTextStyles.caption
-                                          .copyWith(
-                                              color: AppColors
-                                                  .textMuted)),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    if (timeStr.isNotEmpty)
+                                      Text(timeStr,
+                                          style: AppTextStyles.caption
+                                              .copyWith(
+                                                  color: AppColors
+                                                      .textMuted)),
+                                    if (unread > 0) ...[
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 1),
+                                        constraints: const BoxConstraints(
+                                            minWidth: 18, minHeight: 18),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          unread > 9 ? '9+' : '$unread',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ],
                             ),
                           ),

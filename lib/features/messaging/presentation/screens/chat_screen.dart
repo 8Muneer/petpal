@@ -40,6 +40,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   User? get _me => FirebaseAuth.instance.currentUser;
 
   @override
+  void initState() {
+    super.initState();
+    final uid = _me?.uid;
+    if (uid != null) {
+      ref.read(messagingDatasourceProvider).markRead(
+            widget.conversationId,
+            uid,
+          );
+    }
+  }
+
+  @override
   void dispose() {
     _ctrl.dispose();
     _scrollCtrl.dispose();
@@ -72,10 +84,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _deleteMessage(String messageId) async {
-    await ref.read(messagingDatasourceProvider).deleteMessage(
-          widget.conversationId,
-          messageId,
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('מחיקת הודעה'),
+          content: const Text(
+            'למחוק את ההודעה? פעולה זו אינה ניתנת לשחזור.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
+              child: const Text('מחק'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(messagingDatasourceProvider).deleteMessage(
+            widget.conversationId,
+            messageId,
+          );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה במחיקת ההודעה, נסה שוב'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
+      }
+    }
   }
 
   void _scrollToBottom() {
