@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/theme/app_theme.dart';
@@ -120,7 +121,124 @@ class _UserDirectoryScreenState extends ConsumerState<UserDirectoryScreen> {
     );
   }
 
+  Future<void> _confirmPromote(Map<String, dynamic> user) async {
+    final name = (user['name'] as String?)?.trim();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('מינוי כמנהל?'),
+          content: Text(
+            '${name == null || name.isEmpty ? "המשתמש" : name} יקבל/תקבל גישה מלאה לכלי הניהול — '
+            'ניהול משתמשים, אימותים ונקודות עניין. ניתן לבטל בהמשך.\n\n'
+            'הרשאות מסוימות (כגון העלאת תמונות POI) ייכנסו לתוקף רק בכניסה הבאה של המשתמש.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('מנה כמנהל'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    await _changeRole(user, 'admin');
+  }
+
+  Future<void> _confirmRevoke(Map<String, dynamic> user) async {
+    final name = (user['name'] as String?)?.trim();
+    // The original pre-admin role isn't tracked, so the admin choosing to
+    // revoke picks what the user becomes instead — defaulting to pet owner,
+    // the lower-privilege option, rather than silently guessing.
+    String fallbackRole = 'petOwner';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('הסרת הרשאת מנהל?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${name == null || name.isEmpty ? "המשתמש" : name} יאבד/תאבד גישה לכלי הניהול. '
+                  'לאיזה תפקיד להעביר/ה?',
+                ),
+                const SizedBox(height: 12),
+                _RoleOptionRow(
+                  label: 'בעל חיה',
+                  selected: fallbackRole == 'petOwner',
+                  onTap: () => setDialogState(() => fallbackRole = 'petOwner'),
+                ),
+                _RoleOptionRow(
+                  label: 'ספק שירות',
+                  selected: fallbackRole == 'serviceProvider',
+                  onTap: () =>
+                      setDialogState(() => fallbackRole = 'serviceProvider'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error, foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('הסר הרשאה'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    await _changeRole(user, fallbackRole);
+  }
+
+  Future<void> _changeRole(Map<String, dynamic> user, String newRole) async {
+    final adminRepo = ref.read(adminRepositoryProvider);
+    final uid = user['uid'] as String;
+    try {
+      await adminRepo.setUserRole(uid, newRole);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('התפקיד עודכן בהצלחה')),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'שגיאה בעדכון התפקיד')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _handleAction(Map<String, dynamic> user, String action) async {
+    // Role changes carry their own confirm dialog and error handling — they
+    // don't fit the generic toggle try-catch below.
+    if (action == 'make_admin') return _confirmPromote(user);
+    if (action == 'revoke_admin') return _confirmRevoke(user);
+
     final adminRepo = ref.read(adminRepositoryProvider);
     final uid = user['uid'] as String;
     final isActive = user['isActive'] ?? true;
@@ -128,12 +246,6 @@ class _UserDirectoryScreenState extends ConsumerState<UserDirectoryScreen> {
       switch (action) {
         case 'toggle_status':
           await adminRepo.updateUserStatus(uid, !isActive);
-          break;
-        case 'add_karma':
-          await adminRepo.adjustUserKarma(uid, 10);
-          break;
-        case 'remove_karma':
-          await adminRepo.adjustUserKarma(uid, -10);
           break;
       }
       if (mounted) {
@@ -171,7 +283,6 @@ class _UserRow extends StatelessWidget {
     final photoUrl = user['photoUrl'] as String?;
     final isActive = user['isActive'] ?? true;
     final isVerified = user['isVerified'] == true;
-    final karma = user['karma'] ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -232,8 +343,6 @@ class _UserRow extends StatelessWidget {
                       label: isActive ? 'פעיל' : 'חסום',
                       color: isActive ? AppColors.success : AppColors.error,
                     ),
-                    _Chip(
-                        label: 'קארמה $karma', color: AppColors.twilightIndigo),
                   ],
                 ),
               ],
@@ -247,10 +356,13 @@ class _UserRow extends StatelessWidget {
                 value: 'toggle_status',
                 child: Text(isActive ? 'חסימת משתמש' : 'שחרור חסימה'),
               ),
-              const PopupMenuItem(
-                  value: 'add_karma', child: Text('הוספת קארמה (+10)')),
-              const PopupMenuItem(
-                  value: 'remove_karma', child: Text('הפחתת קארמה (−10)')),
+              const PopupMenuDivider(),
+              if (roleLabel == 'מנהל')
+                const PopupMenuItem(
+                    value: 'revoke_admin', child: Text('הסר הרשאת מנהל'))
+              else
+                const PopupMenuItem(
+                    value: 'make_admin', child: Text('מנה כמנהל')),
             ],
           ),
         ],
@@ -332,6 +444,42 @@ class _FilterChip extends StatelessWidget {
               color: selected ? Colors.white : AdminColors.inkMuted,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleOptionRow extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RoleOptionRow({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 20,
+              color: selected ? AdminColors.accent : AdminColors.inkMuted,
+            ),
+            const SizedBox(width: 10),
+            Text(label, style: AdminText.rowTitle),
+          ],
         ),
       ),
     );

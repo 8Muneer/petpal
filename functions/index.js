@@ -642,3 +642,94 @@ function _mimeFromUrl(url) {
 function _sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Admin — role assignment (server-side, Blaze)
+//
+//  Promoting/revoking admin must never be a direct client write to
+//  /users/{uid}.role — firestore.rules deliberately excludes `role` from the
+//  admin-update branch so this function is the only path. That buys us two
+//  things a raw client write can't: a guard against locking the app out of
+//  its own admin tooling by demoting the last admin, and an audit trail of
+//  who changed whose role and when.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ASSIGNABLE_ROLES = ['petOwner', 'serviceProvider', 'admin'];
+
+exports.setUserRole = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const targetUid = data && data.targetUid;
+  const newRole = data && data.newRole;
+  if (!targetUid || !ASSIGNABLE_ROLES.includes(newRole)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'targetUid and a valid newRole are required.'
+    );
+  }
+
+  const db = admin.firestore();
+  const callerRef = db.collection('users').doc(context.auth.uid);
+  const callerSnap = await callerRef.get();
+  if (callerSnap.data()?.role !== 'admin') {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Only an admin can change a user\'s role.'
+    );
+  }
+
+  const targetRef = db.collection('users').doc(targetUid);
+  const targetSnap = await targetRef.get();
+  if (!targetSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Target user not found.');
+  }
+  const previousRole = targetSnap.data()?.role || null;
+
+  if (previousRole === newRole) {
+    // Still (re-)set the custom claim even on a no-op Firestore change — this
+    // is what lets the very first bootstrapped admin (role: 'admin' already
+    // set by hand in Firestore/console, but never granted the claim) pick up
+    // `request.auth.token.role` by calling this once on themselves.
+    await admin.auth().setCustomUserClaims(targetUid, { role: newRole });
+    return { success: true, unchanged: true };
+  }
+
+  // Demoting the last admin would lock everyone out of admin tooling —
+  // including the ability to promote a new admin back in.
+  if (previousRole === 'admin' && newRole !== 'admin') {
+    const adminCountSnap = await db.collection('users')
+      .where('role', '==', 'admin')
+      .count()
+      .get();
+    if ((adminCountSnap.data().count || 0) <= 1) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Cannot remove the last remaining admin.'
+      );
+    }
+  }
+
+  await targetRef.update({ role: newRole, userType: newRole });
+
+  // Custom claims back the storage.rules poi_images admin check — Storage
+  // rules can't query Firestore the way Firestore rules' isAdmin() can, so
+  // the role has to be mirrored onto the auth token itself. Note: this only
+  // takes effect on the target's NEXT ID token refresh (new sign-in, or an
+  // explicit getIdToken(true)) — Firebase Auth doesn't push claim changes to
+  // already-issued tokens.
+  await admin.auth().setCustomUserClaims(targetUid, { role: newRole });
+
+  await db.collection('admin_audit').add({
+    actorUid: context.auth.uid,
+    actorName: callerSnap.data()?.name || null,
+    targetUid,
+    targetName: targetSnap.data()?.name || null,
+    previousRole,
+    newRole,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true, unchanged: false };
+});

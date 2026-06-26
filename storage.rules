@@ -38,5 +38,16 @@ service firebase.storage {
       allow read:  if request.auth != null;
       allow write: if request.auth != null;
     }
+
+    // POI images — uploaded by the admin POI editor.
+    // Storage rules can't run a Firestore get() the way isAdmin() does in
+    // firestore.rules, so this checks a custom auth-token claim instead.
+    // The claim is set by the setUserRole Cloud Function whenever a user's
+    // role is set to/from 'admin' (functions/index.js) — never trust the
+    // client's own routing as the enforcement layer for a write rule.
+    match /poi_images/{allPaths=**} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
   }
 }

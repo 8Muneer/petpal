@@ -2,16 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Returns true when the requesting user has role == 'admin' in their
+    // /users/{uid} document. Used to gate all POI write operations.
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && (request.auth.uid == userId || request.resource.data.isMock == true);
+      // role is restricted to non-privileged values on every create path —
+      // including the isMock seeding path — so a user can't self-assign admin
+      // at signup, and admin can only ever be granted via the setUserRole
+      // Cloud Function, which writes with the Admin SDK and bypasses these
+      // rules entirely.
+      allow create: if request.auth != null &&
+        (request.auth.uid == userId || request.resource.data.isMock == true) &&
+        request.resource.data.role in ['petOwner', 'serviceProvider'];
       // Rating aggregates (ratingAverage/reviewCount) are written exclusively by the
       // onReviewWrite Cloud Function (Admin SDK bypasses these rules) — no client
       // branch allows writing those fields, so a review can't be forged by any
       // authenticated user patching another provider's rating directly.
+      // Admins may edit any other user's document (status, verification)
+      // for moderation — but role/userType stays off-limits even for admins here,
+      // since role changes must go through setUserRole (audited, last-admin-safe).
       allow update: if request.auth != null &&
-        request.auth.uid == userId &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ratingAverage', 'reviewCount']);
+        (request.auth.uid == userId || isAdmin()) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'userType', 'ratingAverage', 'reviewCount']);
       allow delete: if request.auth != null && (request.auth.uid == userId || resource.data.isMock == true);
 
       match /pets/{petId} {
@@ -199,6 +217,15 @@ service cloud.firestore {
         request.resource.data.rating >= 1 &&
         request.resource.data.rating <= 5;
       allow delete: if request.auth != null && resource.data.isMock == true;
+    }
+
+    // ── admin_audit ──────────────────────────────────────────────────────────
+    // Written exclusively by the setUserRole Cloud Function (Admin SDK bypasses
+    // these rules) — no client branch allows writing here, so the audit trail
+    // can't be forged or cleared by an admin covering their own tracks.
+    match /admin_audit/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // ── notifications ─────────────────────────────────────────────────────────
