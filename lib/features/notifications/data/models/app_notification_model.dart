@@ -24,6 +24,15 @@ class AppNotificationModel extends AppNotification {
       case 'bookingAccepted':
         type = NotificationType.bookingAccepted;
         break;
+      case 'bookingCompletionRequested':
+        type = NotificationType.bookingCompletionRequested;
+        break;
+      case 'bookingCompletionDisputed':
+        type = NotificationType.bookingCompletionDisputed;
+        break;
+      case 'bookingCompleted':
+        type = NotificationType.bookingCompleted;
+        break;
       case 'bookingDeclined':
         type = NotificationType.bookingDeclined;
         break;
@@ -37,7 +46,8 @@ class AppNotificationModel extends AppNotification {
         type = NotificationType.newReview;
         break;
       default:
-        type = NotificationType.bookingNew;
+        // Unrecognized/missing type — render neutrally rather than as a booking.
+        type = NotificationType.unknown;
     }
 
     return AppNotificationModel(

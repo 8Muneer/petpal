@@ -97,10 +97,17 @@ class NotificationTile extends ConsumerWidget {
         break;
       case NotificationType.bookingNew:
       case NotificationType.bookingAccepted:
+      case NotificationType.bookingCompletionRequested:
+      case NotificationType.bookingCompletionDisputed:
+      case NotificationType.bookingCompleted:
       case NotificationType.bookingDeclined:
       case NotificationType.bookingCancelled:
       case NotificationType.newReview:
         context.push('/profile/bookings');
+        break;
+      case NotificationType.unknown:
+        // No meaningful destination for an unrecognized type — do nothing
+        // rather than guess wrong (the tap still marks it read above).
         break;
     }
   }
@@ -113,6 +120,15 @@ class NotificationTile extends ConsumerWidget {
       case NotificationType.bookingAccepted:
         return _NotificationTypeConfig(
             icon: Icons.check_circle_outline_rounded, color: AppColors.success);
+      case NotificationType.bookingCompletionRequested:
+        return _NotificationTypeConfig(
+            icon: Icons.fact_check_outlined, color: AppColors.sapphire);
+      case NotificationType.bookingCompletionDisputed:
+        return _NotificationTypeConfig(
+            icon: Icons.report_problem_outlined, color: AppColors.warning);
+      case NotificationType.bookingCompleted:
+        return _NotificationTypeConfig(
+            icon: Icons.task_alt_rounded, color: AppColors.success);
       case NotificationType.bookingDeclined:
         return _NotificationTypeConfig(
             icon: Icons.cancel_outlined, color: AppColors.error);
@@ -125,6 +141,9 @@ class NotificationTile extends ConsumerWidget {
       case NotificationType.newReview:
         return _NotificationTypeConfig(
             icon: Icons.star_outline_rounded, color: AppColors.warning);
+      case NotificationType.unknown:
+        return _NotificationTypeConfig(
+            icon: Icons.notifications_none_rounded, color: AppColors.textMuted);
     }
   }
 }

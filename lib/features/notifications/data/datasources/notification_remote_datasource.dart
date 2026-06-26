@@ -11,25 +11,40 @@ class NotificationRemoteDatasource {
       _db.collection('notifications');
 
   Stream<List<AppNotificationModel>> watchNotifications(String userId) {
-    debugPrint('[NotificationRemoteDatasource] watchNotifications initialized for userId: $userId');
     return _col
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
         .map((snap) {
-      debugPrint('[NotificationRemoteDatasource] watchNotifications snap received: docCount=${snap.docs.length}');
       try {
-        final list = snap.docs.map((doc) {
-          debugPrint('[NotificationRemoteDatasource] Notification doc found: id=${doc.id}, data=${doc.data()}');
-          return AppNotificationModel.fromFirestore(doc);
-        }).toList();
-        return list;
+        return snap.docs
+            .map((doc) => AppNotificationModel.fromFirestore(doc))
+            .toList();
       } catch (e, st) {
-        debugPrint('[NotificationRemoteDatasource] ERROR mapping notifications: $e\n$st');
+        // Keep error visibility (no user content), rethrow so the UI's
+        // error state shows instead of silently swallowing a mapping failure.
+        debugPrint('[NotificationRemoteDatasource] mapping error: $e\n$st');
         rethrow;
       }
     });
+  }
+
+  /// Live count of unread notifications, capped at 10. The UI never shows an
+  /// exact number above 9 (it renders "9+"), so counting past 10 would just be
+  /// wasted reads. Crucially this is a *separate* query from watchNotifications'
+  /// 50-doc display window — the bell badge previously derived its count from
+  /// that window, so unread notifications older than the most-recent 50 were
+  /// silently missed (and the "mark all read" button could vanish while unread
+  /// items still existed). Equality-only filters on userId+isRead need no
+  /// composite index — the same query markAllAsRead already relies on.
+  Stream<int> watchUnreadCount(String userId) {
+    return _col
+        .where('userId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .limit(10)
+        .snapshots()
+        .map((snap) => snap.docs.length);
   }
 
   Future<void> markAsRead(String notificationId) async {

@@ -3,10 +3,18 @@ import 'package:equatable/equatable.dart';
 enum NotificationType {
   bookingNew,
   bookingAccepted,
+  bookingCompletionRequested,
+  bookingCompletionDisputed,
+  bookingCompleted,
   bookingDeclined,
   bookingCancelled,
   newMessage,
   newReview,
+  // Fallback for an unrecognized or missing type string — e.g. corrupt data,
+  // or a new server-side type shipped before the client enum catches up. Kept
+  // distinct from bookingNew so an unknown type degrades to a neutral display
+  // instead of masquerading as a booking with the wrong icon and tap target.
+  unknown,
 }
 
 class AppNotification extends Equatable {
