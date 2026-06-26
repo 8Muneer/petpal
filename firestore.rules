@@ -54,7 +54,10 @@ service cloud.firestore {
 
     match /posts/{postId} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
+      allow create: if request.auth != null && (
+        request.resource.data.authorUid == request.auth.uid ||
+        request.resource.data.isMock == true
+      );
       allow update: if request.auth != null && (
         // Author can edit their own post (content, images, etc.)
         request.auth.uid == resource.data.authorUid ||
@@ -67,7 +70,10 @@ service cloud.firestore {
           request.resource.data.createdAt == resource.data.createdAt
         )
       );
-      allow delete: if request.auth != null && request.auth.uid == resource.data.authorUid;
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.authorUid ||
+        resource.data.isMock == true
+      );
 
       match /comments/{commentId} {
         allow read: if true;
@@ -293,8 +299,28 @@ service cloud.firestore {
     // blocking the moderation queue and admin dashboard's open-reports count
     // for admins.
     match /reports/{reportId} {
-      allow create: if request.auth != null && request.resource.data.reporterId == request.auth.uid;
-      allow read, update: if request.auth != null && isAdmin();
+      allow create: if request.auth != null && (
+        request.resource.data.reporterId == request.auth.uid ||
+        request.resource.data.isMock == true
+      );
+      allow read: if request.auth != null && isAdmin();
+      // Reports are written with a deterministic id (type_targetId_reporterId)
+      // so a resubmission on the same target overwrites instead of creating a
+      // duplicate document — that overwrite is a Firestore *update*, not a
+      // create, so the original reporter needs update access to their own
+      // report (re-flagging settled content re-opens it as 'open' again).
+      // They can't repoint the doc at a different target/type/reporter.
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (resource.data.reporterId == request.auth.uid &&
+         request.resource.data.reporterId == request.auth.uid &&
+         request.resource.data.targetId == resource.data.targetId &&
+         request.resource.data.type == resource.data.type) ||
+        // Re-seeding overwrites a prior mock report at the same deterministic
+        // id — allowed only mock-to-mock, so a real report can't be hijacked
+        // by a "mock" rewrite and a mock report can't be laundered into real.
+        (resource.data.isMock == true && request.resource.data.isMock == true)
+      );
       allow delete: if false;
     }
 
@@ -325,9 +351,9 @@ service cloud.firestore {
     // ── pois ─────────────────────────────────────────────────────────────────
     match /pois/{poiId} {
       allow read:   if request.auth != null;
-      allow create: if isAdmin();
+      allow create: if isAdmin() || (request.auth != null && request.resource.data.isMock == true);
       allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (request.auth != null && resource.data.isMock == true);
     }
 
     match /conversations/{conversationId} {

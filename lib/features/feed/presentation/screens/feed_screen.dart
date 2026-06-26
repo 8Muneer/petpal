@@ -9,6 +9,8 @@ import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/app_card.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/time_ago_text.dart';
+import 'package:petpal/core/widgets/report_content_dialog.dart';
+import 'package:petpal/features/admin/domain/entities/report_model.dart';
 import 'package:petpal/features/feed/domain/entities/feed_post.dart';
 import 'package:petpal/features/feed/presentation/providers/feed_provider.dart';
 
@@ -607,6 +609,20 @@ class _PostCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.flag_outlined,
+                        size: 20, color: AppColors.textSecondary),
+                    tooltip: 'דווח על הפוסט',
+                    onPressed: () {
+                      if (currentUid.isEmpty) {
+                        _showLoginDialog(context);
+                        return;
+                      }
+                      showReportDialog(context,
+                          targetId: post.id, type: ReportType.post);
+                    },
                   ),
               ],
             ),

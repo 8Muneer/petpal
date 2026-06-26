@@ -838,3 +838,55 @@ exports.setUserRole = functions.https.onCall(async (data, context) => {
 
   return { success: true, unchanged: false };
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Demo seeding — mock admins (server-side, Blaze)
+//
+//  firestore.rules blocks role:'admin' on every client create, including
+//  isMock writes — no client write can self-promote to admin, by design. This
+//  callable is the seed-data equivalent: it uses the Admin SDK to write a
+//  small, fixed set of mock admin docs at hardcoded seed_admin_N ids, so demo
+//  data can include admin accounts without weakening that rule. It never
+//  touches the caller's own uid or any arbitrary uid, and these doc ids don't
+//  correspond to any real Firebase Auth account — so this grants no one
+//  real admin access (the app's actual admin gate is the caller's own
+//  /users/{request.auth.uid}.role, checked by isAdmin() and mirrored onto the
+//  auth token by setUserRole). It only produces mock rows for the admin user
+//  directory to display.
+// ─────────────────────────────────────────────────────────────────────────────
+
+exports.seedMockAdmins = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const admins = data && Array.isArray(data.admins) ? data.admins : [];
+  if (admins.length === 0 || admins.length > 10) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Provide 1-10 admin profiles.'
+    );
+  }
+
+  const db = admin.firestore();
+  const batch = db.batch();
+  admins.forEach((profile, i) => {
+    const uid = `seed_admin_${i}`;
+    batch.set(db.collection('users').doc(uid), {
+      uid,
+      name: profile.name || `Admin ${i}`,
+      email: `admin${i}@demo.petpal.com`,
+      phone: profile.phone || null,
+      location: profile.location || null,
+      bio: profile.bio || null,
+      role: 'admin',
+      userType: 'admin',
+      isVerified: true,
+      isMock: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  await batch.commit();
+
+  return { success: true, count: admins.length };
+});

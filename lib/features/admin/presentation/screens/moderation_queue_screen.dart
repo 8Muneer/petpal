@@ -16,10 +16,12 @@ class ModerationQueueScreen extends ConsumerStatefulWidget {
 }
 
 class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
-  /// Report ids currently being analyzed, to avoid duplicate AI calls.
+  /// Target ids currently being analyzed, to avoid duplicate AI calls. Keyed
+  /// by target (not report id): every report on the same target shares one
+  /// Gemini call, so the unit of "in-flight work" is the target.
   final Set<String> _analyzing = {};
 
-  /// Report ids already attempted this session (success or failure), so a
+  /// Target ids already attempted this session (success or failure), so a
   /// failed/unreachable call isn't retried on every rebuild.
   final Set<String> _attempted = {};
 
@@ -68,38 +70,51 @@ class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
   int _effectiveSeverity(ContentReport r) =>
       r.aiSeverity ?? _keywordSeverity(r.reason);
 
-  Future<void> _ensureAnalyzed(List<ContentReport> reports) async {
+  /// Runs one Gemini call per reported *target*, not per report — every
+  /// report clustered on the same target (lib/features/admin/.../report_model
+  /// `targetId`) shares a single analysis instead of each triggering its own
+  /// API call on identical content. The result is fanned out to every report
+  /// in the cluster via saveReportAnalysisForCluster, so _effectiveSeverity
+  /// stays uniform across the whole cluster.
+  Future<void> _ensureAnalyzed(List<_Cluster> clusters) async {
     final service = ref.read(reportTriageServiceProvider);
     if (!service.isConfigured) return;
     final repo = ref.read(moderationRepositoryProvider);
 
     var didWork = false;
-    for (final r in reports) {
-      if (r.isAnalyzed ||
-          _analyzing.contains(r.id) ||
-          _attempted.contains(r.id)) {
+    for (final cluster in clusters) {
+      final targetId = cluster.reports.first.targetId;
+      final alreadyAnalyzed = cluster.reports.any((r) => r.isAnalyzed);
+      if (alreadyAnalyzed ||
+          _analyzing.contains(targetId) ||
+          _attempted.contains(targetId)) {
         continue;
       }
-      _analyzing.add(r.id);
-      _attempted.add(r.id); // don't retry this one on later rebuilds
+      _analyzing.add(targetId);
+      _attempted.add(targetId); // don't retry this target on later rebuilds
       didWork = true;
-      // Enrich with the actual reported content when reachable.
-      final content = await repo.fetchReportedContent(r.type, r.targetId);
+
+      // Represent the cluster with its most severe (keyword-fallback) report
+      // — the one most likely to carry the clearest reason for the AI.
+      final primary = cluster.reports
+          .reduce((a, b) => _keywordSeverity(a.reason) >= _keywordSeverity(b.reason) ? a : b);
+
+      final content = await repo.fetchReportedContent(primary.type, targetId);
       final triage = await service.analyze(
-        type: r.type.name,
-        reason: r.reason,
+        type: primary.type.name,
+        reason: primary.reason,
         content: content,
       );
       if (triage != null) {
-        await repo.saveReportAnalysis(
-          reportId: r.id,
+        await repo.saveReportAnalysisForCluster(
+          reportIds: cluster.reports.map((r) => r.id).toList(),
           severity: triage.severity,
           category: triage.category,
           action: triage.action,
           rationale: triage.rationale,
         );
       }
-      _analyzing.remove(r.id);
+      _analyzing.remove(targetId);
     }
     // Refresh the "analyzing…" indicator once the batch settles (failures
     // won't re-emit from Firestore, so we nudge a rebuild ourselves).
@@ -144,17 +159,21 @@ class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
         final reports = snapshot.data ?? [];
         if (reports.isEmpty) return const _EmptyState();
 
-        // Kick off AI triage for any unscored reports (cached once each).
+        final clusters = _buildClusters(reports);
+
+        // Kick off AI triage for any unscored targets — one Gemini call per
+        // cluster, cached once each (see _ensureAnalyzed).
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _ensureAnalyzed(reports);
+          _ensureAnalyzed(clusters);
         });
 
-        final clusters = _buildClusters(reports);
         // Only show the AI indicator while there is real work pending — i.e.
-        // the service is configured and some reports haven't been attempted yet.
+        // the service is configured and some target hasn't been attempted yet.
         final aiConfigured = ref.read(reportTriageServiceProvider).isConfigured;
         final analyzing = aiConfigured &&
-            reports.any((r) => !r.isAnalyzed && !_attempted.contains(r.id));
+            clusters.any((c) =>
+                !c.reports.any((r) => r.isAnalyzed) &&
+                !_attempted.contains(c.reports.first.targetId));
 
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),

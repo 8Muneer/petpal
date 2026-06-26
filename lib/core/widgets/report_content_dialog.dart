@@ -6,6 +6,25 @@ import 'package:petpal/features/admin/data/repositories/moderation_repository.da
 import 'package:petpal/core/widgets/app_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Opens [ReportContentDialog] as a bottom sheet — the single call site every
+/// "report" button in the app should use, so the sheet styling and RTL
+/// wrapping stay consistent wherever reporting is offered.
+Future<void> showReportDialog(
+  BuildContext context, {
+  required String targetId,
+  required ReportType type,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: ReportContentDialog(targetId: targetId, type: type),
+    ),
+  );
+}
+
 class ReportContentDialog extends ConsumerStatefulWidget {
   final String targetId;
   final ReportType type;
@@ -24,13 +43,13 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
   final _reasonController = TextEditingController();
   bool _isSubmitting = false;
 
-  final List<String> _predefinedReasons = [
-    'Spam',
-    'Inappropriate content',
-    'Harassment',
-    'Hate speech',
-    'False information',
-    'Other',
+  static const _predefinedReasons = [
+    'ספאם',
+    'תוכן לא הולם',
+    'הטרדה',
+    'דברי שטנה',
+    'מידע שגוי',
+    'אחר',
   ];
 
   String? _selectedReason;
@@ -41,12 +60,27 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
     super.dispose();
   }
 
+  String _typeLabel(ReportType type) => switch (type) {
+        ReportType.post => 'פוסט',
+        ReportType.comment => 'תגובה',
+        ReportType.user => 'משתמש',
+      };
+
   Future<void> _submit() async {
-    final reason = _selectedReason == 'Other' ? _reasonController.text.trim() : _selectedReason;
-    
+    final reason =
+        _selectedReason == 'אחר' ? _reasonController.text.trim() : _selectedReason;
+
     if (reason == null || reason.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select or enter a reason')),
+        const SnackBar(content: Text('יש לבחור או להזין סיבה')),
+      );
+      return;
+    }
+
+    final reporterId = FirebaseAuth.instance.currentUser?.uid;
+    if (reporterId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('יש להתחבר כדי לדווח')),
       );
       return;
     }
@@ -57,7 +91,7 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
       id: '',
       targetId: widget.targetId,
       type: widget.type,
-      reporterId: FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
+      reporterId: reporterId,
       reason: reason,
       status: ReportStatus.open,
       createdAt: DateTime.now(),
@@ -68,14 +102,14 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thank you. We will review this content.')),
+          const SnackBar(content: Text('תודה, נבדוק את התוכן בהקדם.')),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('שגיאה בשליחת הדיווח: $e')),
         );
       }
     }
@@ -86,8 +120,8 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 24,
         right: 24,
+        left: 24,
         top: 24,
       ),
       decoration: const BoxDecoration(
@@ -99,12 +133,12 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Report Content',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            'דיווח על תוכן',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
-            'Why are you reporting this ${widget.type.name}?',
+            'מה הסיבה לדיווח על ה${_typeLabel(widget.type)} הזה?',
             style: const TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
@@ -124,12 +158,13 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
               );
             }).toList(),
           ),
-          if (_selectedReason == 'Other') ...[
+          if (_selectedReason == 'אחר') ...[
             const SizedBox(height: 16),
             TextField(
               controller: _reasonController,
+              textDirection: TextDirection.rtl,
               decoration: InputDecoration(
-                hintText: 'Describe the issue...',
+                hintText: 'פרט/י את הבעיה...',
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -142,8 +177,9 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
           ],
           const SizedBox(height: 32),
           AppButton(
-            label: 'Submit Report',
+            label: 'שלח דיווח',
             expand: true,
+            isLoading: _isSubmitting,
             onTap: _isSubmitting ? null : _submit,
           ),
         ],
