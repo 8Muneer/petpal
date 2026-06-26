@@ -228,6 +228,28 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── verification_requests ────────────────────────────────────────────────
+    // Restored: this collection had no rule at all (default-deny), which was
+    // silently blocking AdminRepository.getAdminStats()/watchPendingVerifications()
+    // for every admin, not just non-admins.
+    match /verification_requests/{requestId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update: if request.auth != null && (
+        isAdmin() || resource.data.userId == request.auth.uid
+      );
+      allow delete: if false;
+    }
+
+    // ── reports (content moderation) ─────────────────────────────────────────
+    // Restored: same default-deny gap as verification_requests above — was
+    // blocking the moderation queue and admin dashboard's open-reports count
+    // for admins.
+    match /reports/{reportId} {
+      allow create: if request.auth != null && request.resource.data.reporterId == request.auth.uid;
+      allow read, update: if request.auth != null && isAdmin();
+      allow delete: if false;
+    }
+
     // ── notifications ─────────────────────────────────────────────────────────
     match /notifications/{notificationId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
