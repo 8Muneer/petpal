@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
-import 'package:petpal/core/widgets/app_header_bar.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/features/walks/presentation/widgets/walk_request_widgets.dart'
     show WalkRequestsView, WalkRequestCard;
 import 'package:petpal/features/sitting/presentation/widgets/sitting_request_widgets.dart'
@@ -240,103 +240,136 @@ class _MyRequestsTabState extends ConsumerState<MyRequestsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const AppHeaderBar(title: 'הזמנות'),
-        Expanded(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AppScaffold(
+        body: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Feed-style filter bar ────────────────────────────────────────
-              Container(
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.divider)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            size: 18, color: AppColors.textPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('הבקשות שלי', style: AppTextStyles.h2),
+                  ],
                 ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(_filters.length, (i) {
-                      final selected = _selected == i;
-                      return GestureDetector(
-                        onTap: () => setState(() => _selected = i),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Feed-style filter bar ────────────────────────────────
+                    Container(
+                      decoration: const BoxDecoration(
+                        border: Border(
+                            bottom: BorderSide(color: AppColors.divider)),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: List.generate(_filters.length, (i) {
+                            final selected = _selected == i;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selected = i),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 14),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: selected
+                                          ? AppColors.primary
+                                          : Colors.transparent,
+                                      width: 2.5,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  _filters[i],
+                                  style: AppTextStyles.bodyMd.copyWith(
+                                    color: selected
+                                        ? AppColors.primary
+                                        : AppColors.textMuted,
+                                    fontWeight: selected
+                                        ? FontWeight.w800
+                                        : FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+
+                    // ── Create request CTA ─────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: InkWell(
+                        onTap: () => _showCreateSheet(context),
+                        borderRadius: BorderRadius.circular(32),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 14),
+                              horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: selected
-                                    ? AppColors.primary
-                                    : Colors.transparent,
-                                width: 2.5,
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: AppShadows.subtle,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'צור בקשה חדשה...',
+                                style: AppTextStyles.bodyMd
+                                    .copyWith(color: AppColors.textMuted),
                               ),
-                            ),
-                          ),
-                          child: Text(
-                            _filters[i],
-                            style: AppTextStyles.bodyMd.copyWith(
-                              color: selected
-                                  ? AppColors.primary
-                                  : AppColors.textMuted,
-                              fontWeight:
-                                  selected ? FontWeight.w800 : FontWeight.w500,
-                              fontSize: 14,
-                            ),
+                              const Spacer(),
+                              Icon(Icons.add_circle_outline_rounded,
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.8),
+                                  size: 22),
+                            ],
                           ),
                         ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-
-              // ── Create request CTA ───────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: InkWell(
-                  onTap: () => _showCreateSheet(context),
-                  borderRadius: BorderRadius.circular(32),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: AppShadows.subtle,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Text(
-                          'צור בקשה חדשה...',
-                          style: AppTextStyles.bodyMd
-                              .copyWith(color: AppColors.textMuted),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.add_circle_outline_rounded,
-                            color: AppColors.primary.withValues(alpha: 0.8),
-                            size: 22),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
-              // ── Content ──────────────────────────────────────────────────────
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: switch (_selected) {
-                    1 => const WalkRequestsView(key: ValueKey('walk')),
-                    2 => const SittingRequestsView(key: ValueKey('sitting')),
-                    _ => const _AllRequestsFeed(key: ValueKey('all')),
-                  },
+                    // ── Content ──────────────────────────────────────────────
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: switch (_selected) {
+                          1 => const WalkRequestsView(key: ValueKey('walk')),
+                          2 => const SittingRequestsView(
+                              key: ValueKey('sitting')),
+                          _ => const _AllRequestsFeed(key: ValueKey('all')),
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
