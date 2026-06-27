@@ -9,6 +9,7 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/app_header_bar.dart';
+import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/section_header.dart';
 
@@ -31,7 +32,7 @@ class ProviderRequestsTab extends ConsumerStatefulWidget {
 }
 
 class _ProviderAllRequestsTabState extends ConsumerState<ProviderRequestsTab> {
-  int _selected = 0; // 0 = walk, 1 = sitting, 2 = bookings
+  int _selected = 0; // 0 = walk, 1 = sitting
 
   @override
   Widget build(BuildContext context) {
@@ -65,15 +66,6 @@ class _ProviderAllRequestsTabState extends ConsumerState<ProviderRequestsTab> {
                           onTap: () => setState(() => _selected = 1),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: _ProviderToggleChip(
-                          label: 'הזמנות',
-                          icon: Icons.calendar_month_rounded,
-                          selected: _selected == 2,
-                          onTap: () => setState(() => _selected = 2),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -84,8 +76,6 @@ class _ProviderAllRequestsTabState extends ConsumerState<ProviderRequestsTab> {
                   child: switch (_selected) {
                     1 => const _ProviderSittingRequestsView(
                         key: ValueKey('req_sitting')),
-                    2 => const _IncomingBookingsView(
-                        key: ValueKey('req_bookings')),
                     _ => const _ProviderRequestsView(key: ValueKey('req_walk')),
                   },
                 ),
@@ -94,6 +84,55 @@ class _ProviderAllRequestsTabState extends ConsumerState<ProviderRequestsTab> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Incoming bookings — moved out of the הבקשות tab and into the profile menu,
+// since it's about confirmed/pending orders rather than open marketplace
+// requests to bid on.
+
+class ProviderBookingsScreen extends StatelessWidget {
+  const ProviderBookingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AppScaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            size: 18, color: AppColors.textPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('הזמנות', style: AppTextStyles.h2),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Expanded(child: _IncomingBookingsView()),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1370,7 +1409,7 @@ class _IconChip extends StatelessWidget {
 }
 
 class _IncomingBookingsView extends ConsumerWidget {
-  const _IncomingBookingsView({super.key});
+  const _IncomingBookingsView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

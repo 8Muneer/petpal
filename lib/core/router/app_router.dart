@@ -32,6 +32,8 @@ import 'package:petpal/features/sitting/presentation/screens/create_sitting_serv
 import 'package:petpal/features/booking/presentation/screens/my_bookings_screen.dart';
 import 'package:petpal/features/home/presentation/widgets/my_requests_tab.dart'
     show MyRequestsTab;
+import 'package:petpal/features/home/presentation/widgets/provider_requests_tab.dart'
+    show ProviderBookingsScreen;
 import 'package:petpal/features/profile/presentation/screens/availability_screen.dart';
 import 'package:petpal/features/profile/presentation/screens/service_settings_screen.dart';
 import 'package:petpal/features/messaging/presentation/screens/chat_list_screen.dart';
@@ -185,6 +187,10 @@ class AppRouter {
       GoRoute(
         path: '/requests',
         builder: (context, state) => const MyRequestsTab(),
+      ),
+      GoRoute(
+        path: '/provider/bookings',
+        builder: (context, state) => const ProviderBookingsScreen(),
       ),
       GoRoute(
         path: '/provider/availability',

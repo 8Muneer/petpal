@@ -74,6 +74,13 @@ List<ProfileMenuItem> _providerMenuItems(
       subtitle: 'ניהול מודעות ושירותים',
       onTap: onMyServices ?? () => context.push('/provider/services'),
     ),
+    ProfileMenuItem(
+      icon: Icons.calendar_month_rounded,
+      iconColor: AppColors.primary,
+      label: 'הזמנות',
+      subtitle: 'הזמנות נכנסות מלקוחות',
+      onTap: () => context.push('/provider/bookings'),
+    ),
     _logoutItem(context),
   ];
 }

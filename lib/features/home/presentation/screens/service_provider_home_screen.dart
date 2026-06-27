@@ -18,6 +18,7 @@ import 'package:petpal/core/widgets/empty_state_card.dart';
 
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
@@ -70,6 +71,7 @@ class _ServiceProviderHomeScreenState
         onSelectTab: _onNavChanged,
       ),
       const FeedScreen(),
+      const ExploreScreen(),
       const LostFoundFeedScreen(),
       const ProviderRequestsTab(),
     ];
@@ -105,6 +107,10 @@ class _ServiceProviderHomeScreenState
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
                 label: 'קהילה'),
+            const AppNavItem(
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore_rounded,
+                label: 'גלה'),
             const AppNavItem(
                 icon: Icons.pets_outlined,
                 activeIcon: Icons.pets_rounded,
@@ -500,7 +506,7 @@ class _ProviderHomeTab extends ConsumerWidget {
           area: w.area,
           typeLabel: 'טיול',
           icon: Icons.directions_walk_rounded,
-          onTap: () => onSelectTab(3),
+          onTap: () => onSelectTab(4),
         ),
       for (final s in openSittings.take(10))
         _OpportunityCard(
@@ -508,7 +514,7 @@ class _ProviderHomeTab extends ConsumerWidget {
           area: s.area,
           typeLabel: 'שמירה',
           icon: Icons.home_work_rounded,
-          onTap: () => onSelectTab(3),
+          onTap: () => onSelectTab(4),
         ),
     ];
 
@@ -675,7 +681,7 @@ class _ProviderHomeTab extends ConsumerWidget {
                 label: 'בקשות',
                 icon: Icons.assignment_outlined,
                 isSelected: true,
-                onTap: () => onSelectTab(3),
+                onTap: () => onSelectTab(4),
               ),
               const SizedBox(width: 12),
               DiscoveryChip(
@@ -710,7 +716,7 @@ class _ProviderHomeTab extends ConsumerWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              onTap: () => onSelectTab(3),
+              onTap: () => onSelectTab(4),
             ),
           ),
           const SizedBox(height: 24),
@@ -722,7 +728,7 @@ class _ProviderHomeTab extends ConsumerWidget {
           child: _SectionTitle(
             title: 'המשימות שלי להיום',
             actionLabel: todayJobs.isEmpty ? null : 'הצג הכל',
-            onAction: todayJobs.isEmpty ? null : () => onSelectTab(3),
+            onAction: todayJobs.isEmpty ? null : () => onSelectTab(4),
           ),
         ),
         const SizedBox(height: 12),
@@ -740,7 +746,7 @@ class _ProviderHomeTab extends ConsumerWidget {
             (b) => Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child:
-                  _ProviderAgendaRow(booking: b, onTap: () => onSelectTab(3)),
+                  _ProviderAgendaRow(booking: b, onTap: () => onSelectTab(4)),
             ),
           ),
 
@@ -756,7 +762,7 @@ class _ProviderHomeTab extends ConsumerWidget {
           HomeTopRatedSection(
             title: 'הזדמנויות חדשות',
             itemHeight: 165,
-            onMoreTap: () => onSelectTab(3),
+            onMoreTap: () => onSelectTab(4),
             itemCount: opportunities.length,
             itemBuilder: (context, i) => opportunities[i],
           ),
