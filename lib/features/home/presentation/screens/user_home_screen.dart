@@ -401,7 +401,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   if (top.isEmpty) return const SizedBox.shrink();
                   return HomeTopRatedSection(
                     title: 'שומרים זמינים',
-                    itemHeight: 340,
+                    itemHeight: 300,
                     onMoreTap: () => widget.onTabChange(4),
                     itemCount: top.length,
                     itemBuilder: (context, index) {
@@ -420,7 +420,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   );
                 },
                 loading: () => const SizedBox(
-                    height: 340,
+                    height: 300,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
@@ -454,7 +454,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   if (top.isEmpty) return const SizedBox.shrink();
                   return HomeTopRatedSection(
                     title: 'מטיילים זמינים',
-                    itemHeight: 340,
+                    itemHeight: 300,
                     onMoreTap: () => widget.onTabChange(4),
                     itemCount: top.length,
                     itemBuilder: (context, index) {
@@ -473,7 +473,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   );
                 },
                 loading: () => const SizedBox(
-                    height: 340,
+                    height: 300,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
