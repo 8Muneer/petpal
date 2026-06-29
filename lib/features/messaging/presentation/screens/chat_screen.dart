@@ -44,10 +44,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     final uid = _me?.uid;
     if (uid != null) {
-      ref.read(messagingDatasourceProvider).markRead(
-            widget.conversationId,
-            uid,
-          );
+      // Fire-and-forget read-receipt — must never crash the screen if it
+      // fails (e.g. a transient permission/network error), since unread
+      // count is a non-critical side effect of opening the chat.
+      ref
+          .read(messagingDatasourceProvider)
+          .markRead(widget.conversationId, uid)
+          .catchError((_) {});
     }
   }
 
