@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
@@ -175,6 +176,8 @@ class _OpportunityCard extends StatelessWidget {
   final String typeLabel;
   final IconData icon;
   final String? imageUrl;
+  final String? dateLabel;
+  final String? budget;
   final VoidCallback onTap;
 
   const _OpportunityCard({
@@ -184,6 +187,8 @@ class _OpportunityCard extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.imageUrl,
+    this.dateLabel,
+    this.budget,
   });
 
   @override
@@ -280,33 +285,51 @@ class _OpportunityCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                  if (dateLabel != null && dateLabel!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded,
+                            size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            dateLabel!,
+                            style: AppTextStyles.labelSm
+                                .copyWith(color: AppColors.textMuted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (budget != null && budget!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          const Icon(Icons.account_balance_wallet_rounded,
+                              size: 12, color: AppColors.primary),
+                          const SizedBox(width: 4),
                           Text(
-                            'הגש הצעה',
-                            style: AppTextStyles.labelMd.copyWith(
+                            budget!,
+                            style: AppTextStyles.labelSm.copyWith(
                               color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_left_rounded,
-                              size: 16, color: AppColors.primary),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -377,6 +400,14 @@ class _ProviderHomeTab extends ConsumerWidget {
           typeLabel: 'טיול',
           icon: Icons.directions_walk_rounded,
           imageUrl: w.allImages.isNotEmpty ? w.allImages.first : null,
+          dateLabel: w.preferredDate != null
+              ? '${w.preferredDate!.day.toString().padLeft(2, '0')}/${w.preferredDate!.month.toString().padLeft(2, '0')}'
+                  '${w.preferredTime.isNotEmpty ? ' · ${w.preferredTime}' : ''}'
+              : (w.preferredTime.isNotEmpty ? w.preferredTime : null),
+          budget:
+              (w.budget != null && w.budget!.isNotEmpty)
+                  ? withShekel(w.budget!)
+                  : null,
           onTap: () => onSelectTab(4),
         ),
       for (final s in openSittings.take(10))
@@ -386,6 +417,14 @@ class _ProviderHomeTab extends ConsumerWidget {
           typeLabel: 'שמירה',
           icon: Icons.home_work_rounded,
           imageUrl: s.allImages.isNotEmpty ? s.allImages.first : null,
+          dateLabel: s.startDate != null
+              ? '${s.startDate!.day.toString().padLeft(2, '0')}/${s.startDate!.month.toString().padLeft(2, '0')}'
+                  '${s.endDate != null ? ' – ${s.endDate!.day.toString().padLeft(2, '0')}/${s.endDate!.month.toString().padLeft(2, '0')}' : ''}'
+              : null,
+          budget:
+              (s.budget != null && s.budget!.isNotEmpty)
+                  ? withShekel(s.budget!)
+                  : null,
           onTap: () => onSelectTab(4),
         ),
     ];
