@@ -2426,7 +2426,7 @@ class _MiniChip extends StatelessWidget {
   }
 }
 
-// ── Editorial single-column card for ServicesTab ──────────────────────────────
+// ── Horizontal card for ServicesTab ──────────────────────────────────────────
 
 class _ProviderCard extends StatelessWidget {
   final _ServiceEntry entry;
@@ -2462,187 +2462,169 @@ class _ProviderCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: AppShadows.card,
         ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Hero image ─────────────────────────────────────────────────
-            SizedBox(
-              height: 200,
-              child: Stack(
-                fit: StackFit.expand,
+            // ── Photo + info row ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Photo or solid placeholder
-                  photo != null && photo.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: photo,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) =>
-                              Container(color: AppColors.prussianBlue),
-                          errorWidget: (_, __, ___) =>
-                              _CardPhotoPlaceholder(name: name, isWalk: isWalk),
-                        )
-                      : _CardPhotoPlaceholder(name: name, isWalk: isWalk),
-
-                  // Available status — top trailing (RTL: top left)
-                  if (isActive)
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.statusOpen,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'זמין',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
+                  // Photo
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      width: 90,
+                      height: 90,
+                      child: (photo != null && photo.isNotEmpty)
+                          ? CachedNetworkImage(
+                              imageUrl: photo,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => _CardPhotoPlaceholder(
+                                  name: name, isWalk: isWalk),
+                              errorWidget: (_, __, ___) =>
+                                  _CardPhotoPlaceholder(
+                                      name: name, isWalk: isWalk),
+                            )
+                          : _CardPhotoPlaceholder(name: name, isWalk: isWalk),
                     ),
-
-                  // Service type — top leading (RTL: top right)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.prussianBlue3.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        isWalk ? 'טיול' : 'שמירה',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                  ),
+                  const SizedBox(width: 12),
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name + available badge
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            if (isActive) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.statusOpen,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'זמין',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ),
+                        // Service type
+                        Text(
+                          isWalk ? 'טיול' : 'שמירה',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        // Info chips
+                        Wrap(
+                          spacing: 5,
+                          runSpacing: 5,
+                          children: [
+                            _MiniChip(
+                                icon: Icons.location_on_rounded,
+                                label: area,
+                                color: AppColors.error),
+                            _MiniChip(
+                              icon: isWalk
+                                  ? Icons.timer_rounded
+                                  : Icons.home_work_rounded,
+                              label: detail,
+                              color: AppColors.primary,
+                            ),
+                            if (rating != null)
+                              _MiniChip(
+                                icon: Icons.star_rounded,
+                                label: rating.toStringAsFixed(1) +
+                                    (reviewCount != null
+                                        ? ' ($reviewCount)'
+                                        : ''),
+                                color: AppColors.warning,
+                              ),
+                          ],
+                        ),
+                        if (entry.availableDays.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          _AvailabilityDotRow(days: entry.availableDays),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-
-            // ── Content ────────────────────────────────────────────────────
+            // ── Price + CTA ───────────────────────────────────────────────
+            Divider(
+                height: 1, color: AppColors.border.withValues(alpha: 0.5)),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+              child: Row(
                 children: [
-                  // Name + price
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.playfairDisplay(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.onSurface,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        displayPrice,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    displayPrice,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
                   ),
-
-                  const SizedBox(height: 6),
-
-                  // Rating
-                  if (rating != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              size: 13, color: AppColors.warning),
-                          const SizedBox(width: 3),
-                          Text(
-                            rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.onSurface,
-                            ),
-                          ),
-                          if (reviewCount != null) ...[
-                            const SizedBox(width: 3),
-                            Text(
-                              '($reviewCount)',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isWalk
+                              ? [AppColors.primary, AppColors.statusOpen]
+                              : [AppColors.primary, AppColors.blueSlate],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const SizedBox(
+                        height: 44,
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chat_bubble_outline_rounded,
+                                  color: Colors.white, size: 15),
+                              SizedBox(width: 6),
+                              Text(
+                                'צור קשר',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14),
                               ),
-                            ),
-                          ],
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-
-                  // Area + service detail
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined,
-                          size: 13, color: AppColors.textMuted),
-                      const SizedBox(width: 3),
-                      Text(
-                        area,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Text('·',
-                            style: TextStyle(color: AppColors.textMuted)),
-                      ),
-                      Icon(
-                        isWalk ? Icons.timer_outlined : Icons.home_outlined,
-                        size: 13,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          detail,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-
-                  // Availability days summary
-                  if (entry.availableDays.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _AvailabilityDotRow(days: entry.availableDays),
-                  ],
                 ],
               ),
             ),
@@ -2738,41 +2720,84 @@ class _ProviderCardSkeleton extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppShadows.card,
       ),
-      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Image skeleton
-          Container(height: 200, color: AppColors.divider),
-          // Content skeleton
           Padding(
             padding: const EdgeInsets.all(14),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                    height: 16,
-                    width: 160,
-                    decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(8),
-                    )),
-                const SizedBox(height: 8),
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                          height: 16,
+                          width: 120,
+                          decoration: BoxDecoration(
+                              color: AppColors.divider,
+                              borderRadius: BorderRadius.circular(8))),
+                      const SizedBox(height: 8),
+                      Container(
+                          height: 12,
+                          width: 60,
+                          decoration: BoxDecoration(
+                              color: AppColors.divider,
+                              borderRadius: BorderRadius.circular(6))),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Container(
+                              height: 22,
+                              width: 70,
+                              decoration: BoxDecoration(
+                                  color: AppColors.divider,
+                                  borderRadius: BorderRadius.circular(11))),
+                          const SizedBox(width: 6),
+                          Container(
+                              height: 22,
+                              width: 60,
+                              decoration: BoxDecoration(
+                                  color: AppColors.divider,
+                                  borderRadius: BorderRadius.circular(11))),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: AppColors.border.withValues(alpha: 0.5)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+            child: Row(
+              children: [
                 Container(
-                    height: 12,
-                    width: 100,
+                    height: 20,
+                    width: 60,
                     decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(6),
-                    )),
-                const SizedBox(height: 8),
-                Container(
-                    height: 12,
-                    width: 140,
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(8))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(6),
-                    )),
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
               ],
             ),
           ),

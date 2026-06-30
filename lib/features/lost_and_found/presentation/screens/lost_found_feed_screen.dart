@@ -81,80 +81,16 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(child: _buildCreateCTA(photoUrl)),
+                        const SizedBox(width: 10),
+                        _buildMyReportsButton(state),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: LostFoundToggleBar(
-                            selectedIndex: state.selectedTabIndex,
-                            onTabChanged: (i) => ref
-                                .read(lostFoundControllerProvider.notifier)
-                                .setTab(i),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        GestureDetector(
-                          onTap: () => ref
-                              .read(lostFoundControllerProvider.notifier)
-                              .toggleMyReportsOnly(),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: state.showMyReportsOnly
-                                  ? AppColors.primary
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: state.showMyReportsOnly
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (state.showMyReportsOnly
-                                          ? AppColors.primary
-                                          : Colors.black)
-                                      .withValues(
-                                          alpha: state.showMyReportsOnly
-                                              ? 0.25
-                                              : 0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  state.showMyReportsOnly
-                                      ? Icons.person_rounded
-                                      : Icons.person_outline_rounded,
-                                  size: 16,
-                                  color: state.showMyReportsOnly
-                                      ? Colors.white
-                                      : AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'הדיווחים שלי',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: state.showMyReportsOnly
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    LostFoundToggleBar(
+                      selectedIndex: state.selectedTabIndex,
+                      onTabChanged: (i) => ref
+                          .read(lostFoundControllerProvider.notifier)
+                          .setTab(i),
                     ),
                     const SizedBox(height: 12),
                     // Active filter chips
@@ -213,6 +149,40 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                   size: 18, color: AppColors.primary),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMyReportsButton(LostFoundState state) {
+    return GestureDetector(
+      onTap: () => ref
+          .read(lostFoundControllerProvider.notifier)
+          .toggleMyReportsOnly(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: state.showMyReportsOnly
+              ? AppColors.primary
+              : AppColors.pureWhite,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: state.showMyReportsOnly
+                ? AppColors.primary
+                : AppColors.border,
+          ),
+          boxShadow: AppShadows.subtle,
+        ),
+        child: Icon(
+          state.showMyReportsOnly
+              ? Icons.person_rounded
+              : Icons.person_outline_rounded,
+          size: 22,
+          color: state.showMyReportsOnly
+              ? Colors.white
+              : AppColors.textSecondary,
         ),
       ),
     );

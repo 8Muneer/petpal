@@ -187,7 +187,7 @@ class _ProviderRequestsView extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.42,
+                  childAspectRatio: 0.46,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -321,7 +321,7 @@ class _ProviderWalkRequestCard extends StatelessWidget {
             Expanded(
               flex: 44,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -390,7 +390,7 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const Spacer(),
                     SizedBox(
                       width: double.infinity,
                       height: 28,
@@ -829,7 +829,7 @@ class _ProviderSittingRequestsView extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.42,
+                  childAspectRatio: 0.46,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -963,7 +963,7 @@ class _ProviderSittingRequestCard extends StatelessWidget {
             Expanded(
               flex: 44,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1033,7 +1033,7 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const Spacer(),
                     SizedBox(
                       width: double.infinity,
                       height: 28,
