@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -628,7 +628,7 @@ class _CreateSittingRequestScreenState
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [AppColors.primary, AppColors.blueSlate],
+                            colors: [AppColors.primary, Color(0xFF2596BE)],
                           ),
                         ),
                         child: Center(
@@ -771,3 +771,4 @@ class _CreateSittingRequestScreenState
     );
   }
 }
+

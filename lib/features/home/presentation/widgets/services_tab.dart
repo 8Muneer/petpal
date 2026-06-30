@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -1422,7 +1422,7 @@ class _SittingServiceCard extends ConsumerWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.primary, AppColors.blueSlate],
+                            colors: [AppColors.primary, Color(0xFF2596BE)],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -1676,7 +1676,7 @@ class _WalkServiceCard extends ConsumerWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.primary, AppColors.statusOpen],
+                            colors: [AppColors.primary, Color(0xFF2596BE)],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -2598,8 +2598,8 @@ class _ProviderCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: isWalk
-                              ? [AppColors.primary, AppColors.statusOpen]
-                              : [AppColors.primary, AppColors.blueSlate],
+                              ? [AppColors.primary, Color(0xFF2596BE)]
+                              : [AppColors.primary, Color(0xFF2596BE)],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -2841,3 +2841,4 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
+

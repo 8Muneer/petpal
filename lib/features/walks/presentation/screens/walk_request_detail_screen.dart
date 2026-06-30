@@ -691,7 +691,7 @@ class _WalkRequestDetailScreenState
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.statusOpen],
+                          colors: [AppColors.primary, Color(0xFF2596BE)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -1034,7 +1034,7 @@ class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, AppColors.statusOpen],
+                      colors: [AppColors.primary, Color(0xFF2596BE)],
                     ),
                   ),
                   child: Row(
@@ -1146,3 +1146,4 @@ class _OfferTextField extends StatelessWidget {
     );
   }
 }
+

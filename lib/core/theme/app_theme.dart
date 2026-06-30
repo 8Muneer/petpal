@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ─────────────────────────────────────────────
-//  NAUTICAL DEPTHS PALETTE
+//  PETPAL DEEP TEAL PALETTE
 // ─────────────────────────────────────────────
 class AppColors {
   AppColors._();
@@ -13,15 +13,15 @@ class AppColors {
   static const Color prussianBlue   = Color(0xFF002855); // prussian blue
   static const Color regalNavy      = Color(0xFF023E7D); // rich regal navy
   static const Color sapphire       = Color(0xFF0353A4); // deep sapphire
-  static const Color smartBlue      = Color(0xFF0466C8); // vibrant hero blue ← primary
+  static const Color smartBlue      = Color(0xFF1B6E8C); // deep teal-blue ← primary
   static const Color twilightIndigo = Color(0xFF33415C); // muted slate-indigo
   static const Color blueSlate      = Color(0xFF5C677D); // desaturated slate
   static const Color slateGrey      = Color(0xFF7D8597); // neutral grey-blue
   static const Color lavenderGrey   = Color(0xFF979DAC); // soft cool grey
 
   // ── Semantic Roles ────────────────────────────────────────────────────────
-  static const Color primary    = smartBlue;             // #0466C8
-  static const Color surface    = Color(0xFFEEF4FC);     // ultra-light blue-white
+  static const Color primary    = smartBlue;             // #1B6E8C
+  static const Color surface    = Color(0xFFEBF5F9);     // ultra-light teal tint
   static const Color onSurface  = prussianBlue3;         // #001233 deep text
   static const Color pureWhite  = Color(0xFFFFFFFF);
 
@@ -39,8 +39,8 @@ class AppColors {
   static const Color statusClosed = blueSlate;
 
   // ── Borders & Dividers ────────────────────────────────────────────────────
-  static const Color border  = Color(0xFFC4D7EE); // cool blue border
-  static const Color divider = Color(0xFFDFEBF7); // very light blue
+  static const Color border  = Color(0xFFAACCDE); // teal-blue border
+  static const Color divider = Color(0xFFCCE6F0); // very light teal
 
   // ── Compatibility Aliases (semantic) ─────────────────────────────────────
   static const Color textPrimary = onSurface;
@@ -90,7 +90,7 @@ class AppColors {
 
   // ── Gradients ─────────────────────────────────────────────────────────────
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [sapphire, smartBlue],
+    colors: [Color(0xFF0D4560), smartBlue],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

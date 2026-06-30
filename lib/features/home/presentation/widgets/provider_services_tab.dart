@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -102,7 +102,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.statusOpen],
+                        colors: [AppColors.primary, Color(0xFF2596BE)],
                       ),
                     ),
                     child: const Icon(Icons.campaign_rounded,
@@ -153,7 +153,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, AppColors.statusOpen],
+                      colors: [AppColors.primary, Color(0xFF2596BE)],
                     ),
                   ),
                   child: const Center(
@@ -224,7 +224,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                          colors: [AppColors.sitting, AppColors.blueSlate]),
+                          colors: [AppColors.primary, Color(0xFF2596BE)]),
                     ),
                     child: const Icon(Icons.campaign_rounded,
                         color: Colors.white, size: 24),
@@ -273,7 +273,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.sitting, AppColors.blueSlate],
+                      colors: [AppColors.primary, Color(0xFF2596BE)],
                     ),
                   ),
                   child: const Center(
@@ -794,7 +794,7 @@ class ListYourServiceCTA extends ConsumerWidget {
                 'פרסם את שירותי השמירה שלך והתחל לקבל פניות מבעלי חיות באזורך',
             icon: Icons.add_business_rounded,
             gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.blueSlate],
+              colors: [AppColors.primary, Color(0xFF2596BE)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -831,3 +831,4 @@ class _BenefitRow extends StatelessWidget {
     );
   }
 }
+

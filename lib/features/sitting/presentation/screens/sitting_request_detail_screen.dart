@@ -724,7 +724,7 @@ class _SittingRequestDetailScreenState
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         gradient: const LinearGradient(
-                          colors: [purple, AppColors.blueSlate],
+                          colors: [purple, Color(0xFF2596BE)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -766,7 +766,7 @@ class _SittingHeroBg extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.blueSlate],
+            colors: [AppColors.primary, Color(0xFF2596BE)],
           ),
         ),
         child: Center(
@@ -1088,3 +1088,4 @@ class _SittingOfferBottomSheetState
     );
   }
 }
+

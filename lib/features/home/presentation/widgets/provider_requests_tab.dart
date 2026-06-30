@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -187,7 +187,7 @@ class _ProviderRequestsView extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.46,
+                  childAspectRatio: 0.44,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -404,7 +404,7 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.statusOpen],
+                              colors: [AppColors.primary, Color(0xFF2596BE)],
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -667,7 +667,7 @@ class _ProviderOfferSheetState extends ConsumerState<_ProviderOfferSheet> {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, AppColors.statusOpen],
+                      colors: [AppColors.primary, Color(0xFF2596BE)],
                     ),
                   ),
                   child: Row(
@@ -787,7 +787,7 @@ class _ProviderSittingRequestsView extends ConsumerWidget {
     final requestsAsync = ref.watch(openSittingRequestsProvider);
     return requestsAsync.when(
       loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.sitting)),
+          child: CircularProgressIndicator(color: AppColors.primary)),
       error: (e, _) => Center(child: Text('שגיאה: $e')),
       data: (requests) {
         if (requests.isEmpty) {
@@ -829,7 +829,7 @@ class _ProviderSittingRequestsView extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.46,
+                  childAspectRatio: 0.44,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -1048,10 +1048,7 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [
-                                AppColors.sitting,
-                                AppColors.blueSlate,
-                              ],
+                              colors: [AppColors.primary, Color(0xFF2596BE)],
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -1192,7 +1189,7 @@ class _SittingProviderOfferSheetState
   @override
   Widget build(BuildContext context) {
     final req = widget.request;
-    const purple = AppColors.sitting;
+    const purple = AppColors.primary;
     final startStr = req.startDate != null
         ? '${req.startDate!.day.toString().padLeft(2, '0')}/${req.startDate!.month.toString().padLeft(2, '0')}'
         : '';
@@ -1326,7 +1323,7 @@ class _SittingProviderOfferSheetState
                             ]
                           : [
                               purple,
-                              AppColors.blueSlate,
+                              const Color(0xFF2596BE),
                             ],
                     ),
                   ),
@@ -1880,3 +1877,4 @@ class _ProviderToggleChip extends StatelessWidget {
     );
   }
 }
+

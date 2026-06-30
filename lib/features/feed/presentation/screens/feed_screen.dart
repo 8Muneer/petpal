@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -408,7 +408,7 @@ class _EmptyFeedState extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
-                  colors: [AppColors.primary, AppColors.statusOpen],
+                  colors: [AppColors.primary, Color(0xFF2596BE)],
                 ),
               ),
               child: const Text(
@@ -769,3 +769,4 @@ class _PostCard extends StatelessWidget {
     );
   }
 }
+

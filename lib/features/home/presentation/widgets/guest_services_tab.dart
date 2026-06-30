@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
@@ -282,7 +282,7 @@ class _MiniLockButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
-            colors: [AppColors.primary, AppColors.statusOpen],
+            colors: [AppColors.primary, Color(0xFF2596BE)],
           ),
         ),
         child: const Row(
@@ -304,3 +304,4 @@ class _MiniLockButton extends StatelessWidget {
     );
   }
 }
+
