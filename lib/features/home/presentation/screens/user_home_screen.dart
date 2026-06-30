@@ -10,7 +10,8 @@ import 'package:petpal/core/widgets/glass_search_bar.dart';
 import 'package:petpal/core/widgets/discovery_chip.dart';
 import 'package:petpal/core/widgets/luxury_service_card.dart';
 import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
-import 'package:petpal/features/home/presentation/widgets/my_requests_tab.dart';
+import 'package:petpal/features/home/presentation/widgets/my_requests_tab.dart'
+    show SittingRequestHomeCard, WalkRequestHomeCard;
 import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
     show SittingStatus;
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
@@ -76,7 +77,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               2 => const ExploreScreen(),
               3 => const LostFoundFeedScreen(),
               4 => const ServicesTab(),
-              5 => const MyRequestsTab(),
               _ => const SizedBox.shrink(),
             });
   }
@@ -140,10 +140,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 icon: Icons.design_services_outlined,
                 activeIcon: Icons.design_services_rounded,
                 label: 'שירותים'),
-            AppNavItem(
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment_rounded,
-                label: 'בקשות'),
           ],
         ),
       ),
@@ -314,7 +310,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
             //       return HomeTopRatedSection(
             //         title: 'בקשות השמירה שלי',
             //         itemHeight: 180,
-            //         onMoreTap: () => widget.onTabChange(5),
+            //         onMoreTap: () => context.push('/requests'),
             //         itemCount: requests.take(10).length,
             //         itemBuilder: (context, index) {
             //           final req = requests[index];
@@ -359,7 +355,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
             //       return HomeTopRatedSection(
             //         title: 'בקשות הטיול שלי',
             //         itemHeight: 180,
-            //         onMoreTap: () => widget.onTabChange(5),
+            //         onMoreTap: () => context.push('/requests'),
             //         itemCount: requests.take(10).length,
             //         itemBuilder: (context, index) {
             //           final req = requests[index];

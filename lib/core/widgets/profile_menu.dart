@@ -49,6 +49,13 @@ List<ProfileMenuItem> buildProfileMenuItems(BuildContext context) {
       subtitle: 'ההזמנות שלי',
       onTap: () => context.push('/profile/bookings'),
     ),
+    ProfileMenuItem(
+      icon: Icons.assignment_rounded,
+      iconColor: AppColors.sapphire,
+      label: 'בקשות',
+      subtitle: 'בקשות הטיול והשמירה שלי',
+      onTap: () => context.push('/requests'),
+    ),
     _logoutItem(context),
   ];
 }
