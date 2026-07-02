@@ -18,6 +18,17 @@ class BookingRequestModel extends BookingRequest {
     super.requestedDate,
     super.startDate,
     super.endDate,
+    super.preferredTime,
+    super.dropOffTime,
+    super.pickupTime,
+    super.location,
+    super.contactPhone,
+    super.feedingInfo,
+    super.medicationInfo,
+    super.vetContact,
+    super.priceText,
+    super.priceType,
+    super.hours,
     super.specialInstructions,
     super.status,
     super.providerNote,
@@ -44,6 +55,9 @@ class BookingRequestModel extends BookingRequest {
         break;
       case 'cancelled':
         status = BookingStatus.cancelled;
+        break;
+      case 'expired':
+        status = BookingStatus.expired;
         break;
       default:
         status = BookingStatus.pending;
@@ -74,6 +88,17 @@ class BookingRequestModel extends BookingRequest {
       requestedDate: (data['requestedDate'] as Timestamp?)?.toDate(),
       startDate: (data['startDate'] as Timestamp?)?.toDate(),
       endDate: (data['endDate'] as Timestamp?)?.toDate(),
+      preferredTime: data['preferredTime'] as String?,
+      dropOffTime: data['dropOffTime'] as String?,
+      pickupTime: data['pickupTime'] as String?,
+      location: data['location'] as String?,
+      contactPhone: data['contactPhone'] as String?,
+      feedingInfo: data['feedingInfo'] as String?,
+      medicationInfo: data['medicationInfo'] as String?,
+      vetContact: data['vetContact'] as String?,
+      priceText: data['priceText'] as String?,
+      priceType: data['priceType'] as String?,
+      hours: (data['hours'] as num?)?.toInt(),
       specialInstructions: data['specialInstructions'] as String?,
       status: status,
       providerNote: data['providerNote'] as String?,
@@ -98,6 +123,17 @@ class BookingRequestModel extends BookingRequest {
       'requestedDate': requestedDate != null ? Timestamp.fromDate(requestedDate!) : null,
       'startDate': startDate != null ? Timestamp.fromDate(startDate!) : null,
       'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
+      'preferredTime': preferredTime,
+      'dropOffTime': dropOffTime,
+      'pickupTime': pickupTime,
+      'location': location,
+      'contactPhone': contactPhone,
+      'feedingInfo': feedingInfo,
+      'medicationInfo': medicationInfo,
+      'vetContact': vetContact,
+      'priceText': priceText,
+      'priceType': priceType,
+      'hours': hours,
       'specialInstructions': specialInstructions,
       'status': status.name,
       'providerNote': providerNote,

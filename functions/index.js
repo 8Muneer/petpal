@@ -55,6 +55,10 @@ exports.onBookingCreate = functions.firestore
   .onCreate(async (snap, context) => {
     const d = snap.data() || {};
     if (d.isMock === true) return null; // don't notify for seeded demo data
+    // Bookings created from an accepted offer are born 'accepted' and the
+    // acceptServiceApplication function sends its own notification — a generic
+    // "new booking request" here would be wrong and duplicate it.
+    if (d.fromApplication === true) return null;
     const ownerName = d.ownerName || 'משתמש';
     await writeNotification(admin.firestore(), {
       userId: d.providerUid,
@@ -115,10 +119,41 @@ exports.onBookingStatusChange = functions.firestore
         type: 'bookingCompleted',
       };
     } else if (next === 'declined') {
+      // System auto-decline (owner confirmed an overlapping booking elsewhere)
+      // is NOT a provider rejection — notify both sides with the real reason
+      // instead of the misleading "provider declined your request".
+      if (after.autoDeclined === true) {
+        await writeNotification(db, {
+          userId: ownerUid,
+          title: 'הזמנה חופפת בוטלה',
+          body: `אישרת הזמנה חופפת, לכן הבקשה אצל ${providerName} בוטלה אוטומטית`,
+          type: 'bookingCancelled',
+          bookingId,
+        });
+        await writeNotification(db, {
+          userId: providerUid,
+          title: 'בקשה בוטלה',
+          body: `${ownerName} אישר/ה הזמנה חופפת אחרת, לכן הבקשה בוטלה`,
+          type: 'bookingCancelled',
+          bookingId,
+        });
+        return null;
+      }
       n = {
         userId: ownerUid,
         title: 'הזמנה נדחתה',
         body: `${providerName} דחה/תה את ההזמנה שלך`,
+        type: 'bookingDeclined',
+      };
+    } else if (next === 'expired') {
+      // Set by the expireStaleBookings scheduler when a pending request's date
+      // passed without the provider responding. Reuse the 'bookingDeclined'
+      // notification type so the client (whose enum may not know 'expired')
+      // still renders a sensible icon and routes to the bookings screen.
+      n = {
+        userId: ownerUid,
+        title: 'בקשת הזמנה פגה',
+        body: `הבקשה אצל ${providerName} פגה מכיוון שלא אושרה במועד`,
         type: 'bookingDeclined',
       };
     } else if (next === 'cancelled') {
@@ -142,8 +177,326 @@ exports.onBookingStatusChange = functions.firestore
     }
 
     if (n) await writeNotification(db, { ...n, bookingId });
+
+    // C2: once a provider accepts, the pet is committed for that slot — so the
+    // owner's OTHER still-pending requests that overlap it can never be honoured.
+    // Auto-decline them server-side (a client can't be trusted to, and may be
+    // offline). Only runs on the pending→accepted edge.
+    if (prev === 'pending' && next === 'accepted') {
+      await autoDeclineConflicts(db, bookingId, after);
+    }
     return null;
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  C2 — conflict resolution helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Declines every other still-pending booking of the same owner that overlaps
+ * the just-accepted one. Marks them `autoDeclined: true` so onBookingStatusChange
+ * sends the "overlapping booking cancelled" copy rather than "provider declined".
+ */
+async function autoDeclineConflicts(db, acceptedId, accepted) {
+  const ownerUid = accepted.ownerUid;
+  if (!ownerUid) return;
+
+  const snap = await db.collection('booking_requests')
+    .where('ownerUid', '==', ownerUid)
+    .where('status', '==', 'pending')
+    .get();
+
+  const batch = db.batch();
+  let count = 0;
+  snap.forEach((doc) => {
+    if (doc.id === acceptedId) return;
+    const other = doc.data() || {};
+    if (other.isMock === true) return;
+    if (bookingsConflict(accepted, other)) {
+      batch.update(doc.ref, { status: 'declined', autoDeclined: true });
+      count++;
+    }
+  });
+  if (count > 0) await batch.commit();
+}
+
+/** Normalises a booking to a date-only [start, end] day span, or null. */
+function bookingDayRange(bk) {
+  const toDate = (ts) =>
+    ts && typeof ts.toDate === 'function' ? ts.toDate() : (ts instanceof Date ? ts : null);
+  const dateOnly = (d) =>
+    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+
+  if (bk.serviceType === 'sitting') {
+    const s = toDate(bk.startDate);
+    const e = toDate(bk.endDate);
+    if (!s || !e) return null;
+    return { start: dateOnly(s), end: dateOnly(e) };
+  }
+  const d = toDate(bk.requestedDate);
+  if (!d) return null;
+  return { start: dateOnly(d), end: dateOnly(d) };
+}
+
+/** 'HH:mm' → minutes since midnight, or null when unparseable. */
+function timeToMinutes(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return null;
+  const parts = hhmm.split(':');
+  if (parts.length !== 2) return null;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * True when two bookings can't both be honoured:
+ *  - their day spans intersect, AND
+ *  - if both are single-day walks on the same day, their times are within 90
+ *    minutes (two walks hours apart don't actually clash); a sitting on either
+ *    side, or any multi-day overlap, always conflicts.
+ */
+function bookingsConflict(a, b) {
+  const ra = bookingDayRange(a);
+  const rb = bookingDayRange(b);
+  if (!ra || !rb) return false;
+  if (ra.end < rb.start || rb.end < ra.start) return false; // disjoint days
+
+  const aWalk = a.serviceType !== 'sitting';
+  const bWalk = b.serviceType !== 'sitting';
+  const sameSingleDay = aWalk && bWalk &&
+    ra.start.getTime() === ra.end.getTime() &&
+    rb.start.getTime() === rb.end.getTime() &&
+    ra.start.getTime() === rb.start.getTime();
+
+  if (sameSingleDay) {
+    const ta = timeToMinutes(a.preferredTime);
+    const tb = timeToMinutes(b.preferredTime);
+    if (ta == null || tb == null) return true; // unknown time → assume clash
+    return Math.abs(ta - tb) < 90;
+  }
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Provider availability check (callable, Blaze)
+//
+//  A client can't read another provider's calendar (firestore.rules only expose
+//  bookings where the caller is owner or provider), so the owner-side overlap
+//  guard in create_booking_screen can only see the owner's OWN bookings. This
+//  callable closes that gap: it runs as the Admin SDK, reads the provider's
+//  committed bookings, and reports whether the requested slot clashes. Only
+//  'accepted'/'awaitingConfirmation' count as busy — a mere 'pending' request
+//  isn't a commitment and shouldn't block other owners from requesting the slot.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.checkProviderAvailability = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+  const providerUid = data && data.providerUid;
+  if (!providerUid) {
+    throw new functions.https.HttpsError('invalid-argument', 'providerUid is required.');
+  }
+
+  const millisToDate = (m) => typeof m === 'number' ? new Date(m) : null;
+  const requested = {
+    serviceType: data.serviceType === 'sitting' ? 'sitting' : 'walk',
+    requestedDate: millisToDate(data.requestedDate),
+    startDate: millisToDate(data.startDate),
+    endDate: millisToDate(data.endDate),
+    preferredTime: typeof data.preferredTime === 'string' ? data.preferredTime : null,
+  };
+
+  const db = admin.firestore();
+  const snap = await db.collection('booking_requests')
+    .where('providerUid', '==', providerUid)
+    .get();
+
+  const busyStatuses = new Set(['accepted', 'awaitingConfirmation']);
+  let available = true;
+  for (const doc of snap.docs) {
+    const b = doc.data() || {};
+    if (b.isMock === true) continue;
+    if (!busyStatuses.has(b.status)) continue;
+    if (bookingsConflict(requested, b)) {
+      available = false;
+      break;
+    }
+  }
+  return { available };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  C3 — expire stale pending bookings (scheduled, Blaze)
+//
+//  A booking left 'pending' past its service date used to sit as "ממתין"
+//  forever — the owner could never tell it had gone stale. This runs daily and
+//  flips those to 'expired', which onBookingStatusChange then notifies the owner
+//  about. Only pending is touched: 'accepted' bookings have their own two-sided
+//  completion flow and might genuinely have happened, so they're left alone.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Effective service instant (ms): sitting endDate, else walk requestedDate. */
+function bookingEffectiveInstant(bk) {
+  const toDate = (ts) =>
+    ts && typeof ts.toDate === 'function' ? ts.toDate() : (ts instanceof Date ? ts : null);
+  const d = bk.serviceType === 'sitting' ? toDate(bk.endDate) : toDate(bk.requestedDate);
+  return d ? d.getTime() : null;
+}
+
+exports.expireStaleBookings = functions.pubsub
+  .schedule('every 24 hours')
+  .timeZone('Asia/Jerusalem')
+  .onRun(async () => {
+    const db = admin.firestore();
+    // Dates are stored as the service day's local midnight. A 36h grace past
+    // that instant guarantees the whole service day has elapsed regardless of
+    // the server/client timezone offset, so nothing expires a day early.
+    const GRACE_MS = 36 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    const snap = await db.collection('booking_requests')
+      .where('status', '==', 'pending')
+      .get();
+
+    const batch = db.batch();
+    let count = 0;
+    snap.forEach((doc) => {
+      const b = doc.data() || {};
+      if (b.isMock === true) return;
+      const eff = bookingEffectiveInstant(b);
+      if (eff == null) return; // no date on record — nothing to expire against
+      if (now - eff > GRACE_MS) {
+        batch.update(doc.ref, { status: 'expired' });
+        count++;
+      }
+    });
+
+    if (count > 0) await batch.commit();
+    console.log(`[expireStaleBookings] expired ${count} pending booking(s)`);
+    return null;
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Service applications — owner accepts a provider's offer (server-side, Blaze)
+//
+//  The owner picking an offer has to (1) create an 'accepted' booking — which
+//  firestore.rules forbid clients from doing directly — and (2) atomically
+//  close the request and refuse the other offers. Doing it here with the Admin
+//  SDK keeps it trustworthy and consistent. Refusing a single offer stays a
+//  plain client write (see firestore.rules); only accept runs through here.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PET_TYPE_HE = { dog: 'כלב', cat: 'חתול', other: 'אחר' };
+
+exports.acceptServiceApplication = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+  const requestType = data && data.requestType;
+  const requestId = data && data.requestId;
+  const providerUid = data && data.providerUid;
+  if (!['walk', 'sitting'].includes(requestType) || !requestId || !providerUid) {
+    throw new functions.https.HttpsError(
+      'invalid-argument', 'requestType, requestId and providerUid are required.');
+  }
+
+  const db = admin.firestore();
+  const requestRef = db.collection(`${requestType}_requests`).doc(requestId);
+  const appsRef = requestRef.collection('applications');
+  const appRef = appsRef.doc(providerUid);
+
+  const [reqSnap, appSnap] = await Promise.all([requestRef.get(), appRef.get()]);
+  if (!reqSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Request not found.');
+  }
+  if (!appSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Application not found.');
+  }
+  const req = reqSnap.data() || {};
+  const app = appSnap.data() || {};
+
+  if (req.ownerUid !== context.auth.uid) {
+    throw new functions.https.HttpsError(
+      'permission-denied', 'Only the request owner can accept an offer.');
+  }
+  if (app.status !== 'pending') {
+    throw new functions.https.HttpsError(
+      'failed-precondition', 'This offer was already handled.');
+  }
+
+  const petImage = req.petImageUrl ||
+    (Array.isArray(req.petImageUrls) && req.petImageUrls.length > 0
+      ? req.petImageUrls[0]
+      : null);
+
+  const bookingRef = db.collection('booking_requests').doc();
+  const booking = {
+    ownerUid: req.ownerUid,
+    ownerName: req.ownerName || '',
+    ownerPhotoUrl: req.ownerPhotoUrl || null,
+    providerUid,
+    providerName: app.providerName || '',
+    providerPhotoUrl: app.providerPhotoUrl || null,
+    serviceId: '',
+    serviceType: requestType,
+    petName: req.petName || '',
+    petType: PET_TYPE_HE[req.petType] || req.petType || '',
+    petImageUrl: petImage,
+    requestedDate: requestType === 'walk' ? (req.preferredDate || null) : null,
+    startDate: requestType === 'sitting' ? (req.startDate || null) : null,
+    endDate: requestType === 'sitting' ? (req.endDate || null) : null,
+    preferredTime: requestType === 'walk' ? (req.preferredTime || null) : null,
+    sittingType: requestType === 'sitting'
+      ? (req.sittingType || 'atOwnerHome')
+      : null,
+    price: null,
+    priceText: app.price || null,
+    priceType: 'קבוע',
+    hours: null,
+    specialInstructions: req.specialInstructions || null,
+    status: 'accepted',
+    fromApplication: true,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // Other still-pending offers on this request → auto-refused.
+  const pendingSnap = await appsRef.where('status', '==', 'pending').get();
+
+  const batch = db.batch();
+  batch.set(bookingRef, booking);
+  batch.update(appRef, { status: 'accepted' });
+  batch.update(requestRef, { status: 'taken' });
+  const losers = [];
+  pendingSnap.forEach((doc) => {
+    if (doc.id === providerUid) return;
+    losers.push(doc.data());
+    batch.update(doc.ref, {
+      status: 'refused',
+      refusalReason: 'בעל החיה בחר בספק אחר',
+    });
+  });
+  await batch.commit();
+
+  // Notifications (best-effort, after the writes land).
+  const ownerName = req.ownerName || 'בעל החיה';
+  await writeNotification(db, {
+    userId: providerUid,
+    title: 'ההצעה שלך אושרה',
+    body: `${ownerName} אישר/ה את ההצעה שלך ויצר/ה הזמנה`,
+    type: 'bookingAccepted',
+    bookingId: bookingRef.id,
+  });
+  await Promise.all(losers.map((l) => writeNotification(db, {
+    userId: l.providerUid,
+    title: 'ההצעה לא נבחרה',
+    body: `${ownerName} בחר/ה בספק אחר לבקשה`,
+    type: 'bookingDeclined',
+    bookingId: bookingRef.id,
+  })));
+
+  return { success: true, bookingId: bookingRef.id };
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Review rating aggregation (server-side, Blaze)

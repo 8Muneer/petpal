@@ -45,6 +45,8 @@ import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_p
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_browse_screen.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/ai_compare_screen.dart';
 import 'package:petpal/features/booking/presentation/screens/create_booking_screen.dart';
+import 'package:petpal/features/booking/presentation/screens/incoming_booking_detail_screen.dart';
+import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/screens/provider_profile_screen.dart';
 import 'package:petpal/features/reviews/presentation/screens/leave_review_screen.dart';
 import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
@@ -193,6 +195,14 @@ class AppRouter {
         builder: (context, state) => const ProviderBookingsScreen(),
       ),
       GoRoute(
+        path: '/provider/bookings/detail',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! BookingRequest) return const OnboardingScreen();
+          return IncomingBookingDetailScreen(booking: extra);
+        },
+      ),
+      GoRoute(
         path: '/provider/availability',
         builder: (context, state) => const AvailabilityScreen(),
       ),
@@ -283,6 +293,7 @@ class AppRouter {
             serviceId: serviceId,
             serviceType: serviceType,
             priceText: priceText,
+            priceType: extra['priceType'] as String?,
           );
         },
       ),

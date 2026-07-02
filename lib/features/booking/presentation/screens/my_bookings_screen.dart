@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
@@ -49,11 +50,29 @@ class MyBookingsScreen extends ConsumerWidget {
                 ),
               );
             }
-            return ListView.separated(
+            final active = bookings.where((b) => b.isActive).toList();
+            final history = bookings.where((b) => !b.isActive).toList();
+            return ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: bookings.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => _BookingSummaryCard(booking: bookings[i]),
+              children: [
+                if (active.isNotEmpty) ...[
+                  const _SectionLabel(text: 'פעילות'),
+                  const SizedBox(height: 10),
+                  for (final b in active) ...[
+                    _BookingSummaryCard(booking: b),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+                if (history.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const _SectionLabel(text: 'היסטוריה'),
+                  const SizedBox(height: 10),
+                  for (final b in history) ...[
+                    _BookingSummaryCard(booking: b),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              ],
             );
           },
         ),
@@ -65,6 +84,31 @@ class MyBookingsScreen extends ConsumerWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 //  Summary card — clean, scannable, tap to open detail sheet
 // ═══════════════════════════════════════════════════════════════════════════
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(text,
+            style: AppTextStyles.headlineSm
+                .copyWith(fontWeight: FontWeight.w800)),
+      ],
+    );
+  }
+}
 
 class _BookingSummaryCard extends StatelessWidget {
   final BookingRequest booking;
@@ -480,6 +524,23 @@ class _BookingDetailSheetState extends ConsumerState<_BookingDetailSheet>
                             label: 'תאריך',
                             value: _dateText(booking),
                           ),
+                          if (_timeText(booking) != null)
+                            _DetailRow(
+                              icon: Icons.access_time_rounded,
+                              label: 'שעה',
+                              value: _timeText(booking)!,
+                            ),
+                          if (booking.priceText?.isNotEmpty == true)
+                            _DetailRow(
+                              icon: Icons.account_balance_wallet_outlined,
+                              label: 'מחיר מוסכם',
+                              value: bookingPriceLabel(
+                                priceText: booking.priceText,
+                                priceType: booking.priceType,
+                                hours: isWalk ? booking.hours : null,
+                                nights: _nightsOf(booking),
+                              ),
+                            ),
                           _DetailRow(
                             icon: isWalk
                                 ? Icons.directions_walk_rounded
@@ -491,6 +552,36 @@ class _BookingDetailSheetState extends ConsumerState<_BookingDetailSheet>
                                     ? 'שמירה בבית השומר'
                                     : 'שמירה בבית הבעלים',
                           ),
+                          if (booking.location?.isNotEmpty == true)
+                            _DetailRow(
+                              icon: Icons.location_on_outlined,
+                              label: 'מיקום',
+                              value: booking.location!,
+                            ),
+                          if (booking.contactPhone?.isNotEmpty == true)
+                            _DetailRow(
+                              icon: Icons.phone_outlined,
+                              label: 'טלפון',
+                              value: booking.contactPhone!,
+                            ),
+                          if (booking.feedingInfo?.isNotEmpty == true)
+                            _DetailRow(
+                              icon: Icons.restaurant_outlined,
+                              label: 'האכלה',
+                              value: booking.feedingInfo!,
+                            ),
+                          if (booking.medicationInfo?.isNotEmpty == true)
+                            _DetailRow(
+                              icon: Icons.medication_outlined,
+                              label: 'תרופות',
+                              value: booking.medicationInfo!,
+                            ),
+                          if (booking.vetContact?.isNotEmpty == true)
+                            _DetailRow(
+                              icon: Icons.local_hospital_outlined,
+                              label: 'וטרינר / חירום',
+                              value: booking.vetContact!,
+                            ),
                           if (booking.specialInstructions?.isNotEmpty == true)
                             _DetailRow(
                               icon: Icons.sticky_note_2_outlined,
@@ -1079,6 +1170,17 @@ class _StatusTimeline extends StatelessWidget {
             icon: Icons.do_not_disturb_on_rounded,
             title: 'ההזמנה בוטלה',
             subtitle: 'הבקשה בוטלה',
+            state: _StepState.muted,
+            color: AppColors.textMuted,
+          ),
+        ];
+      case BookingStatus.expired:
+        return const [
+          sent,
+          _Step(
+            icon: Icons.timer_off_rounded,
+            title: 'הבקשה פגה',
+            subtitle: 'הבקשה לא אושרה עד למועד השירות',
             state: _StepState.muted,
             color: AppColors.textMuted,
           ),
@@ -1694,6 +1796,30 @@ String _dateText(BookingRequest b) {
 String _fmt(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
+/// Nights for a sitting booking (null for walks / incomplete dates).
+int? _nightsOf(BookingRequest b) {
+  if (b.serviceType == BookingServiceType.walk) return null;
+  if (b.startDate == null || b.endDate == null) return null;
+  final n = b.endDate!.difference(b.startDate!).inDays;
+  return n > 0 ? n : null;
+}
+
+/// Human-readable time line: walk start time, or sitting drop-off (+ pickup).
+/// Returns null when no time is recorded (older bookings pre-dating this field).
+String? _timeText(BookingRequest b) {
+  if (b.serviceType == BookingServiceType.walk) {
+    return b.preferredTime?.isNotEmpty == true ? b.preferredTime : null;
+  }
+  final drop = b.dropOffTime;
+  final pick = b.pickupTime;
+  if (drop?.isNotEmpty == true && pick?.isNotEmpty == true) {
+    return 'מסירה $drop · איסוף $pick';
+  }
+  if (drop?.isNotEmpty == true) return 'מסירה $drop';
+  if (pick?.isNotEmpty == true) return 'איסוף $pick';
+  return null;
+}
+
 (String, Color) _statusInfo(BookingStatus status) => switch (status) {
       BookingStatus.pending => ('ממתין', AppColors.warning),
       BookingStatus.accepted => ('אושר', AppColors.success),
@@ -1701,4 +1827,5 @@ String _fmt(DateTime d) =>
       BookingStatus.completed => ('הושלם', AppColors.primary),
       BookingStatus.declined => ('נדחה', AppColors.error),
       BookingStatus.cancelled => ('בוטל', AppColors.textMuted),
+      BookingStatus.expired => ('פג תוקף', AppColors.textMuted),
     };

@@ -90,6 +90,33 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update: if request.auth != null;
       allow delete: if request.auth != null && (request.auth.uid == resource.data.ownerUid || resource.data.isMock == true);
+
+      // Provider offers on this request. Accepting is done by the
+      // acceptServiceApplication Cloud Function (Admin SDK), so there's no
+      // client 'accepted' write path here.
+      match /applications/{applicationId} {
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/walk_requests/$(requestId)).data.ownerUid == request.auth.uid ||
+          resource.data.providerUid == request.auth.uid
+        );
+        // A provider may only create their own offer (doc id == their uid),
+        // starting as 'pending'.
+        allow create: if request.auth != null &&
+          applicationId == request.auth.uid &&
+          request.resource.data.providerUid == request.auth.uid &&
+          request.resource.data.status == 'pending';
+        allow update: if request.auth != null && (
+          // Provider edits/re-submits their own offer (stays pending)
+          (request.auth.uid == applicationId &&
+           request.resource.data.providerUid == request.auth.uid &&
+           request.resource.data.status == 'pending') ||
+          // Owner refuses an offer (request stays open for others)
+          (get(/databases/$(database)/documents/walk_requests/$(requestId)).data.ownerUid == request.auth.uid &&
+           request.resource.data.status == 'refused' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'refusalReason']))
+        );
+        allow delete: if request.auth != null && resource.data.providerUid == request.auth.uid;
+      }
     }
 
     match /sitting_requests/{requestId} {
@@ -97,6 +124,26 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update: if request.auth != null;
       allow delete: if request.auth != null && (request.auth.uid == resource.data.ownerUid || resource.data.isMock == true);
+
+      match /applications/{applicationId} {
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/sitting_requests/$(requestId)).data.ownerUid == request.auth.uid ||
+          resource.data.providerUid == request.auth.uid
+        );
+        allow create: if request.auth != null &&
+          applicationId == request.auth.uid &&
+          request.resource.data.providerUid == request.auth.uid &&
+          request.resource.data.status == 'pending';
+        allow update: if request.auth != null && (
+          (request.auth.uid == applicationId &&
+           request.resource.data.providerUid == request.auth.uid &&
+           request.resource.data.status == 'pending') ||
+          (get(/databases/$(database)/documents/sitting_requests/$(requestId)).data.ownerUid == request.auth.uid &&
+           request.resource.data.status == 'refused' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'refusalReason']))
+        );
+        allow delete: if request.auth != null && resource.data.providerUid == request.auth.uid;
+      }
     }
 
     match /walk_services/{serviceId} {

@@ -780,6 +780,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                           'serviceId': _serviceId,
                           'serviceType': _isWalk ? 'walk' : 'sitting',
                           'priceText': _priceText,
+                          'priceType': _priceType,
                         },
                       ),
                       child: Container(

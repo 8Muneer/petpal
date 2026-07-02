@@ -187,6 +187,7 @@ class _ServicesTabState extends ConsumerState<ServicesTab> {
   Timer? _searchDebounce;
 
   static const _typeFilters = ['הכל', 'טיולים', 'שמירה'];
+
   static const _days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
   static const _dayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   static const _petOptions = ['כלב', 'חתול', 'אחר'];
@@ -696,52 +697,6 @@ class _ServicesTabState extends ConsumerState<ServicesTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Service type tabs ─────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: List.generate(_typeFilters.length, (i) {
-                    final label = _typeFilters[i];
-                    final selected = _filter.typeFilter == label;
-                    return Padding(
-                      padding: EdgeInsets.only(
-                          left: i < _typeFilters.length - 1 ? 8 : 0),
-                      child: GestureDetector(
-                        onTap: () => setState(() =>
-                            _filter = _filter.copyWith(typeFilter: label)),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? AppColors.primary
-                                : AppColors.pureWhite,
-                            borderRadius: AppRadius.fullRadius,
-                            border: Border.all(
-                              color: selected
-                                  ? AppColors.primary
-                                  : AppColors.border,
-                              width: 1.5,
-                            ),
-                            boxShadow: selected ? null : AppShadows.subtle,
-                          ),
-                          child: Text(
-                            label,
-                            style: AppTextStyles.labelMd.copyWith(
-                              color: selected
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-
               // ── Search bar + filter button ────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
