@@ -778,7 +778,8 @@ exports.compareLostFoundPair = functions
       throw new functions.https.HttpsError('failed-precondition', 'Both posts must have images.');
     }
 
-    const result = await _callGemini(post1.imageUrl, post2.imageUrl, process.env.GEMINI_KEY);
+    const daysElapsed = _daysBetween(post1.createdAt, post2.createdAt);
+    const result = await _callGemini(post1.imageUrl, post2.imageUrl, process.env.GEMINI_KEY, daysElapsed);
     if (!result) throw new functions.https.HttpsError('internal', 'Gemini comparison failed.');
 
     return {
@@ -875,7 +876,8 @@ async function _compareAll(postId, post, candidates, geminiKey) {
     const batch = candidates.slice(i, i + MAX_CONCURRENT);
     const batchResults = await Promise.all(
       batch.map(async candidate => {
-        const geminiResult = await _callGemini(post.imageUrl, candidate.imageUrl, geminiKey);
+        const daysElapsed = _daysBetween(post.createdAt, candidate.createdAt);
+        const geminiResult = await _callGemini(post.imageUrl, candidate.imageUrl, geminiKey, daysElapsed);
         if (!geminiResult) return null;
         if (geminiResult.confidence < MATCH_THRESHOLD) return null;
         return { candidate, geminiResult };
@@ -894,7 +896,7 @@ async function _compareAll(postId, post, candidates, geminiKey) {
  * Retries up to MAX_RETRIES times on 429 / 5xx with exponential backoff.
  * Returns null on total failure (candidate is silently skipped — caller decides).
  */
-async function _callGemini(imageUrl1, imageUrl2, geminiKey) {
+async function _callGemini(imageUrl1, imageUrl2, geminiKey, daysElapsed) {
   const endpoint =
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
 
@@ -907,7 +909,7 @@ async function _callGemini(imageUrl1, imageUrl2, geminiKey) {
   const body = JSON.stringify({
     contents: [{
       parts: [
-        { text: _buildPrompt() },
+        { text: _buildPrompt(daysElapsed) },
         { inline_data: { mime_type: _mimeFromUrl(imageUrl1), data: bytes1 } },
         { inline_data: { mime_type: _mimeFromUrl(imageUrl2), data: bytes2 } },
       ],
@@ -986,34 +988,45 @@ async function _callGemini(imageUrl1, imageUrl2, geminiKey) {
  * capped valid same-pet matches at ≤25) and a loose similarity scorer.
  * Same-species + same-colour + same-area → 50-65.
  * Clear individual identifiers (unique patch, scar, collar) → 70-90.
- * Confirmed different animal (visible mismatch in unique feature) → 0-30.
+ * Confirmed different animal (visible mismatch in unique feature, OR an
+ * unexplained age/size gap) → 0-30.
  * All Hebrew text fields in the JSON.
  */
-function _buildPrompt() {
-  return `You are a veterinary photo analyst helping reunite lost pets with their owners.
+function _buildPrompt(daysElapsed) {
+  const elapsedNote = (typeof daysElapsed === 'number' && !Number.isNaN(daysElapsed))
+    ? `The two reports were filed ${daysElapsed} day(s) apart.`
+    : `The time gap between the two reports is unknown — assume it could be anywhere from same-day to several weeks.`;
+
+  return `You are a forensic photo analyst verifying whether two pet photos show the SAME individual animal, for a lost-and-found reunification app.
+Be accurate, not optimistic: a false "match" gives an owner false hope and wastes time better spent searching elsewhere. A missed match is recoverable — a false positive is not. When evidence is ambiguous, score conservatively.
+
 Your task: decide whether Photo 1 and Photo 2 show the SAME individual animal.
 
+${elapsedNote}
+
 SCORING GUIDE — assign a confidence integer (0-100):
-- 85-100 : Strong individual match — same unique markings, scars, collar, or patch shapes clearly visible and matching.
+- 85-100 : Strong individual match — a SPECIFIC, independently-verifiable identifying feature (irregular patch shape, scar, ear notch, eye condition, asymmetric marking) is clearly visible and matching in BOTH photos, AND nothing else contradicts it.
 - 65-84  : Likely same animal — most individual features align; minor angle/quality differences explain small gaps.
 - 50-64  : Possible match — same species/breed/colour/area, individual features not fully visible but nothing contradicts.
 - 30-49  : Weak match — same general type but no individual-level evidence confirmed.
-- 0-29   : Not a match — same breed/colour but a unique feature visible in one photo is absent or different in the other.
+- 0-29   : Not a match — a contradiction was found (unique feature absent/different, OR an age/size gap not explained by the elapsed time).
 
 RULES:
-- Same breed + same colour alone = 35-45. Individual evidence must push it higher.
+- Same breed + same colour alone = 35-45. Sharing a common coat pattern (e.g. "calico", "tabby", "black and white") is NOT by itself strong evidence — many unrelated animals share these patterns. Only credit colour/pattern as strong evidence if you can point to a SPECIFIC irregular or asymmetric detail that matches in both photos — not just "both have black, orange and white fur".
+- AGE & SIZE CHECK (mandatory, evaluate this before assigning a final score): Compare apparent developmental stage — head-to-body ratio, eye/ear size relative to the face, leg length, coat fluffiness, overall size. A young kitten/puppy (round face, oversized eyes/ears, short legs, fluffy coat) looks visibly different from a mature adult of the same breed. Decide whether the elapsed time between reports plausibly explains any visible difference (kittens/puppies change dramatically over 4-8 weeks; adults change very little over weeks or months). If the age/size gap is NOT plausibly explained by the elapsed time, this is a disqualifying mismatch — cap confidence at 0-20 regardless of colour/pattern similarity.
 - A unique marker present in Photo 1 but clearly absent (not just hidden) in Photo 2 = drop to 0-30.
-- Low photo quality or awkward angle: do NOT penalise heavily — score what you CAN see.
-- "reason" must be in Hebrew and must name the specific feature(s) that drove the score up or down.
+- Low photo quality or awkward angle: do NOT penalise heavily — score what you CAN see. But never invent a matching detail you cannot actually verify in both photos.
+- "reason" must be in Hebrew and must name the specific feature(s) that drove the score up or down, including the age/size assessment.
 - All text fields (featureName, pet1Value, pet2Value, reason) MUST be in Hebrew.
 - "status" must be exactly one of: MATCH, MISMATCH, CANNOT_DETERMINE.
 
-Compare these 5 categories in the comparisonTable:
+Compare these 6 categories in the comparisonTable, in this order:
 1. סוג וגזע (Species & Breed)
-2. צבע ודוגמת פרווה (Colour & Coat Pattern)
-3. מבנה פנים וראש (Face & Head — eyes, ears, nose, facial markings)
-4. סימנים מיוחדים (Unique markings, scars, patches, ear notches)
-5. אביזרים (Accessories — collar, harness, tag)`;
+2. גיל וגודל יחסי (Apparent Age & Relative Size — kitten/puppy vs. adult, body proportions)
+3. צבע ודוגמת פרווה (Colour & Coat Pattern — credit MATCH only for a specific identifying detail, not shared common colours)
+4. מבנה פנים וראש (Face & Head — eyes, ears, nose, facial markings)
+5. סימנים מיוחדים (Unique markings, scars, patches, ear notches)
+6. אביזרים (Accessories — collar, harness, tag)`;
 }
 
 /**
@@ -1070,6 +1083,15 @@ async function _addMatchDeduped(db, targetPostId, matchData) {
     filtered.push(matchData);
     tx.update(docRef, { matches: filtered });
   });
+}
+
+/** Whole days between two Firestore Timestamps (or Dates). Returns null if either is missing/invalid. */
+function _daysBetween(ts1, ts2) {
+  if (!ts1 || !ts2) return null;
+  const d1 = typeof ts1.toDate === 'function' ? ts1.toDate() : new Date(ts1);
+  const d2 = typeof ts2.toDate === 'function' ? ts2.toDate() : new Date(ts2);
+  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return null;
+  return Math.round(Math.abs(d2.getTime() - d1.getTime()) / 86_400_000);
 }
 
 /** Downloads an image and returns it as a base64 string, or null on failure. */
