@@ -95,14 +95,14 @@ class _AuthGateState extends ConsumerState<AuthGate> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Unable to load profile.'),
+                        const Text('לא ניתן לטעון את הפרופיל'),
                         const SizedBox(height: 12),
                         TextButton(
                           onPressed: () => setState(() {
                             _cachedUid = null;
                             _roleFuture = null;
                           }),
-                          child: const Text('Retry'),
+                          child: const Text('נסה שוב'),
                         ),
                       ],
                     ),

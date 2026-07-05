@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
+import 'package:petpal/core/widgets/inline_error_retry.dart';
 import 'package:petpal/features/applications/domain/entities/service_application.dart';
 import 'package:petpal/features/applications/presentation/providers/application_provider.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
@@ -37,7 +38,11 @@ class OwnerApplicationsList extends ConsumerWidget {
                 height: 22,
                 child: CircularProgressIndicator(strokeWidth: 2))),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => InlineErrorRetry(
+        message: 'שגיאה בטעינת ההצעות',
+        onRetry: () => ref.invalidate(
+            requestApplicationsProvider((type: requestType, id: requestId))),
+      ),
       data: (apps) {
         if (apps.isEmpty) {
           return Container(

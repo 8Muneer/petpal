@@ -136,6 +136,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentUserProfileProvider);
+    // Demo-data tools are developer/admin utilities — never show them to
+    // regular users (a stray tap on "clear demo data" is destructive).
+    final isAdmin =
+        profileAsync.valueOrNull?.role == UserRole.admin;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -148,6 +152,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           surfaceTintColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
+            if (isAdmin)
             IconButton(
               tooltip: 'ניקוי נתוני דמו',
               onPressed: () => _confirmAction(
@@ -164,6 +169,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ),
               icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white),
             ),
+            if (isAdmin)
             IconButton(
               tooltip: 'יצירת נתוני דמו',
               onPressed: () => _confirmAction(
@@ -182,6 +188,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ),
               icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
             ),
+            if (isAdmin)
             IconButton(
               tooltip: 'תיקון הזמנות ישנות',
               onPressed: () => _confirmAction(
@@ -600,7 +607,7 @@ class _ProfileHeroSection extends StatelessWidget {
                   // Name
                   Text(
                     displayName,
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.frankRuhlLibre(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -916,7 +923,7 @@ class _BandStat extends StatelessWidget {
           children: [
             Text(
               value,
-              style: GoogleFonts.playfairDisplay(
+              style: GoogleFonts.frankRuhlLibre(
                 fontSize: 26,
                 fontWeight: FontWeight.w900,
                 color: accent,
@@ -1104,7 +1111,7 @@ class _BioSection extends StatelessWidget {
           // Decorative opening quote (on the reading-start side in RTL = right)
           Text(
             '"',
-            style: GoogleFonts.playfairDisplay(
+            style: GoogleFonts.frankRuhlLibre(
               fontSize: 64,
               fontWeight: FontWeight.w900,
               color: AppColors.primary.withValues(alpha: 0.15),

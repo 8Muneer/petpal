@@ -334,10 +334,9 @@ class _LostFoundPostDetailScreenState
               ),
             ),
           );
-          if (confirm == true && context.mounted) {
-            await ref.read(markResolvedProvider)(post.id);
-            if (context.mounted) context.pop();
-          }
+          if (confirm != true || !mounted) return;
+          await ref.read(markResolvedProvider)(post.id);
+          if (mounted) context.pop();
         },
         icon: const Icon(Icons.check_circle_rounded),
         label: const Text('החיה נמצאה / נפתר',

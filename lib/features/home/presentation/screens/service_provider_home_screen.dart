@@ -15,6 +15,7 @@ import 'package:petpal/core/widgets/notification_bell_button.dart';
 import 'package:petpal/core/widgets/profile_menu.dart';
 import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
+import 'package:petpal/core/widgets/inline_error_retry.dart';
 
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
@@ -440,19 +441,12 @@ class _ProviderHomeTab extends ConsumerWidget {
               height: 380,
               width: double.infinity,
               decoration: BoxDecoration(color: AppColors.surfaceDark),
-              child: CachedNetworkImage(
-                imageUrl:
-                    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=2000&auto=format&fit=crop', // Group of happy dogs in field
+              child: Image.asset(
+                'assets/images/hero/provider_home_bg.jpg', // Group of happy dogs in field
                 fit: BoxFit.cover,
                 color: Colors.black.withValues(alpha: 0.25),
                 colorBlendMode: BlendMode.darken,
-                placeholder: (context, url) => Container(
-                  color: AppColors.surfaceDark,
-                  child: const Center(
-                      child:
-                          CircularProgressIndicator(color: AppColors.primary)),
-                ),
-                errorWidget: (context, url, error) => Container(
+                errorBuilder: (context, error, stackTrace) => Container(
                   color: AppColors.surfaceDark,
                   child: const Center(
                       child: Icon(Icons.business_center_rounded,
@@ -641,7 +635,11 @@ class _ProviderHomeTab extends ConsumerWidget {
             height: 240,
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
-          error: (e, _) => const SizedBox.shrink(),
+          error: (e, _) => InlineErrorRetry(
+            message: 'שגיאה בטעינת גינות כלבים',
+            onRetry: () =>
+                ref.invalidate(topRatedPOIsProvider(type: POIType.park)),
+          ),
         ),
 
         const SizedBox(height: 24),
@@ -674,7 +672,11 @@ class _ProviderHomeTab extends ConsumerWidget {
             height: 240,
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
-          error: (e, _) => const SizedBox.shrink(),
+          error: (e, _) => InlineErrorRetry(
+            message: 'שגיאה בטעינת וטרינרים',
+            onRetry: () =>
+                ref.invalidate(topRatedPOIsProvider(type: POIType.vet)),
+          ),
         ),
 
         const SizedBox(height: 24),
@@ -707,7 +709,11 @@ class _ProviderHomeTab extends ConsumerWidget {
             height: 240,
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
-          error: (e, _) => const SizedBox.shrink(),
+          error: (e, _) => InlineErrorRetry(
+            message: 'שגיאה בטעינת חנויות',
+            onRetry: () =>
+                ref.invalidate(topRatedPOIsProvider(type: POIType.store)),
+          ),
         ),
 
         const SizedBox(height: 24),
