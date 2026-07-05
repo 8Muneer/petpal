@@ -1124,6 +1124,130 @@ function _sleep(ms) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  Admin — AI report triage (server-side, Blaze)
+//
+//  Classifies a moderation report into severity/category/action/rationale
+//  using Gemini. Runs server-side so the Gemini API key never ships inside
+//  the app binary (the previous client-side implementation compiled the key
+//  into the APK). Same prompt and response contract as the old client call —
+//  ModerationQueueScreen caches the result on the report document as before.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TRIAGE_ACTIONS = ['delete', 'dismiss', 'escalate'];
+
+exports.triageReport = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  // Admin-only — mirrors the moderation queue's own access control.
+  const callerSnap = await admin.firestore()
+    .collection('users').doc(context.auth.uid).get();
+  if (callerSnap.data()?.role !== 'admin') {
+    throw new functions.https.HttpsError(
+      'permission-denied', 'Only an admin can triage reports.');
+  }
+
+  const type = (data && data.type) ? String(data.type) : '';
+  const reason = (data && data.reason) ? String(data.reason) : '';
+  const content = (data && data.content) ? String(data.content) : '';
+  if (!type || !reason) {
+    throw new functions.https.HttpsError(
+      'invalid-argument', 'type and reason are required.');
+  }
+
+  const geminiKey = process.env.GEMINI_KEY;
+  if (!geminiKey) {
+    throw new functions.https.HttpsError(
+      'failed-precondition', 'GEMINI_KEY is not configured.');
+  }
+
+  const hasContent = content.trim().length > 0;
+  // Cap content length to keep the request small and cheap.
+  const clipped = hasContent
+    ? (content.trim().length > 600
+        ? `${content.trim().substring(0, 600)}…`
+        : content.trim())
+    : '';
+
+  const prompt = `
+אתה מנהל קהילה של אפליקציית טיפול בחיות מחמד. קיבלת דיווח של משתמש על תוכן.
+סוג היעד: ${type}
+סיבת הדיווח: "${reason}"
+${hasContent ? `התוכן שדווח: "${clipped}"` : '(התוכן שדווח אינו זמין — התבסס על סיבת הדיווח בלבד)'}
+
+${hasContent ? 'התבסס בעיקר על התוכן שדווח עצמו, ולאחר מכן על סיבת הדיווח.' : ''}
+דרג את חומרת הדיווח לפי ההשפעה הפוטנציאלית על המשתמשים והחיות:
+- 5 = קריטי: סכנת בטיחות, אכזריות לבעלי חיים, איום, הונאה חמורה
+- 4 = גבוה: הטרדה, תוכן פוגעני חמור, הונאה
+- 3 = בינוני: תוכן לא הולם, ויכוח
+- 2 = נמוך: ספאם, פרסומת
+- 1 = זניח: תלונה קלה, אי-הבנה
+
+קטגוריות אפשריות: בטיחות, אכזריות לבעלי חיים, הטרדה, ספאם, הונאה, תוכן לא הולם, אחר.
+פעולה מומלצת: "delete" (מחיקת התוכן), "escalate" (הסלמה לבדיקה), או "dismiss" (התעלמות).
+
+החזר אך ורק JSON, ללא markdown וללא טקסט נוסף:
+{"severity": 3, "category": "ספאם", "action": "dismiss", "rationale": "משפט קצר בעברית"}`;
+
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.2 },
+  });
+
+  let res;
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (err) {
+    console.error('[Triage] Gemini request failed:', err.message);
+    throw new functions.https.HttpsError('internal', 'Triage request failed.');
+  }
+
+  if (!res.ok) {
+    console.error('[Triage] Gemini API error', res.status, await res.text());
+    throw new functions.https.HttpsError('internal', 'Triage request failed.');
+  }
+
+  const decoded = await res.json();
+  let text = decoded?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new functions.https.HttpsError('internal', 'Empty triage response.');
+  }
+
+  // Strip markdown fences if present.
+  text = text.trim();
+  if (text.startsWith('```')) {
+    text = text.replace(/```[a-zA-Z]*/g, '').replace(/```/g, '').trim();
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    console.error('[Triage] Unparseable triage JSON:', text);
+    throw new functions.https.HttpsError('internal', 'Unparseable triage response.');
+  }
+
+  const severity = Math.min(5, Math.max(1, parseInt(parsed.severity, 10) || 3));
+  const action = String(parsed.action || '').toLowerCase();
+  const category = String(parsed.category || '').trim();
+
+  return {
+    severity,
+    category: category.length > 0 ? category : 'אחר',
+    action: TRIAGE_ACTIONS.includes(action) ? action : 'escalate',
+    rationale: String(parsed.rationale || '').trim(),
+  };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  Admin — role assignment (server-side, Blaze)
 //
 //  Promoting/revoking admin must never be a direct client write to
