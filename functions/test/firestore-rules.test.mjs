@@ -51,15 +51,20 @@ await check('isMock-branch create with role admin is denied', async () => {
   await assertFails(setDoc(doc(db, 'users/someoneElse'), { role: 'admin', isMock: true }));
 });
 
-await check('isMock-branch create with role serviceProvider is allowed (seed_service.dart)', async () => {
+await check('isMock-branch create by a NON-admin is denied (seeding is admin-only now)', async () => {
   const db = testEnv.authenticatedContext('seeder').firestore();
-  await assertSucceeds(setDoc(doc(db, 'users/mockUser1'), { role: 'serviceProvider', isMock: true }));
+  await assertFails(setDoc(doc(db, 'users/mockUser1'), { role: 'serviceProvider', isMock: true }));
 });
 
 await testEnv.withSecurityRulesDisabled(async (context) => {
   const db = context.firestore();
   await setDoc(doc(db, 'users/admin1'), { role: 'admin', name: 'Admin' });
   await setDoc(doc(db, 'users/target1'), { role: 'petOwner', name: 'Target', isActive: true });
+});
+
+await check('isMock-branch create by an ADMIN is allowed (seed_service.dart runs as admin)', async () => {
+  const db = testEnv.authenticatedContext('admin1').firestore();
+  await assertSucceeds(setDoc(doc(db, 'users/mockUser1'), { role: 'serviceProvider', isMock: true }));
 });
 
 await check('admin updates another user\'s isActive (moderation)', async () => {
@@ -170,6 +175,52 @@ await check('admin queries open reports', async () => {
 await check('admin resolves a report', async () => {
   const db = testEnv.authenticatedContext('admin1').firestore();
   await assertSucceeds(updateDoc(doc(db, 'reports/r1'), { status: 'resolved', resolvedBy: 'admin1' }));
+});
+
+// ── walk/sitting requests: owner-only updates (pre-judging hardening) ───────
+
+await testEnv.withSecurityRulesDisabled(async (context) => {
+  const db = context.firestore();
+  await setDoc(doc(db, 'walk_requests/w1'), { ownerUid: 'owner1', status: 'open', budget: 50 });
+  await setDoc(doc(db, 'sitting_requests/s1'), { ownerUid: 'owner1', status: 'open' });
+});
+
+await check('owner updates their own walk_request', async () => {
+  const db = testEnv.authenticatedContext('owner1').firestore();
+  await assertSucceeds(updateDoc(doc(db, 'walk_requests/w1'), { status: 'closed' }));
+});
+
+await check('stranger cannot update someone else\'s walk_request', async () => {
+  const db = testEnv.authenticatedContext('rando').firestore();
+  await assertFails(updateDoc(doc(db, 'walk_requests/w1'), { budget: 1 }));
+});
+
+await check('stranger cannot update someone else\'s sitting_request', async () => {
+  const db = testEnv.authenticatedContext('rando').firestore();
+  await assertFails(updateDoc(doc(db, 'sitting_requests/s1'), { status: 'closed' }));
+});
+
+// ── posts: interaction branch is an allow-list (likes/commentCount only) ────
+
+await testEnv.withSecurityRulesDisabled(async (context) => {
+  await setDoc(doc(context.firestore(), 'posts/p1'), {
+    authorUid: 'owner1', content: 'hello', type: 'text', likes: [], commentCount: 0,
+  });
+});
+
+await check('non-author can like a post (likes only)', async () => {
+  const db = testEnv.authenticatedContext('rando').firestore();
+  await assertSucceeds(updateDoc(doc(db, 'posts/p1'), { likes: ['rando'] }));
+});
+
+await check('non-author cannot tamper with other post fields', async () => {
+  const db = testEnv.authenticatedContext('rando').firestore();
+  await assertFails(updateDoc(doc(db, 'posts/p1'), { likes: ['rando'], imageUrls: ['x'] }));
+});
+
+await check('author can still edit their own post content', async () => {
+  const db = testEnv.authenticatedContext('owner1').firestore();
+  await assertSucceeds(updateDoc(doc(db, 'posts/p1'), { content: 'edited' }));
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -26,8 +26,12 @@ service cloud.firestore {
       // at signup, and admin can only ever be granted via the setUserRole
       // Cloud Function, which writes with the Admin SDK and bypasses these
       // rules entirely.
+      // Every isMock (demo-seeding) branch in this file additionally requires
+      // isAdmin(): the seeding UI is admin-only, so regular users get no
+      // "mark it mock" bypass of ownership checks anywhere.
       allow create: if request.auth != null &&
-        (request.auth.uid == userId || request.resource.data.isMock == true) &&
+        (request.auth.uid == userId ||
+         (request.resource.data.isMock == true && isAdmin())) &&
         request.resource.data.role in ['petOwner', 'serviceProvider'];
       // Rating aggregates (ratingAverage/reviewCount) are written exclusively by the
       // onReviewWrite Cloud Function (Admin SDK bypasses these rules) — no client
@@ -40,14 +44,18 @@ service cloud.firestore {
         (request.auth.uid == userId || isAdmin()) &&
         !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'userType', 'ratingAverage', 'reviewCount']);
-      allow delete: if request.auth != null && (request.auth.uid == userId || resource.data.isMock == true);
+      allow delete: if request.auth != null &&
+        (request.auth.uid == userId ||
+         (resource.data.isMock == true && isAdmin()));
 
       match /pets/{petId} {
         allow read: if request.auth != null;
         allow write: if request.auth != null && (
           request.auth.uid == userId ||
-          request.resource.data.isMock == true ||
-          (resource != null && resource.data.isMock == true)
+          (isAdmin() && (
+            (request.resource != null && request.resource.data.isMock == true) ||
+            (resource != null && resource.data.isMock == true)
+          ))
         );
       }
     }
@@ -56,23 +64,20 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null && (
         request.resource.data.authorUid == request.auth.uid ||
-        request.resource.data.isMock == true
+        (request.resource.data.isMock == true && isAdmin())
       );
       allow update: if request.auth != null && (
         // Author can edit their own post (content, images, etc.)
         request.auth.uid == resource.data.authorUid ||
         // Any authenticated user may like/unlike or increment commentCount —
-        // guard by asserting the immutable fields are untouched.
-        (
-          request.resource.data.authorUid == resource.data.authorUid &&
-          request.resource.data.content == resource.data.content &&
-          request.resource.data.type == resource.data.type &&
-          request.resource.data.createdAt == resource.data.createdAt
-        )
+        // and may touch NOTHING else (an allow-list, so fields like imageUrls
+        // or likes-forging on other keys can't ride along).
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['likes', 'commentCount'])
       );
       allow delete: if request.auth != null && (
         request.auth.uid == resource.data.authorUid ||
-        resource.data.isMock == true
+        (resource.data.isMock == true && isAdmin())
       );
 
       match /comments/{commentId} {
@@ -88,8 +93,16 @@ service cloud.firestore {
     match /walk_requests/{requestId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.ownerUid || resource.data.isMock == true);
+      // Only the owner edits or closes their own request. Providers never
+      // update the request doc from the client — offers live in the
+      // applications subcollection, and acceptance is done by the
+      // acceptServiceApplication Cloud Function (Admin SDK).
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.ownerUid ||
+         (resource.data.isMock == true && isAdmin()));
+      allow delete: if request.auth != null &&
+        (request.auth.uid == resource.data.ownerUid ||
+         (resource.data.isMock == true && isAdmin()));
 
       // Provider offers on this request. Accepting is done by the
       // acceptServiceApplication Cloud Function (Admin SDK), so there's no
@@ -122,8 +135,13 @@ service cloud.firestore {
     match /sitting_requests/{requestId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.ownerUid || resource.data.isMock == true);
+      // Owner-only, mirroring walk_requests above.
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.ownerUid ||
+         (resource.data.isMock == true && isAdmin()));
+      allow delete: if request.auth != null &&
+        (request.auth.uid == resource.data.ownerUid ||
+         (resource.data.isMock == true && isAdmin()));
 
       match /applications/{applicationId} {
         allow read: if request.auth != null && (
@@ -148,26 +166,26 @@ service cloud.firestore {
 
     match /walk_services/{serviceId} {
       allow read: if true;
-      allow create: if request.auth != null && (request.resource.data.providerUid == request.auth.uid || request.resource.data.isMock == true);
+      allow create: if request.auth != null && (request.resource.data.providerUid == request.auth.uid || (request.resource.data.isMock == true && isAdmin()));
       // rating/reviewCount are written exclusively by the onReviewWrite Cloud
       // Function (Admin SDK bypasses these rules) — the owning provider can edit
       // every other field on their own listing, but not self-inflate their rating.
       allow update: if request.auth != null &&
         resource.data.providerUid == request.auth.uid &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rating', 'reviewCount']);
-      allow delete: if request.auth != null && (resource.data.providerUid == request.auth.uid || resource.data.isMock == true);
+      allow delete: if request.auth != null && (resource.data.providerUid == request.auth.uid || (resource.data.isMock == true && isAdmin()));
     }
 
     match /sitting_services/{serviceId} {
       allow read: if true;
-      allow create: if request.auth != null && (request.resource.data.providerUid == request.auth.uid || request.resource.data.isMock == true);
+      allow create: if request.auth != null && (request.resource.data.providerUid == request.auth.uid || (request.resource.data.isMock == true && isAdmin()));
       // rating/reviewCount are written exclusively by the onReviewWrite Cloud
       // Function (Admin SDK bypasses these rules) — the owning provider can edit
       // every other field on their own listing, but not self-inflate their rating.
       allow update: if request.auth != null &&
         resource.data.providerUid == request.auth.uid &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rating', 'reviewCount']);
-      allow delete: if request.auth != null && (resource.data.providerUid == request.auth.uid || resource.data.isMock == true);
+      allow delete: if request.auth != null && (resource.data.providerUid == request.auth.uid || (resource.data.isMock == true && isAdmin()));
     }
 
     match /lost_found_posts/{docId} {
@@ -220,11 +238,15 @@ service cloud.firestore {
     }
 
     // ── collection-group rule for pets (required for collectionGroup queries) ──
+    // Writes here are the demo-seeding path only (mock pets under mock users,
+    // by an admin). A real user's own pets are written via the
+    // /users/{userId}/pets rule above — overlapping matches are OR'd, so
+    // tightening this one doesn't affect them.
     match /{path=**}/pets/{petId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (
-        resource == null ||
-        resource.data.isMock == true
+      allow write: if request.auth != null && isAdmin() && (
+        (request.resource != null && request.resource.data.isMock == true) ||
+        (resource != null && resource.data.isMock == true)
       );
     }
 
@@ -233,7 +255,7 @@ service cloud.firestore {
       allow read: if request.auth != null && (
         resource.data.ownerUid == request.auth.uid ||
         resource.data.providerUid == request.auth.uid ||
-        resource.data.isMock == true
+        (resource.data.isMock == true && isAdmin())
       );
       allow create: if request.auth != null && (
         (request.resource.data.ownerUid == request.auth.uid &&
@@ -243,7 +265,7 @@ service cloud.firestore {
          (request.resource.data.get('startDate', null) == null ||
           request.resource.data.get('endDate', null) == null ||
           request.resource.data.endDate >= request.resource.data.startDate)) ||
-        request.resource.data.isMock == true
+        (request.resource.data.isMock == true && isAdmin())
       );
       allow update: if request.auth != null &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
@@ -294,7 +316,7 @@ service cloud.firestore {
            resource.data.status == 'awaitingConfirmation' &&
            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
         );
-      allow delete: if request.auth != null && resource.data.isMock == true;
+      allow delete: if request.auth != null && resource.data.isMock == true && isAdmin();
     }
 
     // ── reviews ──────────────────────────────────────────────────────────────
@@ -308,7 +330,7 @@ service cloud.firestore {
          get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.ownerUid == request.auth.uid &&
          get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.providerUid == request.resource.data.providerId &&
          get(/databases/$(database)/documents/booking_requests/$(reviewId)).data.status == 'completed') ||
-        request.resource.data.isMock == true
+        (request.resource.data.isMock == true && isAdmin())
       );
       allow update: if request.auth != null &&
         resource.data.reviewerUid == request.auth.uid &&
@@ -317,7 +339,7 @@ service cloud.firestore {
         request.resource.data.bookingId == resource.data.bookingId &&
         request.resource.data.rating >= 1 &&
         request.resource.data.rating <= 5;
-      allow delete: if request.auth != null && resource.data.isMock == true;
+      allow delete: if request.auth != null && resource.data.isMock == true && isAdmin();
     }
 
     // ── admin_audit ──────────────────────────────────────────────────────────
@@ -348,7 +370,7 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if request.auth != null && (
         request.resource.data.reporterId == request.auth.uid ||
-        request.resource.data.isMock == true
+        (request.resource.data.isMock == true && isAdmin())
       );
       allow read: if request.auth != null && isAdmin();
       // Reports are written with a deterministic id (type_targetId_reporterId)
@@ -366,7 +388,7 @@ service cloud.firestore {
         // Re-seeding overwrites a prior mock report at the same deterministic
         // id — allowed only mock-to-mock, so a real report can't be hijacked
         // by a "mock" rewrite and a mock report can't be laundered into real.
-        (resource.data.isMock == true && request.resource.data.isMock == true)
+        (resource.data.isMock == true && request.resource.data.isMock == true && isAdmin())
       );
       allow delete: if false;
     }
@@ -398,9 +420,10 @@ service cloud.firestore {
     // ── pois ─────────────────────────────────────────────────────────────────
     match /pois/{poiId} {
       allow read:   if request.auth != null;
-      allow create: if isAdmin() || (request.auth != null && request.resource.data.isMock == true);
+      // Admin-only for every write — mock POI seeding runs as an admin too.
+      allow create: if isAdmin();
       allow update: if isAdmin();
-      allow delete: if isAdmin() || (request.auth != null && resource.data.isMock == true);
+      allow delete: if isAdmin();
     }
 
     match /conversations/{conversationId} {
