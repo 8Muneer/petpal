@@ -1377,7 +1377,7 @@ class _SittingServiceCard extends ConsumerWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.primary, Color(0xFF2596BE)],
+                            colors: [AppColors.primary, AppColors.accent],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -1631,7 +1631,7 @@ class _WalkServiceCard extends ConsumerWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.primary, Color(0xFF2596BE)],
+                            colors: [AppColors.primary, AppColors.accent],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -2551,10 +2551,8 @@ class _ProviderCard extends StatelessWidget {
                   Expanded(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isWalk
-                              ? [AppColors.primary, Color(0xFF2596BE)]
-                              : [AppColors.primary, Color(0xFF2596BE)],
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.accent],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -2603,7 +2601,7 @@ class _CardPhotoPlaceholder extends StatelessWidget {
       child: Center(
         child: Text(
           name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.frankRuhlLibre(
             fontSize: 64,
             fontWeight: FontWeight.w700,
             color: Colors.white.withValues(alpha: 0.2),

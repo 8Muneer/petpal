@@ -21,6 +21,7 @@ class AppColors {
 
   // ── Semantic Roles ────────────────────────────────────────────────────────
   static const Color primary    = smartBlue;             // #1B6E8C
+  static const Color accent     = Color(0xFF2596BE);     // bright teal accent (gradients, highlights)
   static const Color surface    = Color(0xFFEBF5F9);     // ultra-light teal tint
   static const Color onSurface  = prussianBlue3;         // #001233 deep text
   static const Color pureWhite  = Color(0xFFFFFFFF);
@@ -53,31 +54,6 @@ class AppColors {
   static const Color walks       = sapphire;
   static const Color sitting     = regalNavy;
   static const Color lostPets    = prussianBlue3;
-
-  // ── Backwards-compat aliases (midnight atlas / amber / amethyst eras) ────
-  static const Color inkBlack      = prussianBlue3;
-  static const Color duskBlue      = smartBlue;
-  static const Color dustyDenim    = slateGrey;
-  static const Color alabasterGrey = lavenderGrey;
-
-  // Amber-era compat
-  static const Color espresso    = prussianBlue3;
-  static const Color darkUmber   = prussianBlue;
-  static const Color russet      = sapphire;
-  static const Color amber       = smartBlue;
-  static const Color goldenAmber = slateGrey;
-  static const Color warmSand    = lavenderGrey;
-  static const Color cream       = surface;
-
-  // Amethyst-era compat
-  static const Color darkAmethyst   = prussianBlue3;
-  static const Color darkAmethyst2  = prussianBlue2;
-  static const Color indigoInk      = prussianBlue;
-  static const Color indigoVelvet   = regalNavy;
-  static const Color royalViolet    = sapphire;
-  static const Color lavenderPurple = smartBlue;
-  static const Color mauveMagic     = blueSlate;
-  static const Color mauve          = twilightIndigo;
 
   // ── Dynamic Helpers ───────────────────────────────────────────────────────
   static Color get walksLight      => sapphire.withValues(alpha: 0.13);
@@ -186,63 +162,63 @@ class AppRadius {
 class AppTextStyles {
   AppTextStyles._();
 
-  static TextStyle get headlineLg => GoogleFonts.playfairDisplay(
+  static TextStyle get headlineLg => GoogleFonts.frankRuhlLibre(
         fontSize: 22,
         fontWeight: FontWeight.w700,
         height: 1.2,
         color: AppColors.onSurface,
       );
 
-  static TextStyle get headlineMd => GoogleFonts.playfairDisplay(
+  static TextStyle get headlineMd => GoogleFonts.frankRuhlLibre(
         fontSize: 20,
         fontWeight: FontWeight.w700,
         height: 1.2,
         color: AppColors.onSurface,
       );
 
-  static TextStyle get headlineSm => GoogleFonts.playfairDisplay(
+  static TextStyle get headlineSm => GoogleFonts.frankRuhlLibre(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         height: 1.2,
         color: AppColors.onSurface,
       );
 
-  static TextStyle get bodyLg => GoogleFonts.ibmPlexSansArabic(
+  static TextStyle get bodyLg => GoogleFonts.heebo(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         height: 1.5,
         color: AppColors.onSurface,
       );
 
-  static TextStyle get bodyMd => GoogleFonts.ibmPlexSansArabic(
+  static TextStyle get bodyMd => GoogleFonts.heebo(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         height: 1.4,
         color: AppColors.onSurface,
       );
 
-  static TextStyle get bodySm => GoogleFonts.ibmPlexSansArabic(
+  static TextStyle get bodySm => GoogleFonts.heebo(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: AppColors.onSurface,
       );
 
-  static TextStyle get labelMd => GoogleFonts.ibmPlexSansArabic(
+  static TextStyle get labelMd => GoogleFonts.heebo(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         height: 1.2,
         color: AppColors.textMuted,
       );
 
-  static TextStyle get labelSm => GoogleFonts.ibmPlexSansArabic(
+  static TextStyle get labelSm => GoogleFonts.heebo(
         fontSize: 11,
         fontWeight: FontWeight.w500,
         height: 1.2,
         color: AppColors.textMuted,
       );
 
-  static TextStyle get priceTag => GoogleFonts.ibmPlexSansArabic(
+  static TextStyle get priceTag => GoogleFonts.heebo(
         fontSize: 14,
         fontWeight: FontWeight.w700,
         color: AppColors.primary,
@@ -308,7 +284,7 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.surface,
-      textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(),
+      textTheme: GoogleFonts.heeboTextTheme(),
 
       cardTheme: CardThemeData(
         color: AppColors.pureWhite,

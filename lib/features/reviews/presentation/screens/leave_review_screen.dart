@@ -267,7 +267,7 @@ class _LeaveReviewScreenState extends ConsumerState<LeaveReviewScreen>
                     child: Text(
                       _ratingLabel(_rating),
                       key: ValueKey(_rating),
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.frankRuhlLibre(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: _rating > 0
@@ -446,7 +446,7 @@ class _ReviewHeroSection extends StatelessWidget {
                   Text(
                     providerName,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.frankRuhlLibre(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -746,7 +746,7 @@ class _SubmitSuccessOverlayState extends State<_SubmitSuccessOverlay>
                     const SizedBox(height: 24),
                     Text(
                       'תודה על הביקורת!',
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.frankRuhlLibre(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: AppColors.textPrimary,

@@ -103,7 +103,7 @@ class _WalkRequestDetailScreenState
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
                     gradient: const LinearGradient(
-                      colors: [AppColors.primary, Color(0xFF2596BE)],
+                      colors: [AppColors.primary, AppColors.accent],
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -726,7 +726,9 @@ class _WalkRequestDetailScreenState
                   onSelected: (v) {
                     if (v == 'edit') {
                       context.push('/walks/edit', extra: _request);
-                    } else if (v == 'delete') _delete();
+                    } else if (v == 'delete') {
+                      _delete();
+                    }
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(

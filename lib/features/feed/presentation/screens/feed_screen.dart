@@ -408,7 +408,7 @@ class _EmptyFeedState extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
-                  colors: [AppColors.primary, Color(0xFF2596BE)],
+                  colors: [AppColors.primary, AppColors.accent],
                 ),
               ),
               child: const Text(

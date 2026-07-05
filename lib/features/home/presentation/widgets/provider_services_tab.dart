@@ -102,7 +102,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                        colors: [AppColors.primary, Color(0xFF2596BE)],
+                        colors: [AppColors.primary, AppColors.accent],
                       ),
                     ),
                     child: const Icon(Icons.campaign_rounded,
@@ -153,7 +153,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, Color(0xFF2596BE)],
+                      colors: [AppColors.primary, AppColors.accent],
                     ),
                   ),
                   child: const Center(
@@ -224,7 +224,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                          colors: [AppColors.primary, Color(0xFF2596BE)]),
+                          colors: [AppColors.primary, AppColors.accent]),
                     ),
                     child: const Icon(Icons.campaign_rounded,
                         color: Colors.white, size: 24),
@@ -273,7 +273,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, Color(0xFF2596BE)],
+                      colors: [AppColors.primary, AppColors.accent],
                     ),
                   ),
                   child: const Center(
@@ -794,7 +794,7 @@ class ListYourServiceCTA extends ConsumerWidget {
                 'פרסם את שירותי השמירה שלך והתחל לקבל פניות מבעלי חיות באזורך',
             icon: Icons.add_business_rounded,
             gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFF2596BE)],
+              colors: [AppColors.primary, AppColors.accent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

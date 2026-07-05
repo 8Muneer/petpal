@@ -339,7 +339,7 @@ class _SittingRequestCardState extends State<SittingRequestCard> {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [purple, Color(0xFF2596BE)],
+                            colors: [purple, AppColors.accent],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),

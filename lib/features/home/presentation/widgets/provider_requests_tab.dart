@@ -419,7 +419,7 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.primary, Color(0xFF2596BE)],
+                              colors: [AppColors.primary, AppColors.accent],
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -791,7 +791,7 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.primary, Color(0xFF2596BE)],
+                              colors: [AppColors.primary, AppColors.accent],
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -1066,7 +1066,7 @@ class _SittingProviderOfferSheetState
                             ]
                           : [
                               purple,
-                              const Color(0xFF2596BE),
+                              AppColors.accent,
                             ],
                     ),
                   ),
