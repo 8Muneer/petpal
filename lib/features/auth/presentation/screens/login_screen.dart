@@ -163,8 +163,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           children: [
             // ── Full-screen background image ──────────────────────────────
             Positioned.fill(
-              child: Image.network(
-                'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2000',
+              child: Image.asset(
+                'assets/images/hero/login_bg.jpg',
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
               ),
@@ -422,10 +422,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
 
             // ── Back button (on top so it receives taps) ──────────────────
+            // Login can be the stack ROOT (signup success and the admin-hub
+            // bounce both arrive via context.go), where a bare pop() throws
+            // "There is nothing to pop" — fall back to onboarding instead.
             Positioned(
               top: topPadding + 16,
               right: 20,
-              child: _CircleBackButton(onTap: () => context.pop()),
+              child: _CircleBackButton(
+                onTap: () => context.canPop()
+                    ? context.pop()
+                    : context.go('/onboarding'),
+              ),
             ),
           ],
         ),
@@ -624,8 +631,8 @@ class _GlassGoogleButton extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Image.network(
-              'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
+            Image.asset(
+              'assets/images/google_g.png',
               height: 22,
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.person_outline,

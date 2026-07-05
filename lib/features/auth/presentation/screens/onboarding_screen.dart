@@ -83,10 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Expanded(
                     flex: 42,
                     child: _BottomContent(
-                      onStartPressed: () {
-                        debugPrint('🚀 Let\'s start pressed');
-                        context.push('/login');
-                      },
+                      onStartPressed: () => context.push('/login'),
                       onGuestPressed: () => context.go('/guest'),
                     ),
                   ),
@@ -141,19 +138,20 @@ class _MasonryGallery extends StatefulWidget {
 }
 
 class _MasonryGalleryState extends State<_MasonryGallery> {
+  // Bundled locally so the very first screen never depends on the network.
   static const List<String> _petImages = [
-    'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=350&fit=crop',
-    'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=400&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&h=380&fit=crop',
-    'https://images.unsplash.com/photo-1598133894008-61f7fdb8cc3a?w=400&h=520&fit=crop',
-    'https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=480&fit=crop',
-    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=360&fit=crop',
-    'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=440&fit=crop',
-    'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=390&fit=crop',
-    'https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=400&h=510&fit=crop',
-    'https://images.unsplash.com/photo-1507146426996-ef05306b995a?w=400&h=370&fit=crop',
+    'assets/images/hero/pet_01.jpg',
+    'assets/images/hero/pet_02.jpg',
+    'assets/images/hero/pet_03.jpg',
+    'assets/images/hero/pet_04.jpg',
+    'assets/images/hero/pet_05.jpg',
+    'assets/images/hero/pet_06.jpg',
+    'assets/images/hero/pet_07.jpg',
+    'assets/images/hero/pet_08.jpg',
+    'assets/images/hero/pet_09.jpg',
+    'assets/images/hero/pet_10.jpg',
+    'assets/images/hero/pet_11.jpg',
+    'assets/images/hero/pet_12.jpg',
   ];
 
   late List<ScrollController> _controllers;
@@ -219,7 +217,7 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                       padding: const EdgeInsets.only(bottom: 8),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
+                        child: Image.asset(
                           _petImages[imgIdx],
                           height: h,
                           width: double.infinity,
@@ -233,13 +231,6 @@ class _MasonryGalleryState extends State<_MasonryGallery> {
                               size: 32,
                             ),
                           ),
-                          loadingBuilder: (_, child, progress) {
-                            if (progress == null) return child;
-                            return Container(
-                              height: h,
-                              color: AppColors.borderFaint,
-                            );
-                          },
                         ),
                       ),
                     );
