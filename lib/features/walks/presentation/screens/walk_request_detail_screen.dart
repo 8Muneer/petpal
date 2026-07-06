@@ -1,4 +1,5 @@
 ﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/applications/domain/entities/service_application.dart';
 import 'package:petpal/features/applications/presentation/providers/application_provider.dart';
 import 'package:petpal/features/applications/presentation/widgets/owner_applications_list.dart';
@@ -180,6 +183,29 @@ class _WalkRequestDetailScreenState
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  /// Opens (or creates) the 1:1 conversation with the request's owner —
+  /// same flow as the chat shortcuts on the booking screens.
+  Future<void> _openChat() async {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: _request.ownerUid,
+      otherName: _request.ownerName,
+      myPhotoUrl: myProfile?.photoUrl ?? me.photoURL ?? '',
+      otherPhotoUrl: _request.ownerPhotoUrl ?? '',
+    );
+    if (!mounted) return;
+    context.push('/chat/$convoId', extra: {
+      'otherName': _request.ownerName,
+      'otherPhotoUrl': _request.ownerPhotoUrl,
+      'otherUid': _request.ownerUid,
+    });
   }
 
   Future<void> _delete() async {
@@ -545,7 +571,7 @@ class _WalkRequestDetailScreenState
                                     icon: Icons
                                         .chat_bubble_outline_rounded,
                                     color: AppColors.primary,
-                                    onTap: () {},
+                                    onTap: _openChat,
                                   ),
                                 ],
                               ),

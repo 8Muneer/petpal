@@ -118,6 +118,29 @@ class _SittingRequestDetailScreenState
     }
   }
 
+  /// Opens (or creates) the 1:1 conversation with the request's owner —
+  /// same flow as the chat shortcuts on the booking screens.
+  Future<void> _openChat() async {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: _request.ownerUid,
+      otherName: _request.ownerName,
+      myPhotoUrl: myProfile?.photoUrl ?? me.photoURL ?? '',
+      otherPhotoUrl: _request.ownerPhotoUrl ?? '',
+    );
+    if (!mounted) return;
+    context.push('/chat/$convoId', extra: {
+      'otherName': _request.ownerName,
+      'otherPhotoUrl': _request.ownerPhotoUrl,
+      'otherUid': _request.ownerUid,
+    });
+  }
+
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -501,7 +524,7 @@ class _SittingRequestDetailScreenState
                                     icon: Icons
                                         .chat_bubble_outline_rounded,
                                     color: purple,
-                                    onTap: () {},
+                                    onTap: _openChat,
                                   ),
                                 ],
                               ),
