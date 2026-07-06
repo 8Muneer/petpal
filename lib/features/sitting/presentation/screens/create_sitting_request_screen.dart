@@ -215,6 +215,9 @@ class _CreateSittingRequestScreenState
           'ownerName': user.displayName ?? user.email?.split('@').first ?? '',
           'ownerPhotoUrl': user.photoURL,
           'status': 'open',
+          // Open-board request, visible to all providers (the provider
+          // requests tab filters on this).
+          'isPublicJob': true,
           'createdAt': FieldValue.serverTimestamp(),
         });
         if (!mounted) return;
