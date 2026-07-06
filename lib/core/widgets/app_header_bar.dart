@@ -96,13 +96,8 @@ class _HeaderContent extends StatelessWidget {
                     child: ProfileAvatarButton(
                       imageUrl: profile?.photoUrl,
                       name: profile?.name,
-                      menuItems: profileMenuItemsForRole(
-                        context,
-                        profile?.role,
-                        onMyServices: () => ref
-                            .read(showProviderServicesProvider.notifier)
-                            .state = true,
-                      ),
+                      menuItems:
+                          profileMenuItemsForRole(context, profile?.role),
                     ),
                   )
                 : null,

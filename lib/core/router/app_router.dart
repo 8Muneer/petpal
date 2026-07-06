@@ -8,6 +8,7 @@ import 'package:petpal/features/auth/presentation/screens/login_screen.dart';
 import 'package:petpal/features/auth/presentation/screens/signup_screen.dart';
 import 'package:petpal/features/auth/presentation/widgets/auth_gate.dart';
 import 'package:petpal/features/home/presentation/screens/guest_home_screen.dart';
+import 'package:petpal/features/home/presentation/screens/provider_my_services_screen.dart';
 import 'package:petpal/features/home/presentation/screens/user_home_screen.dart';
 import 'package:petpal/features/home/presentation/screens/service_provider_home_screen.dart';
 import 'package:petpal/features/pets/presentation/screens/my_pets_screen.dart';
@@ -205,6 +206,10 @@ class AppRouter {
       GoRoute(
         path: '/provider/availability',
         builder: (context, state) => const AvailabilityScreen(),
+      ),
+      GoRoute(
+        path: '/provider/my-services',
+        builder: (context, state) => const ProviderMyServicesScreen(),
       ),
       GoRoute(
         path: '/provider/services',

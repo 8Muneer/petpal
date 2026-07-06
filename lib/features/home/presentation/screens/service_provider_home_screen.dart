@@ -33,6 +33,8 @@ import 'package:petpal/features/reviews/presentation/providers/review_provider.d
 
 import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
 import 'package:petpal/features/home/presentation/widgets/provider_requests_tab.dart';
+// Still needed for ListYourServiceCTA (the tab widget itself is no longer
+// embedded here — "My Services" is a pushed route now).
 import 'package:petpal/features/home/presentation/widgets/provider_services_tab.dart';
 
 class ServiceProviderHomeScreen extends ConsumerStatefulWidget {
@@ -60,13 +62,11 @@ class _ServiceProviderHomeScreenState
   }
 
   void _onNavChanged(int i) {
-    ref.read(showProviderServicesProvider.notifier).state = false;
     setState(() => _currentIndex = i);
   }
 
   @override
   Widget build(BuildContext context) {
-    final showMyServices = ref.watch(showProviderServicesProvider);
     final pendingCount = ref.watch(pendingBookingCountProvider);
     final tabs = <Widget>[
       _ProviderHomeTab(
@@ -78,9 +78,6 @@ class _ServiceProviderHomeScreenState
       const LostFoundFeedScreen(),
       const ProviderRequestsTab(),
     ];
-
-    final body =
-        showMyServices ? const ProviderServicesTab() : tabs[_currentIndex];
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -94,12 +91,12 @@ class _ServiceProviderHomeScreenState
             child: child,
           ),
           child: KeyedSubtree(
-            key: ValueKey(showMyServices ? 'services' : '$_currentIndex'),
-            child: body,
+            key: ValueKey('$_currentIndex'),
+            child: tabs[_currentIndex],
           ),
         ),
         bottomNavigationBar: AppBottomNav(
-          currentIndex: showMyServices ? -1 : _currentIndex,
+          currentIndex: _currentIndex,
           onChanged: _onNavChanged,
           items: [
             const AppNavItem(
@@ -466,9 +463,6 @@ class _ProviderHomeTab extends ConsumerWidget {
                       menuItems: profileMenuItemsForRole(
                         context,
                         UserRole.serviceProvider,
-                        onMyServices: () => ref
-                            .read(showProviderServicesProvider.notifier)
-                            .state = true,
                       ),
                     ),
                     const SizedBox(width: 14),
