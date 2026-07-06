@@ -281,7 +281,7 @@ class _NavItem extends StatelessWidget {
             // ── Label ─────────────────────────────────────────────────────
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 220),
-              style: GoogleFonts.ibmPlexSansArabic(
+              style: GoogleFonts.heebo(
                 fontSize: 9.5,
                 fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                 color: isActive

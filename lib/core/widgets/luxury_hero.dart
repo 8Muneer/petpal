@@ -1,3 +1,4 @@
+import 'dart:async' show FutureOr;
 import 'dart:math' show min;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,13 @@ class ProfileMenuItem {
   final Color? iconColor;
   final String label;
   final String? subtitle;
-  final VoidCallback onTap;
+
+  /// Item action. When this returns a [Future] (e.g. `context.push(...)`),
+  /// the side menu reopens once that future completes — so backing out of a
+  /// page opened from the menu lands the user back *in* the open menu
+  /// instead of on the bare home screen. Void actions (logout dialog,
+  /// in-place overlays) leave the menu closed.
+  final FutureOr<void> Function() onTap;
   const ProfileMenuItem({
     required this.icon,
     this.iconColor,
@@ -203,6 +210,12 @@ class _ProfileAvatarState extends State<ProfileAvatarButton>
               imageUrl: widget.imageUrl,
               name: widget.name,
               onDismiss: _close,
+              // Called when a page opened from the menu is popped — reopen
+              // the menu so the user can pick their next destination without
+              // tapping the avatar again.
+              onReopen: () {
+                if (mounted) _open();
+              },
             ));
     Overlay.of(context).insert(_overlay!);
   }
@@ -288,8 +301,14 @@ class _SideMenu extends StatefulWidget {
   final String? imageUrl;
   final String? name;
   final VoidCallback onDismiss;
-  const _SideMenu(
-      {required this.items, this.imageUrl, this.name, required this.onDismiss});
+  final VoidCallback onReopen;
+  const _SideMenu({
+    required this.items,
+    this.imageUrl,
+    this.name,
+    required this.onDismiss,
+    required this.onReopen,
+  });
 
   @override
   State<_SideMenu> createState() => _SideMenuState();
@@ -665,7 +684,13 @@ class _SideMenuState extends State<_SideMenu> with TickerProviderStateMixin {
             onTap: () async {
               HapticFeedback.selectionClick();
               await _dismiss();
-              item.onTap();
+              final result = item.onTap();
+              // Navigation actions return the route's pop-future: when the
+              // user backs out of the opened page, reopen the menu.
+              if (result is Future) {
+                await result;
+                widget.onReopen();
+              }
             },
           ),
         );

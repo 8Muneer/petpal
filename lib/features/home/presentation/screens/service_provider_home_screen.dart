@@ -5,19 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/pill_icon_button.dart';
-import 'package:petpal/core/widgets/discovery_chip.dart';
 import 'package:petpal/core/widgets/luxury_hero.dart';
 import 'package:petpal/core/widgets/notification_bell_button.dart';
 import 'package:petpal/core/widgets/profile_menu.dart';
 import 'package:petpal/core/widgets/gradient_action_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
+import 'package:petpal/core/widgets/inline_error_retry.dart';
 
 import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/feed/presentation/screens/feed_screen.dart';
+import 'package:petpal/features/explore/presentation/screens/explore_screen.dart';
+import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
+import 'package:petpal/features/explore/presentation/widgets/poi_card.dart';
+import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/lost_and_found/presentation/screens/lost_found_feed_screen.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
@@ -25,10 +30,11 @@ import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/features/reviews/presentation/providers/review_provider.dart';
-import 'package:petpal/features/reviews/domain/entities/review.dart';
 
 import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
 import 'package:petpal/features/home/presentation/widgets/provider_requests_tab.dart';
+// Still needed for ListYourServiceCTA (the tab widget itself is no longer
+// embedded here — "My Services" is a pushed route now).
 import 'package:petpal/features/home/presentation/widgets/provider_services_tab.dart';
 
 class ServiceProviderHomeScreen extends ConsumerStatefulWidget {
@@ -56,13 +62,11 @@ class _ServiceProviderHomeScreenState
   }
 
   void _onNavChanged(int i) {
-    ref.read(showProviderServicesProvider.notifier).state = false;
     setState(() => _currentIndex = i);
   }
 
   @override
   Widget build(BuildContext context) {
-    final showMyServices = ref.watch(showProviderServicesProvider);
     final pendingCount = ref.watch(pendingBookingCountProvider);
     final tabs = <Widget>[
       _ProviderHomeTab(
@@ -70,12 +74,10 @@ class _ServiceProviderHomeScreenState
         onSelectTab: _onNavChanged,
       ),
       const FeedScreen(),
+      const ExploreScreen(),
       const LostFoundFeedScreen(),
       const ProviderRequestsTab(),
     ];
-
-    final body =
-        showMyServices ? const ProviderServicesTab() : tabs[_currentIndex];
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -89,12 +91,12 @@ class _ServiceProviderHomeScreenState
             child: child,
           ),
           child: KeyedSubtree(
-            key: ValueKey(showMyServices ? 'services' : '$_currentIndex'),
-            child: body,
+            key: ValueKey('$_currentIndex'),
+            child: tabs[_currentIndex],
           ),
         ),
         bottomNavigationBar: AppBottomNav(
-          currentIndex: showMyServices ? -1 : _currentIndex,
+          currentIndex: _currentIndex,
           onChanged: _onNavChanged,
           items: [
             const AppNavItem(
@@ -105,6 +107,10 @@ class _ServiceProviderHomeScreenState
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
                 label: 'קהילה'),
+            const AppNavItem(
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore_rounded,
+                label: 'גלה'),
             const AppNavItem(
                 icon: Icons.pets_outlined,
                 activeIcon: Icons.pets_rounded,
@@ -137,7 +143,11 @@ class _StatItem extends StatelessWidget {
         children: [
           Text(
             value,
-            style: AppTextStyles.h2.copyWith(color: color, fontSize: 16),
+            style: AppTextStyles.h2.copyWith(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -153,122 +163,19 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-/// Section header with an optional trailing action link.
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  const _SectionTitle({required this.title, this.actionLabel, this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: AppTextStyles.headlineMd,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (actionLabel != null && onAction != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              actionLabel!,
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// A full-width agenda row for one of today's accepted bookings.
-class _ProviderAgendaRow extends StatelessWidget {
-  final BookingRequest booking;
-  final VoidCallback onTap;
-
-  const _ProviderAgendaRow({required this.booking, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final isWalk = booking.serviceType == BookingServiceType.walk;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.pureWhite,
-          borderRadius: AppRadius.organicRadius,
-          border: Border.all(color: AppColors.border),
-          boxShadow: AppShadows.subtle,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                isWalk
-                    ? Icons.directions_walk_rounded
-                    : Icons.home_work_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    booking.petName,
-                    style: AppTextStyles.headlineSm,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'עם ${booking.ownerName} · ${isWalk ? 'טיול' : 'שמירה'}',
-                    style: AppTextStyles.labelMd
-                        .copyWith(color: AppColors.textMuted),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Icon(Icons.chevron_left_rounded, color: AppColors.textMuted),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// A horizontal card for an open marketplace request the provider can bid on.
+///
+/// Sized and styled to match [POICard] (width 280, 16:9 image, organic
+/// radius) so this row and the dog-parks/vets/stores rows below it read as
+/// one consistent card system instead of two different scales.
 class _OpportunityCard extends StatelessWidget {
   final String petName;
   final String area;
   final String typeLabel;
   final IconData icon;
+  final String? imageUrl;
+  final String? dateLabel;
+  final String? budget;
   final VoidCallback onTap;
 
   const _OpportunityCard({
@@ -277,156 +184,155 @@ class _OpportunityCard extends StatelessWidget {
     required this.typeLabel,
     required this.icon,
     required this.onTap,
+    this.imageUrl,
+    this.dateLabel,
+    this.budget,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 210,
-        padding: const EdgeInsets.all(16),
+        width: 280,
         decoration: BoxDecoration(
-          color: AppColors.pureWhite,
+          color: AppColors.surfaceCard,
           borderRadius: AppRadius.organicRadius,
-          border: Border.all(color: AppColors.border),
-          boxShadow: AppShadows.premium,
+          boxShadow: AppShadows.subtle,
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
+            Stack(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 18, color: AppColors.primary),
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: hasImage
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            child:
+                                Icon(icon, size: 32, color: AppColors.primary),
+                          ),
+                        )
+                      : Container(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          child: Icon(icon, size: 32, color: AppColors.primary),
+                        ),
                 ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    typeLabel,
-                    style: AppTextStyles.labelSm.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 13, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          typeLabel,
+                          style: AppTextStyles.labelSm.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              petName,
-              style: AppTextStyles.headlineSm,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.location_on_rounded,
-                    size: 14, color: AppColors.textMuted),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    area,
-                    style: AppTextStyles.labelSm
-                        .copyWith(color: AppColors.textMuted),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    petName,
+                    style: AppTextStyles.headlineSm,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Text(
-                  'הגש הצעה',
-                  style: AppTextStyles.labelMd.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined,
+                          size: 13, color: AppColors.textMuted),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          area,
+                          style: AppTextStyles.labelSm
+                              .copyWith(color: AppColors.textMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.chevron_left_rounded,
-                    size: 16, color: AppColors.primary),
-              ],
+                  if (dateLabel != null && dateLabel!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded,
+                            size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            dateLabel!,
+                            style: AppTextStyles.labelSm
+                                .copyWith(color: AppColors.textMuted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (budget != null && budget!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.account_balance_wallet_rounded,
+                              size: 12, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            budget!,
+                            style: AppTextStyles.labelSm.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// A full-width review card for the recent-reviews section.
-class _ReviewCard extends StatelessWidget {
-  final Review review;
-
-  const _ReviewCard({required this.review});
-
-  @override
-  Widget build(BuildContext context) {
-    final comment = review.comment?.trim() ?? '';
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.pureWhite,
-        borderRadius: AppRadius.organicRadius,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.subtle,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  review.reviewerName.isEmpty ? 'משתמש' : review.reviewerName,
-                  style: AppTextStyles.bodyBold,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < review.rating
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    size: 15,
-                    color: AppColors.warning,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (comment.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              comment,
-              style:
-                  AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -445,6 +351,11 @@ class _ProviderHomeTab extends ConsumerWidget {
         FirebaseAuth.instance.currentUser?.displayName ??
         'נותן שירות';
 
+    // Nearby points of interest — same insight cards shown on the pet-owner home.
+    final parksAsync = ref.watch(topRatedPOIsProvider(type: POIType.park));
+    final vetsAsync = ref.watch(topRatedPOIsProvider(type: POIType.vet));
+    final storesAsync = ref.watch(topRatedPOIsProvider(type: POIType.store));
+
     // ── Real metrics derived from live data ──────────────────────────────────
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -455,26 +366,12 @@ class _ProviderHomeTab extends ConsumerWidget {
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    bool coversToday(BookingRequest b) {
-      final single = b.requestedDate;
-      if (single != null) {
-        return DateTime(single.year, single.month, single.day) == today;
-      }
-      if (b.startDate != null && b.endDate != null) {
-        final start =
-            DateTime(b.startDate!.year, b.startDate!.month, b.startDate!.day);
-        final end = DateTime(b.endDate!.year, b.endDate!.month, b.endDate!.day);
-        return !today.isBefore(start) && !today.isAfter(end);
-      }
-      return false;
-    }
 
     final accepted = incoming
         .where((b) =>
             b.status == BookingStatus.accepted ||
             b.status == BookingStatus.awaitingConfirmation)
         .toList();
-    final todayJobs = accepted.where(coversToday).toList();
     final upcomingCount = accepted.where((b) {
       final d = b.requestedDate ?? b.startDate;
       return d != null && !d.isBefore(today);
@@ -500,7 +397,16 @@ class _ProviderHomeTab extends ConsumerWidget {
           area: w.area,
           typeLabel: 'טיול',
           icon: Icons.directions_walk_rounded,
-          onTap: () => onSelectTab(3),
+          imageUrl: w.allImages.isNotEmpty ? w.allImages.first : null,
+          dateLabel: w.preferredDate != null
+              ? '${w.preferredDate!.day.toString().padLeft(2, '0')}/${w.preferredDate!.month.toString().padLeft(2, '0')}'
+                  '${w.preferredTime.isNotEmpty ? ' · ${w.preferredTime}' : ''}'
+              : (w.preferredTime.isNotEmpty ? w.preferredTime : null),
+          budget:
+              (w.budget != null && w.budget!.isNotEmpty)
+                  ? withShekel(w.budget!)
+                  : null,
+          onTap: () => onSelectTab(4),
         ),
       for (final s in openSittings.take(10))
         _OpportunityCard(
@@ -508,14 +414,18 @@ class _ProviderHomeTab extends ConsumerWidget {
           area: s.area,
           typeLabel: 'שמירה',
           icon: Icons.home_work_rounded,
-          onTap: () => onSelectTab(3),
+          imageUrl: s.allImages.isNotEmpty ? s.allImages.first : null,
+          dateLabel: s.startDate != null
+              ? '${s.startDate!.day.toString().padLeft(2, '0')}/${s.startDate!.month.toString().padLeft(2, '0')}'
+                  '${s.endDate != null ? ' – ${s.endDate!.day.toString().padLeft(2, '0')}/${s.endDate!.month.toString().padLeft(2, '0')}' : ''}'
+              : null,
+          budget:
+              (s.budget != null && s.budget!.isNotEmpty)
+                  ? withShekel(s.budget!)
+                  : null,
+          onTap: () => onSelectTab(4),
         ),
     ];
-
-    // Recent reviews for social proof.
-    final reviews = uid.isEmpty
-        ? const <Review>[]
-        : (ref.watch(providerReviewsProvider(uid)).asData?.value ?? const []);
 
     return ListView(
       physics: const BouncingScrollPhysics(),
@@ -528,19 +438,12 @@ class _ProviderHomeTab extends ConsumerWidget {
               height: 380,
               width: double.infinity,
               decoration: BoxDecoration(color: AppColors.surfaceDark),
-              child: CachedNetworkImage(
-                imageUrl:
-                    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=2000&auto=format&fit=crop', // Group of happy dogs in field
+              child: Image.asset(
+                'assets/images/hero/provider_home_bg.jpg', // Group of happy dogs in field
                 fit: BoxFit.cover,
                 color: Colors.black.withValues(alpha: 0.25),
                 colorBlendMode: BlendMode.darken,
-                placeholder: (context, url) => Container(
-                  color: AppColors.surfaceDark,
-                  child: const Center(
-                      child:
-                          CircularProgressIndicator(color: AppColors.primary)),
-                ),
-                errorWidget: (context, url, error) => Container(
+                errorBuilder: (context, error, stackTrace) => Container(
                   color: AppColors.surfaceDark,
                   child: const Center(
                       child: Icon(Icons.business_center_rounded,
@@ -560,9 +463,6 @@ class _ProviderHomeTab extends ConsumerWidget {
                       menuItems: profileMenuItemsForRole(
                         context,
                         UserRole.serviceProvider,
-                        onMyServices: () => ref
-                            .read(showProviderServicesProvider.notifier)
-                            .state = true,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -632,14 +532,14 @@ class _ProviderHomeTab extends ConsumerWidget {
                 padding: const EdgeInsets.all(18),
                 borderRadius: BorderRadius.circular(22),
                 blur: 35,
-                opacity: 0.95,
-                color: AppColors.surfaceDark,
+                opacity: 0.55,
+                color: AppColors.prussianBlue3,
                 child: Row(
                   children: [
                     _StatItem(
                         label: 'ממתינות',
                         value: '$pendingCount',
-                        color: AppColors.primary),
+                        color: Colors.white),
                     Container(
                         height: 30,
                         width: 1,
@@ -665,38 +565,6 @@ class _ProviderHomeTab extends ConsumerWidget {
 
         const SizedBox(height: 24),
 
-        // --- Quick action chips (wired to real destinations) ---
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              DiscoveryChip(
-                label: 'בקשות',
-                icon: Icons.assignment_outlined,
-                isSelected: true,
-                onTap: () => onSelectTab(3),
-              ),
-              const SizedBox(width: 12),
-              DiscoveryChip(
-                label: 'השירותים שלי',
-                icon: Icons.campaign_outlined,
-                onTap: () => ref
-                    .read(showProviderServicesProvider.notifier)
-                    .state = true,
-              ),
-              const SizedBox(width: 12),
-              DiscoveryChip(
-                label: 'צ׳אט',
-                icon: Icons.chat_bubble_outline_rounded,
-                onTap: () => onSelectTab(4),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
         // --- Pending requests action banner ---
         if (pendingCount > 0) ...[
           Padding(
@@ -710,41 +578,11 @@ class _ProviderHomeTab extends ConsumerWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              onTap: () => onSelectTab(3),
+              onTap: () => onSelectTab(4),
             ),
           ),
           const SizedBox(height: 24),
         ],
-
-        // --- Today's schedule (vertical agenda) ---
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _SectionTitle(
-            title: 'המשימות שלי להיום',
-            actionLabel: todayJobs.isEmpty ? null : 'הצג הכל',
-            onAction: todayJobs.isEmpty ? null : () => onSelectTab(3),
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (todayJobs.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: EmptyStateWidget(
-              title: 'אין משימות להיום',
-              subtitle: 'משימות מאושרות יופיעו כאן ביום הביצוע',
-              icon: Icons.event_available_rounded,
-            ),
-          )
-        else
-          ...todayJobs.map(
-            (b) => Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child:
-                  _ProviderAgendaRow(booking: b, onTap: () => onSelectTab(3)),
-            ),
-          ),
-
-        const SizedBox(height: 12),
 
         // --- Open opportunities (horizontal) ---
         // Note: not actually area-filtered — openWalkRequestsProvider/
@@ -754,30 +592,125 @@ class _ProviderHomeTab extends ConsumerWidget {
         // profile doesn't have today).
         if (opportunities.isNotEmpty) ...[
           HomeTopRatedSection(
-            title: 'הזדמנויות חדשות',
-            itemHeight: 165,
-            onMoreTap: () => onSelectTab(3),
+            title: 'בקשות חדשות',
+            itemHeight: 300,
+            onMoreTap: () => onSelectTab(4),
             itemCount: opportunities.length,
             itemBuilder: (context, i) => opportunities[i],
           ),
           const SizedBox(height: 24),
         ],
 
-        // --- Recent reviews (social proof) ---
-        if (reviews.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: _SectionTitle(title: 'ביקורות אחרונות'),
+        // --- Dog parks nearby ---
+        parksAsync.when(
+          data: (parks) => HomeTopRatedSection(
+            title: 'גינות כלבים',
+            itemHeight: 300,
+            onMoreTap: () {
+              ref.read(exploreTabIndexProvider.notifier).state = 0;
+              onSelectTab(2);
+            },
+            itemCount: parks.length,
+            emptyState: const EmptyStateWidget(
+              title: 'אין גינות כלבים באזור',
+              subtitle: 'נסה לחפש באזור אחר',
+              icon: Icons.park_rounded,
+            ),
+            itemBuilder: (context, index) {
+              final poi = parks[index];
+              return POICard(
+                poi: poi,
+                isCompact: true,
+                onTap: () => context.push('/explore/poi/${poi.id}'),
+              );
+            },
           ),
-          const SizedBox(height: 12),
-          ...reviews.take(3).map(
-                (r) => Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  child: _ReviewCard(review: r),
-                ),
-              ),
-          const SizedBox(height: 12),
-        ],
+          loading: () => const SizedBox(
+            height: 240,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (e, _) => InlineErrorRetry(
+            message: 'שגיאה בטעינת גינות כלבים',
+            onRetry: () =>
+                ref.invalidate(topRatedPOIsProvider(type: POIType.park)),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // --- Vets nearby ---
+        vetsAsync.when(
+          data: (vets) => HomeTopRatedSection(
+            title: 'וטרינרים',
+            itemHeight: 300,
+            onMoreTap: () {
+              ref.read(exploreTabIndexProvider.notifier).state = 1;
+              onSelectTab(2);
+            },
+            itemCount: vets.length,
+            emptyState: const EmptyStateWidget(
+              title: 'אין וטרינרים באזור',
+              subtitle: 'נסה לחפש באזור אחר',
+              icon: Icons.medical_services_rounded,
+            ),
+            itemBuilder: (context, index) {
+              final poi = vets[index];
+              return POICard(
+                poi: poi,
+                isCompact: true,
+                onTap: () => context.push('/explore/poi/${poi.id}'),
+              );
+            },
+          ),
+          loading: () => const SizedBox(
+            height: 240,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (e, _) => InlineErrorRetry(
+            message: 'שגיאה בטעינת וטרינרים',
+            onRetry: () =>
+                ref.invalidate(topRatedPOIsProvider(type: POIType.vet)),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // --- Pet stores nearby ---
+        storesAsync.when(
+          data: (stores) => HomeTopRatedSection(
+            title: 'חנויות חיות',
+            itemHeight: 300,
+            onMoreTap: () {
+              ref.read(exploreTabIndexProvider.notifier).state = 2;
+              onSelectTab(2);
+            },
+            itemCount: stores.length,
+            emptyState: const EmptyStateWidget(
+              title: 'אין חנויות באזור',
+              subtitle: 'נסה לחפש באזור אחר',
+              icon: Icons.shopping_bag_rounded,
+            ),
+            itemBuilder: (context, index) {
+              final poi = stores[index];
+              return POICard(
+                poi: poi,
+                isCompact: true,
+                onTap: () => context.push('/explore/poi/${poi.id}'),
+              );
+            },
+          ),
+          loading: () => const SizedBox(
+            height: 240,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (e, _) => InlineErrorRetry(
+            message: 'שגיאה בטעינת חנויות',
+            onRetry: () =>
+                ref.invalidate(topRatedPOIsProvider(type: POIType.store)),
+          ),
+        ),
+
+        const SizedBox(height: 24),
 
         // --- List Your Service CTA (shown only when no services yet) ---
         const ListYourServiceCTA(),

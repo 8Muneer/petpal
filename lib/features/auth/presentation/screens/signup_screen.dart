@@ -192,8 +192,8 @@ class _SignupScreenState extends State<SignupScreen>
           children: [
             // ── Full-screen background image ──────────────────────────────
             Positioned.fill(
-              child: Image.network(
-                'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=2000',
+              child: Image.asset(
+                'assets/images/hero/signup_bg.jpg',
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
               ),
@@ -404,10 +404,16 @@ class _SignupScreenState extends State<SignupScreen>
             ),
 
             // ── Back button (on top so it receives taps) ──────────────────
+            // Same root-guard as the login screen: if signup is ever reached
+            // via context.go (no stack beneath), pop() would throw.
             Positioned(
               top: topPadding + 16,
               right: 20,
-              child: _CircleBackButton(onTap: () => context.pop()),
+              child: _CircleBackButton(
+                onTap: () => context.canPop()
+                    ? context.pop()
+                    : context.go('/onboarding'),
+              ),
             ),
           ],
         ),

@@ -173,7 +173,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           _providerName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.frankRuhlLibre(
             fontSize: 15,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -206,7 +206,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           _providerName.isNotEmpty
               ? _providerName.characters.first.toUpperCase()
               : '?',
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.frankRuhlLibre(
             fontSize: 96,
             fontWeight: FontWeight.w700,
             color: Colors.white.withValues(alpha: 0.15),
@@ -299,7 +299,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                     children: [
                       Text(
                         '"',
-                        style: GoogleFonts.playfairDisplay(
+                        style: GoogleFonts.frankRuhlLibre(
                           fontSize: 64,
                           fontWeight: FontWeight.w900,
                           color: AppColors.primary.withValues(alpha: 0.15),
@@ -368,7 +368,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                   Expanded(
                     child: Text(
                       _providerName,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.frankRuhlLibre(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: AppColors.onSurface,
@@ -484,7 +484,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           _providerName.isNotEmpty
               ? _providerName.characters.first.toUpperCase()
               : '?',
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.frankRuhlLibre(
             fontSize: 28,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -780,6 +780,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                           'serviceId': _serviceId,
                           'serviceType': _isWalk ? 'walk' : 'sitting',
                           'priceText': _priceText,
+                          'priceType': _priceType,
                         },
                       ),
                       child: Container(

@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petpal/core/providers/firebase_providers.dart';
+import 'package:petpal/core/services/seed_service.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
 import 'package:petpal/features/admin/presentation/widgets/admin_dashboard_tab.dart';
@@ -58,6 +61,80 @@ class _AdminHubScreenState extends ConsumerState<AdminHubScreen> {
     context.go('/login');
   }
 
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Text(msg),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  void _confirmAction(String title, String content, VoidCallback onConfirm) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title:
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                onConfirm();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+              child: const Text('אישור',
+                  style: TextStyle(fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _seedDemoData() => _confirmAction(
+        'יצירת נתוני דמו?',
+        'המערכת תיצור נתונים ריאליסטיים להדגמה (משתמשים, חיות, שירותים, הזמנות).',
+        () async {
+          final currentUserUid =
+              ref.read(authStateChangesProvider).valueOrNull?.uid;
+          final seedService =
+              SeedService(firestore: FirebaseFirestore.instance);
+          await seedService.seedData(currentUserId: currentUserUid);
+          _toast('נתוני דמו נוצרו בהצלחה');
+        },
+      );
+
+  void _clearDemoData() => _confirmAction(
+        'ניקוי נתוני דמו?',
+        'כל נתוני הדמו (משתמשים, חיות, הזמנות) יימחקו לצמיתות.',
+        () async {
+          final seedService =
+              SeedService(firestore: FirebaseFirestore.instance);
+          await seedService.clearMockData();
+          _toast('נתוני דמו נמחקו בהצלחה');
+        },
+      );
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = ref.watch(isAdminProvider);
@@ -82,6 +159,8 @@ class _AdminHubScreenState extends ConsumerState<AdminHubScreen> {
                   _AdminTopBar(
                     title: _destinations[_currentIndex].title,
                     onLogout: _logout,
+                    onSeedDemoData: _seedDemoData,
+                    onClearDemoData: _clearDemoData,
                   ),
                   Expanded(child: _bodies[_currentIndex]),
                 ],
@@ -131,7 +210,14 @@ class _AdminHubScreenState extends ConsumerState<AdminHubScreen> {
 class _AdminTopBar extends StatelessWidget {
   final String title;
   final VoidCallback onLogout;
-  const _AdminTopBar({required this.title, required this.onLogout});
+  final VoidCallback onSeedDemoData;
+  final VoidCallback onClearDemoData;
+  const _AdminTopBar({
+    required this.title,
+    required this.onLogout,
+    required this.onSeedDemoData,
+    required this.onClearDemoData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +242,20 @@ class _AdminTopBar extends StatelessWidget {
           const SizedBox(width: 5),
           const Text('מחובר', style: AdminText.rowSub),
           const Spacer(),
+          // Demo-data tools — admin-only by construction (this whole screen
+          // is behind the isAdmin gate, and firestore.rules enforce it too).
+          IconButton(
+            onPressed: onSeedDemoData,
+            tooltip: 'יצירת נתוני דמו',
+            icon: const Icon(Icons.auto_awesome_rounded,
+                size: 20, color: AdminColors.inkMuted),
+          ),
+          IconButton(
+            onPressed: onClearDemoData,
+            tooltip: 'ניקוי נתוני דמו',
+            icon: const Icon(Icons.delete_sweep_rounded,
+                size: 20, color: AdminColors.inkMuted),
+          ),
           IconButton(
             onPressed: onLogout,
             tooltip: 'התנתקות',

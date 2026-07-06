@@ -227,7 +227,7 @@ class _PetCard extends StatelessWidget {
                         label: 'מחוסן',
                         icon: Icons.verified_rounded,
                         bgColor:
-                            const Color(0xFF1B6B45).withValues(alpha: 0.85),
+                            AppColors.success.withValues(alpha: 0.85),
                       ),
                     ),
 
@@ -701,7 +701,7 @@ class _PetDetailSheetState extends State<_PetDetailSheet>
                             label: 'מחוסן',
                             icon: Icons.verified_rounded,
                             gradient: LinearGradient(colors: [
-                              Color(0xFF1B6B45),
+                              AppColors.success,
                               Color(0xFF2E9E69),
                             ]),
                           ),
@@ -753,13 +753,13 @@ class _PetDetailSheetState extends State<_PetDetailSheet>
                         _StatTile(
                           icon: Icons.vaccines_rounded,
                           iconColor: pet.isVaccinated
-                              ? const Color(0xFF1B6B45)
+                              ? AppColors.success
                               : AppColors.textMuted,
                           label: 'חיסונים',
                           value: pet.isVaccinated ? 'מחוסן ✓' : 'לא מחוסן',
                           hasValue: pet.isVaccinated,
                           valueColor:
-                              pet.isVaccinated ? const Color(0xFF1B6B45) : null,
+                              pet.isVaccinated ? AppColors.success : null,
                         ),
                       ],
                     ),

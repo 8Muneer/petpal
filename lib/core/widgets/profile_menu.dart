@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/luxury_hero.dart' show ProfileMenuItem;
@@ -10,24 +9,15 @@ import 'package:petpal/features/auth/domain/enums/user_role.dart';
 /// the shared [AppHeaderBar]. Keeping the items and the logout flow here means
 /// every tab opens an identical menu instead of a copy-pasted variant.
 
-/// Drives the provider "My services" advertise overlay in the provider shell.
-/// Lives here (rather than as screen-local state) so both the provider hero and
-/// the shared header open the same overlay.
-final showProviderServicesProvider = StateProvider<bool>((ref) => false);
-
 /// Profile menu items appropriate for the given [role]. Pet owners get "My
 /// pets"; service providers get "My services". Falls back to the owner menu
 /// when the role is unknown (e.g. profile still loading).
-///
-/// [onMyServices] lets the provider shell open its in-app advertise overlay;
-/// without it the "My services" item routes to the service settings screen.
 List<ProfileMenuItem> profileMenuItemsForRole(
   BuildContext context,
-  UserRole? role, {
-  VoidCallback? onMyServices,
-}) {
+  UserRole? role,
+) {
   return role == UserRole.serviceProvider
-      ? _providerMenuItems(context, onMyServices: onMyServices)
+      ? _providerMenuItems(context)
       : buildProfileMenuItems(context);
 }
 
@@ -61,10 +51,7 @@ List<ProfileMenuItem> buildProfileMenuItems(BuildContext context) {
 }
 
 /// The service-provider profile menu.
-List<ProfileMenuItem> _providerMenuItems(
-  BuildContext context, {
-  VoidCallback? onMyServices,
-}) {
+List<ProfileMenuItem> _providerMenuItems(BuildContext context) {
   return [
     _profileItem(context),
     ProfileMenuItem(
@@ -72,7 +59,17 @@ List<ProfileMenuItem> _providerMenuItems(
       iconColor: AppColors.sapphire,
       label: 'השירותים שלי',
       subtitle: 'ניהול מודעות ושירותים',
-      onTap: onMyServices ?? () => context.push('/provider/services'),
+      // A real pushed page (was an in-place body swap inside the home
+      // shell) — so it gets back navigation and the menu-reopen behavior
+      // like every other menu destination.
+      onTap: () => context.push('/provider/my-services'),
+    ),
+    ProfileMenuItem(
+      icon: Icons.calendar_month_rounded,
+      iconColor: AppColors.primary,
+      label: 'הזמנות',
+      subtitle: 'הזמנות נכנסות מלקוחות',
+      onTap: () => context.push('/provider/bookings'),
     ),
     _logoutItem(context),
   ];

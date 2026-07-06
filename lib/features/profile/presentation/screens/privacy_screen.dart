@@ -197,7 +197,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [AppColors.primary, AppColors.statusOpen],
+                            colors: [AppColors.primary, AppColors.accent],
                           ),
                         ),
                         child: Row(
@@ -297,3 +297,4 @@ class _PrivacyToggle extends StatelessWidget {
     );
   }
 }
+

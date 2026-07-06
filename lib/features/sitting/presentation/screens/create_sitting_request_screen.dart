@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -215,6 +215,9 @@ class _CreateSittingRequestScreenState
           'ownerName': user.displayName ?? user.email?.split('@').first ?? '',
           'ownerPhotoUrl': user.photoURL,
           'status': 'open',
+          // Open-board request, visible to all providers (the provider
+          // requests tab filters on this).
+          'isPublicJob': true,
           'createdAt': FieldValue.serverTimestamp(),
         });
         if (!mounted) return;
@@ -628,7 +631,7 @@ class _CreateSittingRequestScreenState
                           gradient: const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [AppColors.primary, AppColors.blueSlate],
+                            colors: [AppColors.primary, AppColors.accent],
                           ),
                         ),
                         child: Center(
@@ -771,3 +774,4 @@ class _CreateSittingRequestScreenState
     );
   }
 }
+

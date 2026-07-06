@@ -10,6 +10,10 @@ import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
+import 'package:petpal/features/applications/domain/entities/service_application.dart';
+import 'package:petpal/features/applications/presentation/providers/application_provider.dart';
+import 'package:petpal/features/applications/presentation/widgets/owner_applications_list.dart';
+import 'package:petpal/features/applications/presentation/widgets/service_application_sheet.dart';
 import 'package:petpal/features/walks/domain/entities/walk_request.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 
@@ -47,11 +51,85 @@ class _WalkRequestDetailScreenState
   bool get _showProviderCta => !_isOwner && _isOpen;
 
   void _showOfferSheet() {
+    final dateStr = _request.preferredDate != null
+        ? '${_request.preferredDate!.day.toString().padLeft(2, '0')}/${_request.preferredDate!.month.toString().padLeft(2, '0')}'
+        : '';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _OfferBottomSheet(request: _request),
+      builder: (_) => ServiceApplicationSheet(
+        requestType: 'walk',
+        requestId: _request.id,
+        ownerUid: _request.ownerUid,
+        ownerName: _request.ownerName,
+        petName: _request.petName,
+        summaryChips: [
+          if (_request.area.isNotEmpty) _request.area,
+          if (_request.preferredTime.isNotEmpty)
+            '${_request.preferredTime}${dateStr.isNotEmpty ? '  $dateStr' : ''}',
+          if (_request.budget != null && _request.budget!.isNotEmpty)
+            'תקציב: ${withShekel(_request.budget!)}',
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderCta() {
+    final uid = _uid;
+    final applied = uid == null
+        ? null
+        : ref
+            .watch(myApplicationProvider(
+                (type: 'walk', id: _request.id, providerUid: uid)))
+            .asData
+            ?.value;
+
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        color: Colors.white,
+        child: applied != null
+            ? _AppliedBadge(
+                status: applied.status,
+                onEdit: applied.status == ApplicationStatus.pending
+                    ? _showOfferSheet
+                    : null,
+              )
+            : GestureDetector(
+                onTap: _showOfferSheet,
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.accent],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'הגש מועמדות',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+      ),
     );
   }
 
@@ -105,6 +183,29 @@ class _WalkRequestDetailScreenState
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  /// Opens (or creates) the 1:1 conversation with the request's owner —
+  /// same flow as the chat shortcuts on the booking screens.
+  Future<void> _openChat() async {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
+    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
+    final convoId = await ds.getOrCreateConversation(
+      myUid: me.uid,
+      myName: me.displayName ?? me.email ?? 'מטפל',
+      otherUid: _request.ownerUid,
+      otherName: _request.ownerName,
+      myPhotoUrl: myProfile?.photoUrl ?? me.photoURL ?? '',
+      otherPhotoUrl: _request.ownerPhotoUrl ?? '',
+    );
+    if (!mounted) return;
+    context.push('/chat/$convoId', extra: {
+      'otherName': _request.ownerName,
+      'otherPhotoUrl': _request.ownerPhotoUrl,
+      'otherUid': _request.ownerUid,
+    });
   }
 
   Future<void> _delete() async {
@@ -470,7 +571,7 @@ class _WalkRequestDetailScreenState
                                     icon: Icons
                                         .chat_bubble_outline_rounded,
                                     color: AppColors.primary,
-                                    onTap: () {},
+                                    onTap: _openChat,
                                   ),
                                 ],
                               ),
@@ -525,6 +626,14 @@ class _WalkRequestDetailScreenState
                                     ),
                                   ],
                                 ),
+                              ),
+                            ],
+                            // Offers received (owner only)
+                            if (_isOwner) ...[
+                              const SizedBox(height: 22),
+                              OwnerApplicationsList(
+                                requestType: 'walk',
+                                requestId: _request.id,
                               ),
                             ],
                             // Owner controls
@@ -643,7 +752,9 @@ class _WalkRequestDetailScreenState
                   onSelected: (v) {
                     if (v == 'edit') {
                       context.push('/walks/edit', extra: _request);
-                    } else if (v == 'delete') _delete();
+                    } else if (v == 'delete') {
+                      _delete();
+                    }
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(
@@ -676,46 +787,7 @@ class _WalkRequestDetailScreenState
               ),
 
             // ── Provider CTA ───────────────────────────────────────────────────────
-            if (_showProviderCta)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-                  color: Colors.white,
-                  child: GestureDetector(
-                    onTap: _showOfferSheet,
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.statusOpen],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.35),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'הגש מועמדות',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            if (_showProviderCta) _buildProviderCta(),
           ],
         ),
       ),
@@ -822,326 +894,57 @@ class _CircleAction extends StatelessWidget {
       );
 }
 
-// ── Hero bg ────────────────────────────────────────────────────────────────
-class _OfferBottomSheet extends ConsumerStatefulWidget {
-  final WalkRequest request;
-  const _OfferBottomSheet({required this.request});
-
-  @override
-  ConsumerState<_OfferBottomSheet> createState() => _OfferBottomSheetState();
-}
-
-class _OfferBottomSheetState extends ConsumerState<_OfferBottomSheet> {
-  final _messageController = TextEditingController();
-  final _priceController = TextEditingController();
-  bool _sending = false;
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _priceController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-    final me = FirebaseAuth.instance.currentUser;
-    if (me == null) return;
-
-    setState(() => _sending = true);
-
-    final req = widget.request;
-    final myProfile = ref.read(currentUserProfileProvider).asData?.value;
-    final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
-    final ownerPhotoUrl = req.ownerPhotoUrl ?? '';
-
-    final ds = MessagingDatasource(db: FirebaseFirestore.instance);
-    final convoId = await ds.getOrCreateConversation(
-      myUid: me.uid,
-      myName: me.displayName ?? me.email ?? 'מטפל',
-      otherUid: req.ownerUid,
-      otherName: req.ownerName,
-      myPhotoUrl: myPhotoUrl,
-      otherPhotoUrl: ownerPhotoUrl,
-    );
-
-    final dateStr = req.preferredDate != null
-        ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
-        : '';
-    await ds.sendContextMessage(
-      conversationId: convoId,
-      senderId: me.uid,
-      metadata: {
-        'requestType': 'walk',
-        'requestId': req.id,
-        'petName': req.petName,
-        'petImageUrl': req.petImageUrl ?? '',
-        'ownerName': req.ownerName,
-        'ownerPhotoUrl': ownerPhotoUrl,
-        'date': dateStr,
-        'time': req.preferredTime,
-        'area': req.area,
-        'budget': req.budget ?? '',
-      },
-    );
-
-    await ds.sendMessage(
-      conversationId: convoId,
-      senderId: me.uid,
-      senderName: me.displayName ?? me.email ?? 'מטפל',
-      senderPhotoUrl: myPhotoUrl,
-      text: '${_priceController.text.trim().isNotEmpty ? "${withShekel(_priceController.text.trim())} — " : ""}$text',
-    );
-
-    if (mounted) {
-      final router = GoRouter.of(context);
-      Navigator.pop(context);
-      router.push('/chat/$convoId', extra: {'otherName': req.ownerName, 'otherPhotoUrl': ownerPhotoUrl, 'otherUid': req.ownerUid});
-    }
-  }
+// ── Applied badge (provider already submitted an offer) ──────────────────────
+class _AppliedBadge extends StatelessWidget {
+  final ApplicationStatus status;
+  final VoidCallback? onEdit;
+  const _AppliedBadge({required this.status, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
-    final req = widget.request;
-    final dateStr = req.preferredDate != null
-        ? '${req.preferredDate!.day.toString().padLeft(2, '0')}/${req.preferredDate!.month.toString().padLeft(2, '0')}'
-        : '';
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle + title + close
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(4)),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text('הצע שירות',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textPrimary)),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: AppColors.borderFaint,
-                      ),
-                      child: const Icon(Icons.close_rounded,
-                          size: 18, color: AppColors.textSecondary),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Request summary card
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.15)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${req.petName}  ·  ${req.ownerName}',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 4,
-                      children: [
-                        _SummaryItem(
-                            icon: Icons.location_on_outlined,
-                            text: req.area),
-                        _SummaryItem(
-                            icon: Icons.access_time_rounded,
-                            text: '${req.preferredTime}'
-                                '${dateStr.isNotEmpty ? '  $dateStr' : ''}'),
-                        if (req.budget != null && req.budget!.isNotEmpty)
-                          _SummaryItem(
-                              icon: Icons.account_balance_wallet_outlined,
-                              text: 'תקציב: ${withShekel(req.budget!)}'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Price field
-              _OfferTextField(
-                hint: 'המחיר שלך (לדוגמה: 80₪)',
-                prefix: '₪',
-                keyboardType: TextInputType.text,
-                controller: _priceController,
-                maxLines: 1,
-              ),
-              const SizedBox(height: 10),
-
-              // Message field
-              _OfferTextField(
-                hint:
-                    'לדוגמה: אני זמין בתאריך זה. יש לי ניסיון עם חיות כמו שלך. ההצעה שלי היא...',
-                controller: _messageController,
-                maxLines: 3,
-                minLines: 2,
-              ),
-              const SizedBox(height: 16),
-
-              // Send button
-              GestureDetector(
-                onTap: _sending ? null : _send,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  width: double.infinity,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, AppColors.statusOpen],
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_sending)
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      else
-                        const Icon(Icons.send_rounded,
-                            color: Colors.white, size: 20),
-                      const SizedBox(width: 10),
-                      Text(
-                        _sending ? 'שולח...' : 'שלח הצעה',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+    final (label, color, icon) = switch (status) {
+      ApplicationStatus.pending => (
+          'הגשת הצעה — ממתין לאישור',
+          AppColors.warning,
+          Icons.hourglass_top_rounded
         ),
+      ApplicationStatus.accepted => (
+          'ההצעה שלך אושרה',
+          AppColors.success,
+          Icons.check_circle_rounded
+        ),
+      ApplicationStatus.refused => (
+          'ההצעה שלך נדחתה',
+          AppColors.error,
+          Icons.cancel_rounded
+        ),
+    };
+
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: color.withValues(alpha: 0.10),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-    );
-  }
-}
-
-class _SummaryItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _SummaryItem({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: AppColors.primary),
-        const SizedBox(width: 4),
-        Text(text,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary)),
-      ],
-    );
-  }
-}
-
-class _OfferTextField extends StatelessWidget {
-  final String hint;
-  final TextEditingController controller;
-  final int maxLines;
-  final int minLines;
-  final String? prefix;
-  final TextInputType? keyboardType;
-
-  const _OfferTextField({
-    required this.hint,
-    required this.controller,
-    this.maxLines = 4,
-    this.minLines = 1,
-    this.prefix,
-    this.keyboardType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      minLines: minLines,
-      textDirection: TextDirection.rtl,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-        prefixText: prefix,
-        prefixStyle: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w800,
-            fontSize: 14),
-        filled: true,
-        fillColor: AppColors.surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900)),
+          ),
+          if (onEdit != null)
+            TextButton(
+              onPressed: onEdit,
+              child: const Text('ערוך'),
+            ),
+        ],
       ),
     );
   }

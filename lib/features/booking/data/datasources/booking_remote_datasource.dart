@@ -17,10 +17,16 @@ class BookingRemoteDatasource {
 
   CollectionReference get _col => _firestore.collection('booking_requests');
 
+  /// Upper bound on how many bookings a single stream fetches. Ordered by
+  /// createdAt desc, so this keeps the most recent ones and stops the query
+  /// (and the widget list) from growing without limit as history piles up.
+  static const int _bookingsLimit = 200;
+
   Stream<List<BookingRequestModel>> watchOwnerBookings(String ownerUid) {
     return _col
         .where('ownerUid', isEqualTo: ownerUid)
         .orderBy('createdAt', descending: true)
+        .limit(_bookingsLimit)
         .snapshots()
         .map((snap) => snap.docs
             .map((d) => BookingRequestModel.fromFirestore(d))
@@ -31,6 +37,7 @@ class BookingRemoteDatasource {
     return _col
         .where('providerUid', isEqualTo: providerUid)
         .orderBy('createdAt', descending: true)
+        .limit(_bookingsLimit)
         .snapshots()
         .map((snap) => snap.docs
             .map((d) => BookingRequestModel.fromFirestore(d))

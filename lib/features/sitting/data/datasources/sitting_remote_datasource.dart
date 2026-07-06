@@ -39,13 +39,20 @@ class SittingRemoteDatasource {
   }
 
   Stream<List<SittingRequestModel>> watchPublicRequests() {
+    // isPublicJob is filtered CLIENT-side, not in the query: requests created
+    // by the app historically never wrote the field, and a Firestore equality
+    // filter excludes documents where the field is missing — which made every
+    // real user request invisible to providers (only seeded data, which sets
+    // the flag, ever matched). The model defaults a missing value to `true`,
+    // so filtering after parsing keeps old and new documents visible while
+    // still hiding requests explicitly marked non-public.
     return _requestsRef
         .where('status', isEqualTo: 'open')
-        .where('isPublicJob', isEqualTo: true)
         .limit(50)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => SittingRequestModel.fromFirestore(doc))
+            .where((request) => request.isPublicJob)
             .toList());
   }
 

@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -193,7 +193,7 @@ class _GuestPostCard extends StatelessWidget {
                         : const LinearGradient(
                             begin: Alignment.topRight,
                             end: Alignment.bottomLeft,
-                            colors: [AppColors.primary, AppColors.statusOpen],
+                            colors: [AppColors.primary, AppColors.accent],
                           ),
                     image: post.authorPhotoUrl != null &&
                             post.authorPhotoUrl!.isNotEmpty
@@ -379,3 +379,4 @@ class _GuestPostCard extends StatelessWidget {
     );
   }
 }
+

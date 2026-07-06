@@ -56,8 +56,11 @@ class _LostFoundPostDetailScreenState
     final isOwner = livePost.reporterUid == currentUserUid;
     final isSearching = livePost.matchingStatus == MatchingStatus.searching;
 
-    // Trigger lazy resumption if matching status is pending and we haven't rerun yet
-    if (livePost.matchingStatus == MatchingStatus.pending &&
+    // Trigger lazy resumption if matching status is pending and we haven't rerun yet.
+    // Only the reporter is allowed to rerun matching — the cloud function rejects
+    // everyone else, so skip this entirely for other viewers.
+    if (isOwner &&
+        livePost.matchingStatus == MatchingStatus.pending &&
         !_hasTriggeredResumption &&
         !_isRerunning) {
       _hasTriggeredResumption = true;
@@ -91,7 +94,7 @@ class _LostFoundPostDetailScreenState
                     if (livePost.description.isNotEmpty)
                       _buildDescription(livePost),
                     const SizedBox(height: 20),
-                    _buildAiSection(livePost, isSearching),
+                    _buildAiSection(livePost, isSearching, isOwner),
                     const SizedBox(height: 20),
                     if (isOwner && livePost.status == LostFoundStatus.active)
                       _buildResolveButton(livePost),
@@ -228,7 +231,7 @@ class _LostFoundPostDetailScreenState
     );
   }
 
-  Widget _buildAiSection(LostFoundPost post, bool isSearching) {
+  Widget _buildAiSection(LostFoundPost post, bool isSearching, bool isOwner) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -260,7 +263,9 @@ class _LostFoundPostDetailScreenState
               ),
             ],
             const Spacer(),
-            if (!isSearching && post.matchingStatus == MatchingStatus.done)
+            if (isOwner &&
+                !isSearching &&
+                post.matchingStatus == MatchingStatus.done)
               _RerunButton(
                 isLoading: _isRerunning,
                 onTap: () => _rerunMatching(post),
@@ -278,7 +283,7 @@ class _LostFoundPostDetailScreenState
                   ? _NoMatchesState(
                       key: const ValueKey('no-matches'),
                       post: post,
-                      onRerun: () => _rerunMatching(post),
+                      onRerun: isOwner ? () => _rerunMatching(post) : null,
                     )
                   : post.matches.isEmpty
                       ? const _PendingState(key: ValueKey('pending'))
@@ -329,10 +334,9 @@ class _LostFoundPostDetailScreenState
               ),
             ),
           );
-          if (confirm == true && context.mounted) {
-            await ref.read(markResolvedProvider)(post.id);
-            if (context.mounted) context.pop();
-          }
+          if (confirm != true || !mounted) return;
+          await ref.read(markResolvedProvider)(post.id);
+          if (mounted) context.pop();
         },
         icon: const Icon(Icons.check_circle_rounded),
         label: const Text('החיה נמצאה / נפתר',
@@ -538,7 +542,7 @@ class _PendingState extends StatelessWidget {
 
 class _NoMatchesState extends StatelessWidget {
   final LostFoundPost post;
-  final VoidCallback onRerun;
+  final VoidCallback? onRerun;
   const _NoMatchesState(
       {super.key, required this.post, required this.onRerun});
 
@@ -574,23 +578,25 @@ class _NoMatchesState extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onRerun,
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('חפש שוב',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 13)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.smartBlue,
-                    side: const BorderSide(color: AppColors.smartBlue),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+              if (onRerun != null) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onRerun,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('חפש שוב',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.smartBlue,
+                      side: const BorderSide(color: AppColors.smartBlue),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () =>

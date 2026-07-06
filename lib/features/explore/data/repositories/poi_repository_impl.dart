@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/utils/geo.dart';
 import '../../domain/entities/poi_model.dart';
@@ -56,11 +57,11 @@ class POIRepositoryImpl implements POIRepository {
       // Firestore-specific errors (permission denied, unavailable, quota exceeded)
       // — surface them in the console instead of masking them with mock data.
       // ignore: avoid_print
-      print('[POIRepository] Firestore error (${e.code}): ${e.message}');
+      debugPrint('[POIRepository] Firestore error (${e.code}): ${e.message}');
       firestoreFailed = true;
     } catch (e) {
       // ignore: avoid_print
-      print('[POIRepository] Unexpected error fetching POIs: $e');
+      debugPrint('[POIRepository] Unexpected error fetching POIs: $e');
       firestoreFailed = true;
     }
 
@@ -108,10 +109,10 @@ class POIRepositoryImpl implements POIRepository {
       }
     } on FirebaseException catch (e) {
       // ignore: avoid_print
-      print('[POIRepository] getPOIById Firestore error (${e.code}): ${e.message}');
+      debugPrint('[POIRepository] getPOIById Firestore error (${e.code}): ${e.message}');
     } catch (e) {
       // ignore: avoid_print
-      print('[POIRepository] getPOIById unexpected error: $e');
+      debugPrint('[POIRepository] getPOIById unexpected error: $e');
     }
 
     // Fall back to mock data — allows the detail screen to work in dev

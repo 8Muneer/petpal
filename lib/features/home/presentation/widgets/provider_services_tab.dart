@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,7 +15,12 @@ import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 
 class ProviderServicesTab extends ConsumerStatefulWidget {
-  const ProviderServicesTab({super.key});
+  /// When [standalone] is true the widget renders as a pushed page: a simple
+  /// back-button header instead of the tab-style [AppHeaderBar] (which has no
+  /// back affordance — it's built for the home shell's tabs).
+  final bool standalone;
+
+  const ProviderServicesTab({super.key, this.standalone = false});
 
   @override
   ConsumerState<ProviderServicesTab> createState() =>
@@ -29,7 +34,10 @@ class _ProviderMyServicesTabState extends ConsumerState<ProviderServicesTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const AppHeaderBar(title: 'השירותים שלי'),
+        if (widget.standalone)
+          const _StandaloneHeader(title: 'השירותים שלי')
+        else
+          const AppHeaderBar(title: 'השירותים שלי'),
         Expanded(
           child: Column(
             children: [
@@ -102,7 +110,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.statusOpen],
+                        colors: [AppColors.primary, AppColors.accent],
                       ),
                     ),
                     child: const Icon(Icons.campaign_rounded,
@@ -153,7 +161,7 @@ class _ProviderAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.primary, AppColors.statusOpen],
+                      colors: [AppColors.primary, AppColors.accent],
                     ),
                   ),
                   child: const Center(
@@ -224,7 +232,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: const LinearGradient(
-                          colors: [AppColors.sitting, AppColors.blueSlate]),
+                          colors: [AppColors.primary, AppColors.accent]),
                     ),
                     child: const Icon(Icons.campaign_rounded,
                         color: Colors.white, size: 24),
@@ -273,7 +281,7 @@ class _ProviderSittingAdvertiseView extends ConsumerWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
-                      colors: [AppColors.sitting, AppColors.blueSlate],
+                      colors: [AppColors.primary, AppColors.accent],
                     ),
                   ),
                   child: const Center(
@@ -794,7 +802,7 @@ class ListYourServiceCTA extends ConsumerWidget {
                 'פרסם את שירותי השמירה שלך והתחל לקבל פניות מבעלי חיות באזורך',
             icon: Icons.add_business_rounded,
             gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.blueSlate],
+              colors: [AppColors.primary, AppColors.accent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -831,3 +839,61 @@ class _BenefitRow extends StatelessWidget {
     );
   }
 }
+
+// ─── Standalone (pushed-page) header ─────────────────────────────────────────
+
+/// Pushed-page variant of the tab header: same surface, divider, and title
+/// typography as [AppHeaderBar], but with a back button instead of the
+/// profile-menu avatar and bells (those belong to the home shell's tabs).
+class _StandaloneHeader extends StatelessWidget {
+  final String title;
+  const _StandaloneHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final topInset = MediaQuery.of(context).padding.top;
+    return Container(
+      padding: EdgeInsets.only(top: topInset),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider, width: 1),
+        ),
+      ),
+      child: SizedBox(
+        height: AppHeaderBar.contentHeight,
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.marginPage),
+          child: Row(
+            children: [
+              // Leading (right in RTL): back. BackButton mirrors automatically.
+              SizedBox(
+                width: 48,
+                child: BackButton(
+                  color: AppColors.textPrimary,
+                  onPressed: () => context.pop(),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.headlineLg.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              // Trailing spacer keeps the title optically centered.
+              const SizedBox(width: 48),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

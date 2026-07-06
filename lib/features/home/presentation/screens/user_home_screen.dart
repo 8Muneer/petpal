@@ -10,10 +10,6 @@ import 'package:petpal/core/widgets/glass_search_bar.dart';
 import 'package:petpal/core/widgets/discovery_chip.dart';
 import 'package:petpal/core/widgets/luxury_service_card.dart';
 import 'package:petpal/features/home/presentation/widgets/home_top_rated_section.dart';
-import 'package:petpal/features/home/presentation/widgets/my_requests_tab.dart'
-    show SittingRequestHomeCard, WalkRequestHomeCard;
-import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
-    show SittingStatus;
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
@@ -185,36 +181,8 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     }
   }
 
-  Color _sittingStatusColor(SittingStatus status) {
-    switch (status) {
-      case SittingStatus.open:
-        return AppColors.warning;
-      case SittingStatus.taken:
-        return AppColors.success;
-      case SittingStatus.closed:
-        return AppColors.primary;
-      case SittingStatus.declined:
-        return AppColors.error;
-    }
-  }
-
-  String _sittingStatusLabel(SittingStatus status) {
-    switch (status) {
-      case SittingStatus.open:
-        return 'ממתין';
-      case SittingStatus.taken:
-        return 'אושר';
-      case SittingStatus.closed:
-        return 'הושלם';
-      case SittingStatus.declined:
-        return 'נדחה';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final sittingReqAsync = ref.watch(sittingRequestsProvider);
-    final walkReqAsync = ref.watch(walkRequestsProvider);
     final sittersAsync = ref.watch(sittingServicesProvider);
     final walkersAsync = ref.watch(walkServicesProvider);
     final profileAsync = ref.watch(currentUserProfileProvider);
@@ -231,8 +199,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
           slivers: [
             // 1. Parallax Hero
             LuxuryHero(
-              imageUrl:
-                  'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=2000&auto=format&fit=crop',
+              imageUrl: 'assets/images/hero/home_bg.jpg',
               scrollController: _scrollController,
               searchBar: const GlassSearchBar(hintText: 'חפש שירותים...'),
               profileImageUrl: profile?.photoUrl,
@@ -401,7 +368,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   if (top.isEmpty) return const SizedBox.shrink();
                   return HomeTopRatedSection(
                     title: 'שומרים זמינים',
-                    itemHeight: 340,
+                    itemHeight: 300,
                     onMoreTap: () => widget.onTabChange(4),
                     itemCount: top.length,
                     itemBuilder: (context, index) {
@@ -420,7 +387,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   );
                 },
                 loading: () => const SizedBox(
-                    height: 340,
+                    height: 300,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(
@@ -454,7 +421,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   if (top.isEmpty) return const SizedBox.shrink();
                   return HomeTopRatedSection(
                     title: 'מטיילים זמינים',
-                    itemHeight: 340,
+                    itemHeight: 300,
                     onMoreTap: () => widget.onTabChange(4),
                     itemCount: top.length,
                     itemBuilder: (context, index) {
@@ -473,7 +440,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   );
                 },
                 loading: () => const SizedBox(
-                    height: 340,
+                    height: 300,
                     child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => Padding(

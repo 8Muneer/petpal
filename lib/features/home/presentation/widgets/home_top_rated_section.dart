@@ -97,8 +97,8 @@ class HomeTopRatedSection extends StatelessWidget {
                 itemCount: itemCount,
                 itemBuilder: (context, index) {
                   return Padding(
-                    padding: EdgeInsets.only(
-                      left: index == 0 ? 0 : 16,
+                    padding: EdgeInsetsDirectional.only(
+                      start: index == 0 ? 0 : 20,
                     ),
                     child: itemBuilder(context, index),
                   );

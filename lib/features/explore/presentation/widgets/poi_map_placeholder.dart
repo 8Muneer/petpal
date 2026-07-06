@@ -38,15 +38,9 @@ class POIMapPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceDark,
         borderRadius: AppRadius.organicRadius,
-        image: DecorationImage(
-          image: NetworkImage('https://api.mapbox.com/styles/v1/mapbox/light-v10/static/pin-s+c19a6b($longitude,$latitude)/$longitude,$latitude,15,0/600x400?access_token=placeholder'), // Placeholder for a real map static API
-          fit: BoxFit.cover,
-          opacity: 0.6,
-        ),
       ),
       child: Stack(
         children: [
-          // If the static map API fails, show a stylized grid/placeholder
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

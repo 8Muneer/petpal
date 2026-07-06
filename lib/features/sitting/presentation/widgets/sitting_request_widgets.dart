@@ -132,7 +132,7 @@ class _SittingRequestCardState extends State<SittingRequestCard> {
     AppColors.prussianBlue2, AppColors.blueSlate,
   ];
 
-  static const purple = AppColors.sitting; // aligned with sitting color
+  static const purple = AppColors.primary;
 
   @override
   void dispose() {
@@ -339,7 +339,7 @@ class _SittingRequestCardState extends State<SittingRequestCard> {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [purple, AppColors.blueSlate],
+                            colors: [purple, AppColors.accent],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),

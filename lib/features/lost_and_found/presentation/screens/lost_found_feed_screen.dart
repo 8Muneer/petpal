@@ -1,9 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_header_bar.dart';
@@ -84,81 +81,16 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(child: _buildCreateCTA(photoUrl)),
-                        _buildViewTypeToggle(state),
+                        const SizedBox(width: 10),
+                        _buildMyReportsButton(state),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: LostFoundToggleBar(
-                            selectedIndex: state.selectedTabIndex,
-                            onTabChanged: (i) => ref
-                                .read(lostFoundControllerProvider.notifier)
-                                .setTab(i),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        GestureDetector(
-                          onTap: () => ref
-                              .read(lostFoundControllerProvider.notifier)
-                              .toggleMyReportsOnly(),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: state.showMyReportsOnly
-                                  ? AppColors.primary
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: state.showMyReportsOnly
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (state.showMyReportsOnly
-                                          ? AppColors.primary
-                                          : Colors.black)
-                                      .withValues(
-                                          alpha: state.showMyReportsOnly
-                                              ? 0.25
-                                              : 0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  state.showMyReportsOnly
-                                      ? Icons.person_rounded
-                                      : Icons.person_outline_rounded,
-                                  size: 16,
-                                  color: state.showMyReportsOnly
-                                      ? Colors.white
-                                      : AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'הדיווחים שלי',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: state.showMyReportsOnly
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    LostFoundToggleBar(
+                      selectedIndex: state.selectedTabIndex,
+                      onTabChanged: (i) => ref
+                          .read(lostFoundControllerProvider.notifier)
+                          .setTab(i),
                     ),
                     const SizedBox(height: 12),
                     // Active filter chips
@@ -171,28 +103,10 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                 ),
               ),
             ),
-            if (state.viewType == LostFoundViewType.grid)
-              _buildGridFeed(postsAsync)
-            else
-              _buildMapViewPlaceholder(),
+            _buildGridFeed(postsAsync),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildViewTypeToggle(LostFoundState state) {
-    final isMap = state.viewType == LostFoundViewType.map;
-    return IconButton(
-      icon: Icon(
-        isMap ? Icons.grid_view_rounded : Icons.map_outlined,
-        color: isMap ? AppColors.primary : AppColors.textMuted,
-      ),
-      tooltip: isMap ? 'תצוגת רשת' : 'תצוגת מפה',
-      onPressed: () {
-        final next = isMap ? LostFoundViewType.grid : LostFoundViewType.map;
-        ref.read(lostFoundControllerProvider.notifier).setViewType(next);
-      },
     );
   }
 
@@ -235,6 +149,40 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
                   size: 18, color: AppColors.primary),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMyReportsButton(LostFoundState state) {
+    return GestureDetector(
+      onTap: () => ref
+          .read(lostFoundControllerProvider.notifier)
+          .toggleMyReportsOnly(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: state.showMyReportsOnly
+              ? AppColors.primary
+              : AppColors.pureWhite,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: state.showMyReportsOnly
+                ? AppColors.primary
+                : AppColors.border,
+          ),
+          boxShadow: AppShadows.subtle,
+        ),
+        child: Icon(
+          state.showMyReportsOnly
+              ? Icons.person_rounded
+              : Icons.person_outline_rounded,
+          size: 22,
+          color: state.showMyReportsOnly
+              ? Colors.white
+              : AppColors.textSecondary,
         ),
       ),
     );
@@ -335,77 +283,6 @@ class _LostFoundFeedScreenState extends ConsumerState<LostFoundFeedScreen> {
     );
   }
 
-  Widget _buildMapViewPlaceholder() {
-    final postsAsync = ref.watch(filteredLostFoundPostsProvider);
-    return SliverFillRemaining(
-      child: postsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const Center(child: Text('שגיאה בטעינת המפה')),
-        data: (posts) {
-          final geoTagged = posts
-              .where((p) => p.latitude != null && p.longitude != null)
-              .toList();
-
-          final center = geoTagged.isNotEmpty
-              ? LatLng(geoTagged.first.latitude!, geoTagged.first.longitude!)
-              : const LatLng(31.7683, 35.2137);
-
-          return FlutterMap(
-            options: MapOptions(
-              initialCenter: center,
-              initialZoom: geoTagged.isNotEmpty ? 13.0 : 8.0,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.petpal.app',
-              ),
-              MarkerLayer(
-                markers: geoTagged.map((post) {
-                  final isLost = post.type == LostFoundType.lost;
-                  return Marker(
-                    point: LatLng(post.latitude!, post.longitude!),
-                    width: 44,
-                    height: 44,
-                    child: GestureDetector(
-                      onTap: () =>
-                          context.push('/lost-found/detail', extra: post),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isLost ? AppColors.error : AppColors.success,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: post.imageUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: post.imageUrl,
-                                  fit: BoxFit.cover,
-                                )
-                              : const Icon(
-                                  Icons.pets_rounded,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
 }
 
 // ── Active filter chip ─────────────────────────────────────────────────────

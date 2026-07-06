@@ -50,44 +50,43 @@ class LuxuryServiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Header (220px)
+            // Image Header (16:9, matching POICard's scale)
             Stack(
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(AppRadius.organic),
                   ),
-                  child: imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          height: 220,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            height: 220,
-                            color: AppColors.surface,
-                            child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: AppColors.surface,
+                              child: const Center(
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
                             ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            height: 220,
+                            errorWidget: (context, url, error) => Container(
+                              color: AppColors.surface,
+                              child: const Icon(Icons.error_outline),
+                            ),
+                          )
+                        : Container(
                             color: AppColors.surface,
-                            child: const Icon(Icons.error_outline),
+                            child: const Icon(Icons.pets,
+                                color: AppColors.border, size: 40),
                           ),
-                        )
-                      : Container(
-                          height: 220,
-                          color: AppColors.surface,
-                          child: const Icon(Icons.pets,
-                              color: AppColors.border, size: 48),
-                        ),
+                  ),
                 ),
-                
+
                 // Glass Rating Pill (Top-Left)
                 Positioned(
-                  top: 16,
-                  right: 16, // Assuming RTL or just a clean placement
+                  top: 12,
+                  right: 12, // Assuming RTL or just a clean placement
                   child: GlassPill(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -95,7 +94,7 @@ class LuxuryServiceCard extends StatelessWidget {
                         const Icon(
                           Icons.star,
                           color: AppColors.primary,
-                          size: 16,
+                          size: 14,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -109,13 +108,13 @@ class LuxuryServiceCard extends StatelessWidget {
 
                 // Favorite Button (Bottom-Right)
                 Positioned(
-                  bottom: 16,
-                  right: 16,
+                  bottom: 12,
+                  right: 12,
                   child: GestureDetector(
                     onTap: onFavoriteToggle,
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 34,
+                      height: 34,
                       decoration: const BoxDecoration(
                         color: AppColors.pureWhite,
                         shape: BoxShape.circle,
@@ -130,7 +129,7 @@ class LuxuryServiceCard extends StatelessWidget {
                       child: Icon(
                         isFavorite ? Icons.favorite : Icons.favorite_border,
                         color: AppColors.primary,
-                        size: 20,
+                        size: 17,
                       ),
                     ),
                   ),
@@ -140,7 +139,7 @@ class LuxuryServiceCard extends StatelessWidget {
 
             // Content Area
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -161,23 +160,29 @@ class LuxuryServiceCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     serviceType,
                     style: AppTextStyles.labelMd,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       const Icon(
                         Icons.location_on_outlined,
-                        size: 16,
+                        size: 14,
                         color: AppColors.textMuted,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        location,
-                        style: AppTextStyles.labelMd,
+                      Expanded(
+                        child: Text(
+                          location,
+                          style: AppTextStyles.labelMd,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),

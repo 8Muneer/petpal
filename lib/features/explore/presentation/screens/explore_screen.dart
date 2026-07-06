@@ -6,12 +6,9 @@ import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/core/widgets/app_header_bar.dart';
 import 'package:petpal/core/widgets/app_search_bar.dart';
 import 'package:petpal/core/widgets/filter_button.dart';
-import 'package:petpal/features/auth/domain/enums/user_role.dart';
-import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_filters_provider.dart';
 import 'package:petpal/features/explore/presentation/widgets/filter_bottom_sheet.dart';
 import 'package:petpal/features/sitting/presentation/providers/marketplace_provider.dart';
-import 'package:petpal/core/widgets/boutique_property_card.dart';
 import 'package:petpal/core/widgets/empty_state_card.dart';
 import 'package:petpal/features/explore/domain/entities/poi_model.dart';
 import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
@@ -45,8 +42,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   @override
   Widget build(BuildContext context) {
-    final profileAsync = ref.watch(currentUserProfileProvider);
-
     // Listen to tab index changes from other screens
     ref.listen(exploreTabIndexProvider, (previous, next) {
       if (next != _tabController.index) {
@@ -57,37 +52,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return AppScaffold(
       body: ColoredBox(
         color: AppColors.surface,
-        child: profileAsync.when(
-          data: (profile) {
-            if (profile == null) {
-              return const Center(child: Text('Please log in'));
-            }
-
-            final isOwner = profile.role == UserRole.petOwner;
-
-            return Column(
-              children: [
-                const AppHeaderBar(title: 'גלה'),
-                _buildHeader(context, isOwner: isOwner),
-                Expanded(
-                  child: isOwner
-                      ? _buildOwnerView(context)
-                      : _buildSitterView(context),
-                ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
+        child: Column(
+          children: [
+            const AppHeaderBar(title: 'גלה'),
+            _buildHeader(context),
+            Expanded(child: _buildOwnerView(context)),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, {required bool isOwner}) {
-    final filterActiveCount = isOwner
-        ? ref.watch(poiFiltersProvider).activeCount
-        : (ref.watch(marketplaceFiltersProvider).hasActiveFilters ? 1 : 0);
+  Widget _buildHeader(BuildContext context) {
+    final filterActiveCount = ref.watch(poiFiltersProvider).activeCount;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
@@ -104,7 +81,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    builder: (_) => FilterBottomSheet(isOwner: isOwner),
+                    builder: (_) => const FilterBottomSheet(isOwner: true),
                   );
                 },
               ),
@@ -206,40 +183,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 poi: poi,
                 onTap: () => context.push('/explore/poi/${poi.id}'),
               ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-    );
-  }
-
-  Widget _buildSitterView(BuildContext context) {
-    return _buildJobsList();
-  }
-
-  Widget _buildJobsList() {
-    final jobsAsync = ref.watch(filteredPublicJobsProvider);
-
-    return jobsAsync.when(
-      data: (jobs) {
-        if (jobs.isEmpty) {
-          return const EmptyStateWidget(
-            title: 'אין עבודות זמינות',
-            subtitle: 'כרגע אין בקשות פומביות באזור שלך. בדוק שוב מאוחר יותר',
-            icon: Icons.work_outline_rounded,
-          );
-        }
-        return _buildScrollableList(
-          count: jobs.length,
-          itemBuilder: (context, index) {
-            final job = jobs[index];
-            return BoutiquePropertyCard(
-              title: job.ownerName,
-              subtitle: '${job.petName} • ${job.petType.name}',
-              price: job.budget ?? '₪100',
-              onTap: () => context.push('/sitting/detail', extra: job),
             );
           },
         );
