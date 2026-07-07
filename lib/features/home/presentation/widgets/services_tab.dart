@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -2533,8 +2533,7 @@ class _ProviderCard extends StatelessWidget {
               ),
             ),
             // ── Price + CTA ───────────────────────────────────────────────
-            Divider(
-                height: 1, color: AppColors.border.withValues(alpha: 0.5)),
+            Divider(height: 1, color: AppColors.border.withValues(alpha: 0.5)),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
               child: Row(
@@ -2794,4 +2793,3 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
-
