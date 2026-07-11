@@ -13,6 +13,7 @@ import 'package:petpal/core/widgets/app_scaffold.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
 import 'package:petpal/features/booking/presentation/widgets/booking_action_buttons.dart';
+import 'package:petpal/features/booking/presentation/widgets/booking_status_timeline.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
@@ -52,6 +53,10 @@ class IncomingBookingDetailScreen extends ConsumerWidget {
                     _PetHero(booking: b, isWalk: isWalk),
                     const SizedBox(height: 16),
                     _OwnerCard(booking: b),
+                    const SizedBox(height: 16),
+                    const _SectionLabel(text: 'מצב ההזמנה'),
+                    const SizedBox(height: 10),
+                    _SectionCard(child: BookingStatusTimeline(status: b.status)),
                     const SizedBox(height: 16),
                     if (b.priceText?.isNotEmpty == true) ...[
                       _PriceBanner(booking: b, isWalk: isWalk),
@@ -500,6 +505,10 @@ class _ServiceDetailsCard extends StatelessWidget {
             const _RowDivider(),
             _DetailRow(
                 icon: Icons.location_on_outlined, text: booking.location!),
+          ],
+          if (booking.contactPhone?.isNotEmpty == true) ...[
+            const _RowDivider(),
+            _DetailRow(icon: Icons.phone_outlined, text: booking.contactPhone!),
           ],
         ],
       ),

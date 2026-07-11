@@ -4,6 +4,7 @@ enum ReportType {
   post,
   comment,
   user,
+  message,
 }
 
 enum ReportStatus {
@@ -14,7 +15,7 @@ enum ReportStatus {
 
 class ContentReport {
   final String id;
-  final String targetId; // ID of post, comment, or user
+  final String targetId; // ID of post, comment, user, or message
   final ReportType type;
   final String reporterId;
   final String reason;
@@ -22,6 +23,11 @@ class ContentReport {
   final DateTime createdAt;
   final String? resolvedBy;
   final DateTime? resolvedAt;
+
+  /// Parent document id needed to locate the target: postId when
+  /// [type] is comment, conversationId when [type] is message.
+  /// Unused for post/user reports.
+  final String? parentId;
 
   // ── AI triage (cached once per report) ──
   /// 1 (trivial) – 5 (critical), null until analyzed.
@@ -40,6 +46,7 @@ class ContentReport {
     required this.createdAt,
     this.resolvedBy,
     this.resolvedAt,
+    this.parentId,
     this.aiSeverity,
     this.aiCategory,
     this.aiAction,
@@ -68,6 +75,7 @@ class ContentReport {
       resolvedAt: data['resolvedAt'] != null
           ? (data['resolvedAt'] as Timestamp).toDate()
           : null,
+      parentId: data['parentId'] as String?,
       aiSeverity: (data['aiSeverity'] as num?)?.toInt(),
       aiCategory: data['aiCategory'] as String?,
       aiAction: data['aiAction'] as String?,
@@ -85,6 +93,7 @@ class ContentReport {
       'createdAt': Timestamp.fromDate(createdAt),
       'resolvedBy': resolvedBy,
       'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
+      'parentId': parentId,
       'aiSeverity': aiSeverity,
       'aiCategory': aiCategory,
       'aiAction': aiAction,

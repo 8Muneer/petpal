@@ -13,6 +13,7 @@ Future<void> showReportDialog(
   BuildContext context, {
   required String targetId,
   required ReportType type,
+  String? parentId,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -20,7 +21,11 @@ Future<void> showReportDialog(
     backgroundColor: Colors.transparent,
     builder: (_) => Directionality(
       textDirection: TextDirection.rtl,
-      child: ReportContentDialog(targetId: targetId, type: type),
+      child: ReportContentDialog(
+        targetId: targetId,
+        type: type,
+        parentId: parentId,
+      ),
     ),
   );
 }
@@ -28,11 +33,13 @@ Future<void> showReportDialog(
 class ReportContentDialog extends ConsumerStatefulWidget {
   final String targetId;
   final ReportType type;
+  final String? parentId;
 
   const ReportContentDialog({
     super.key,
     required this.targetId,
     required this.type,
+    this.parentId,
   });
 
   @override
@@ -64,6 +71,7 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
         ReportType.post => 'פוסט',
         ReportType.comment => 'תגובה',
         ReportType.user => 'משתמש',
+        ReportType.message => 'הודעה',
       };
 
   Future<void> _submit() async {
@@ -95,6 +103,7 @@ class _ReportContentDialogState extends ConsumerState<ReportContentDialog> {
       reason: reason,
       status: ReportStatus.open,
       createdAt: DateTime.now(),
+      parentId: widget.parentId,
     );
 
     try {

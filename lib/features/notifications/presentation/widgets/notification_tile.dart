@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/glass_card.dart';
 import 'package:petpal/core/widgets/time_ago_text.dart';
+import 'package:petpal/features/auth/domain/enums/user_role.dart';
 import 'package:petpal/features/notifications/domain/entities/app_notification.dart';
 import 'package:petpal/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 
 class NotificationTile extends ConsumerWidget {
   final AppNotification notification;
@@ -30,7 +32,7 @@ class NotificationTile extends ConsumerWidget {
                 .read(notificationActionsProvider.notifier)
                 .markAsRead(notification.id);
           }
-          if (context.mounted) _navigateTo(context);
+          if (context.mounted) _navigateTo(context, ref);
         },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +88,7 @@ class NotificationTile extends ConsumerWidget {
     );
   }
 
-  void _navigateTo(BuildContext context) {
+  void _navigateTo(BuildContext context, WidgetRef ref) {
     switch (notification.type) {
       case NotificationType.newMessage:
         final convoId = notification.conversationId;
@@ -103,7 +105,16 @@ class NotificationTile extends ConsumerWidget {
       case NotificationType.bookingDeclined:
       case NotificationType.bookingCancelled:
       case NotificationType.newReview:
-        context.push('/profile/bookings');
+        // Each account is either a pet owner or a service provider (never
+        // both), so the current user's role — not the notification type —
+        // determines which side of the booking they need to see. Routing
+        // every booking notification to the owner-side screen sent providers
+        // to a screen that queries their bookings by ownerUid, which is
+        // always empty for a provider account.
+        final role = ref.read(currentUserProfileProvider).valueOrNull?.role;
+        context.push(role == UserRole.serviceProvider
+            ? '/provider/bookings'
+            : '/profile/bookings');
         break;
       case NotificationType.unknown:
         // No meaningful destination for an unrecognized type — do nothing

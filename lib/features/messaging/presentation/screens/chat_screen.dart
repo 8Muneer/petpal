@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_avatar.dart';
 import 'package:petpal/core/widgets/app_scaffold.dart';
+import 'package:petpal/core/widgets/report_content_dialog.dart';
+import 'package:petpal/features/admin/domain/entities/report_model.dart';
 import 'package:petpal/features/messaging/presentation/providers/messaging_provider.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/sitting/data/models/sitting_request_model.dart';
@@ -170,7 +172,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _showMessageOptions(
-      BuildContext ctx, String messageId, String text) {
+      BuildContext ctx, String messageId, String text, {required bool isMe}) {
     HapticFeedback.mediumImpact();
     showModalBottomSheet(
       context: ctx,
@@ -219,6 +221,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   _deleteMessage(messageId);
                 },
               ),
+              if (!isMe) ...[
+                const Divider(height: 1),
+                _OptionTile(
+                  icon: Icons.flag_outlined,
+                  label: 'דווח על ההודעה',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    if ((_me?.uid ?? '').isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('יש להתחבר כדי לדווח')),
+                      );
+                      return;
+                    }
+                    showReportDialog(context,
+                        targetId: messageId,
+                        type: ReportType.message,
+                        parentId: widget.conversationId);
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -409,7 +431,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             isLastInGroup: isLastInGroup,
                             onLongPress: msgId.isNotEmpty
                                 ? () => _showMessageOptions(
-                                    ctx, msgId, text)
+                                    ctx, msgId, text, isMe: isMe)
                                 : null,
                           ),
                         ],

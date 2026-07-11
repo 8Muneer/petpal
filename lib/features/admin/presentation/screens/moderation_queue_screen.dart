@@ -21,10 +21,6 @@ class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
   /// Gemini call, so the unit of "in-flight work" is the target.
   final Set<String> _analyzing = {};
 
-  /// Target ids already attempted this session (success or failure), so a
-  /// failed/unreachable call isn't retried on every rebuild.
-  final Set<String> _attempted = {};
-
   // ── Ranking helpers ────────────────────────────────────────────────────────
 
   /// Keyword-based fallback severity used until the AI score lands.
@@ -70,55 +66,55 @@ class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
   int _effectiveSeverity(ContentReport r) =>
       r.aiSeverity ?? _keywordSeverity(r.reason);
 
-  /// Runs one Gemini call per reported *target*, not per report — every
-  /// report clustered on the same target (lib/features/admin/.../report_model
-  /// `targetId`) shares a single analysis instead of each triggering its own
-  /// API call on identical content. The result is fanned out to every report
-  /// in the cluster via saveReportAnalysisForCluster, so _effectiveSeverity
-  /// stays uniform across the whole cluster.
-  Future<void> _ensureAnalyzed(List<_Cluster> clusters) async {
+  /// Runs one Gemini call for a single reported *target* (cluster), triggered
+  /// by the admin tapping "Analyze with AI" on that cluster — not automatic.
+  /// Every report clustered on the same target shares this one analysis; the
+  /// result is fanned out to every report in the cluster via
+  /// saveReportAnalysisForCluster, so _effectiveSeverity stays uniform across
+  /// the whole cluster.
+  Future<void> _analyzeCluster(_Cluster cluster) async {
     final service = ref.read(reportTriageServiceProvider);
     if (!service.isConfigured) return;
     final repo = ref.read(moderationRepositoryProvider);
 
-    var didWork = false;
-    for (final cluster in clusters) {
-      final targetId = cluster.reports.first.targetId;
-      final alreadyAnalyzed = cluster.reports.any((r) => r.isAnalyzed);
-      if (alreadyAnalyzed ||
-          _analyzing.contains(targetId) ||
-          _attempted.contains(targetId)) {
-        continue;
-      }
-      _analyzing.add(targetId);
-      _attempted.add(targetId); // don't retry this target on later rebuilds
-      didWork = true;
-
-      // Represent the cluster with its most severe (keyword-fallback) report
-      // — the one most likely to carry the clearest reason for the AI.
-      final primary = cluster.reports
-          .reduce((a, b) => _keywordSeverity(a.reason) >= _keywordSeverity(b.reason) ? a : b);
-
-      final content = await repo.fetchReportedContent(primary.type, targetId);
-      final triage = await service.analyze(
-        type: primary.type.name,
-        reason: primary.reason,
-        content: content,
-      );
-      if (triage != null) {
-        await repo.saveReportAnalysisForCluster(
-          reportIds: cluster.reports.map((r) => r.id).toList(),
-          severity: triage.severity,
-          category: triage.category,
-          action: triage.action,
-          rationale: triage.rationale,
-        );
-      }
-      _analyzing.remove(targetId);
+    final targetId = cluster.reports.first.targetId;
+    if (cluster.reports.any((r) => r.isAnalyzed) ||
+        _analyzing.contains(targetId)) {
+      return;
     }
-    // Refresh the "analyzing…" indicator once the batch settles (failures
-    // won't re-emit from Firestore, so we nudge a rebuild ourselves).
-    if (didWork && mounted) setState(() {});
+    _analyzing.add(targetId);
+    if (mounted) setState(() {});
+
+    // Represent the cluster with its most severe (keyword-fallback) report
+    // — the one most likely to carry the clearest reason for the AI.
+    final primary = cluster.reports.reduce((a, b) =>
+        _keywordSeverity(a.reason) >= _keywordSeverity(b.reason) ? a : b);
+
+    final content = await repo.fetchReportedContent(primary.type, targetId,
+        parentId: primary.parentId);
+    final triage = await service.analyze(
+      type: primary.type.name,
+      reason: primary.reason,
+      content: content,
+    );
+    if (triage != null) {
+      await repo.saveReportAnalysisForCluster(
+        reportIds: cluster.reports.map((r) => r.id).toList(),
+        severity: triage.severity,
+        category: triage.category,
+        action: triage.action,
+        rationale: triage.rationale,
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'ניתוח ה-AI נכשל (בדוק שה-Cloud Function מוגדר עם GEMINI_KEY)'),
+        ),
+      );
+    }
+    _analyzing.remove(targetId);
+    if (mounted) setState(() {});
   }
 
   List<_Cluster> _buildClusters(List<ContentReport> reports) {
@@ -149,72 +145,59 @@ class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
   Widget build(BuildContext context) {
     final modRepo = ref.watch(moderationRepositoryProvider);
 
-    return StreamBuilder<List<ContentReport>>(
-      stream: modRepo.watchOpenReports(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    // Wrapped in its own Scaffold so this screen also works when reached
+    // directly via the `/admin/moderation` route (not just embedded inside
+    // AdminHubScreen's Scaffold) — ExpansionTile/ListTile/OutlinedButton all
+    // need a Material ancestor, which was otherwise missing on that route.
+    return Scaffold(
+      backgroundColor: AdminColors.bg,
+      body: StreamBuilder<List<ContentReport>>(
+        stream: modRepo.watchOpenReports(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        final reports = snapshot.data ?? [];
-        if (reports.isEmpty) return const _EmptyState();
+          final reports = snapshot.data ?? [];
+          if (reports.isEmpty) return const _EmptyState();
 
-        final clusters = _buildClusters(reports);
+          final clusters = _buildClusters(reports);
+          final aiConfigured =
+              ref.read(reportTriageServiceProvider).isConfigured;
 
-        // Kick off AI triage for any unscored targets — one Gemini call per
-        // cluster, cached once each (see _ensureAnalyzed).
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _ensureAnalyzed(clusters);
-        });
-
-        // Only show the AI indicator while there is real work pending — i.e.
-        // the service is configured and some target hasn't been attempted yet.
-        final aiConfigured = ref.read(reportTriageServiceProvider).isConfigured;
-        final analyzing = aiConfigured &&
-            clusters.any((c) =>
-                !c.reports.any((r) => r.isAnalyzed) &&
-                !_attempted.contains(c.reports.first.targetId));
-
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          itemCount: clusters.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, i) {
-            if (i == 0) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Text('${reports.length} דיווחים פתוחים',
-                        style: AdminText.section),
-                    const Spacer(),
-                    if (analyzing)
-                      const Row(
-                        children: [
-                          SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 6),
-                          Text('AI מנתח…', style: AdminText.rowSub),
-                        ],
-                      )
-                    else
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            itemCount: clusters.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, i) {
+              if (i == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Text('${reports.length} דיווחים פתוחים',
+                          style: AdminText.section),
+                      const Spacer(),
                       const Text('ממוין לפי חומרה', style: AdminText.rowSub),
-                  ],
-                ),
+                    ],
+                  ),
+                );
+              }
+              final cluster = clusters[i - 1];
+              final targetId = cluster.reports.first.targetId;
+              return _ClusterCard(
+                cluster: cluster,
+                effectiveSeverity: _effectiveSeverity,
+                aiConfigured: aiConfigured,
+                isAnalyzing: _analyzing.contains(targetId),
+                onAnalyze: () => _analyzeCluster(cluster),
+                onResolve: (status, deleteContent) =>
+                    _resolveCluster(cluster, status, deleteContent),
               );
-            }
-            return _ClusterCard(
-              cluster: clusters[i - 1],
-              effectiveSeverity: _effectiveSeverity,
-              onResolve: (status, deleteContent) =>
-                  _resolveCluster(clusters[i - 1], status, deleteContent),
-            );
-          },
-        );
-      },
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -236,6 +219,7 @@ class _ModerationQueueScreenState extends ConsumerState<ModerationQueueScreen> {
           deleteContent: deleteContent && i == 0,
           targetId: r.targetId,
           type: r.type,
+          parentId: r.parentId,
         );
       }
       if (mounted) {
@@ -280,6 +264,7 @@ String _typeLabel(ReportType t) => switch (t) {
       ReportType.post => 'פוסט',
       ReportType.comment => 'תגובה',
       ReportType.user => 'משתמש',
+      ReportType.message => 'הודעה',
     };
 
 String _actionLabel(String action) => switch (action) {
@@ -294,11 +279,17 @@ String _actionLabel(String action) => switch (action) {
 class _ClusterCard extends StatelessWidget {
   final _Cluster cluster;
   final int Function(ContentReport) effectiveSeverity;
+  final bool aiConfigured;
+  final bool isAnalyzing;
+  final VoidCallback onAnalyze;
   final void Function(ReportStatus status, bool deleteContent) onResolve;
 
   const _ClusterCard({
     required this.cluster,
     required this.effectiveSeverity,
+    required this.aiConfigured,
+    required this.isAnalyzing,
+    required this.onAnalyze,
     required this.onResolve,
   });
 
@@ -332,8 +323,29 @@ class _ClusterCard extends StatelessWidget {
                     _Pill(
                         label: primary.aiCategory!, color: AdminColors.accent),
                   const Spacer(),
-                  if (count > 1)
+                  if (count > 1) ...[
                     _Pill(label: '$count דיווחים', color: AppColors.error),
+                    const SizedBox(width: 6),
+                  ],
+                  if (aiConfigured && !primary.isAnalyzed)
+                    isAnalyzing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: onAnalyze,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(Icons.auto_awesome, size: 14),
+                            label: const Text('נתח עם AI',
+                                style: TextStyle(fontSize: 11)),
+                          ),
                 ],
               ),
               const SizedBox(height: 8),

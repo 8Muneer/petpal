@@ -11,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
+import 'package:petpal/core/widgets/report_content_dialog.dart';
+import 'package:petpal/features/admin/domain/entities/report_model.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/reviews/domain/entities/review.dart';
@@ -118,7 +120,8 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           backgroundColor: AppColors.surface,
           body: CustomScrollView(
             slivers: [
-              _buildHeroAppBar(context),
+              _buildHeroAppBar(context,
+                  currentUserUid: currentUserUid, isOwnProfile: isOwnProfile),
               SliverToBoxAdapter(
                 child: _buildContent(
                   ratingAsync: ratingAsync,
@@ -134,7 +137,11 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
     );
   }
 
-  Widget _buildHeroAppBar(BuildContext context) {
+  Widget _buildHeroAppBar(
+    BuildContext context, {
+    required String? currentUserUid,
+    required bool isOwnProfile,
+  }) {
     return SliverAppBar(
       pinned: true,
       expandedHeight: 300,
@@ -142,6 +149,44 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
       surfaceTintColor: Colors.transparent,
       systemOverlayStyle: SystemUiOverlayStyle.light,
       automaticallyImplyLeading: false,
+      actions: isOwnProfile
+          ? null
+          : [
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: GestureDetector(
+                  onTap: () {
+                    if (currentUserUid == null || currentUserUid.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('יש להתחבר כדי לדווח')),
+                      );
+                      return;
+                    }
+                    showReportDialog(context,
+                        targetId: _providerUid, type: ReportType.user);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.prussianBlue3.withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.flag_outlined,
+                      color: AppColors.prussianBlue3,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
       leading: Padding(
         padding: const EdgeInsets.all(8),
         child: GestureDetector(

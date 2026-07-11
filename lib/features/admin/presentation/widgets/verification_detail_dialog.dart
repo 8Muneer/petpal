@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/theme/app_theme.dart';
@@ -20,7 +21,7 @@ class VerificationDetailDialog extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Sitter Verification',
+              'Provider Verification',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -40,14 +41,35 @@ class VerificationDetailDialog extends ConsumerWidget {
                   scrollDirection: Axis.horizontal,
                   itemCount: request.documents.length,
                   itemBuilder: (context, index) {
-                    return Container(
-                      width: 100,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(16),
+                    final url = request.documents[index];
+                    return GestureDetector(
+                      onTap: () => _showFullScreenImage(context, url),
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        margin: const EdgeInsets.only(right: 8),
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.broken_image, color: Colors.grey),
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                      child: const Icon(Icons.description, color: Colors.grey),
                     );
                   },
                 ),
@@ -100,10 +122,25 @@ class VerificationDetailDialog extends ConsumerWidget {
     );
   }
 
+  void _showFullScreenImage(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: InteractiveViewer(
+            child: Image.network(url, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleAction(BuildContext context, WidgetRef ref, String status) async {
     final adminRepo = ref.read(adminRepositoryProvider);
-    // In a real app, we'd get the current admin ID from auth state
-    const adminId = 'current_admin_id';
+    final adminId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     try {
       await adminRepo.updateVerificationStatus(

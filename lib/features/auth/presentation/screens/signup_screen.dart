@@ -1,10 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/validators.dart';
+import 'package:petpal/features/auth/data/datasources/id_photo_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -32,9 +37,15 @@ class _SignupScreenState extends State<SignupScreen>
   String? _emailError;
   String? _passwordError;
   String? _confirmError;
+  String? _idPhotoError;
 
-  final _auth     = FirebaseAuth.instance;
-  final _usersRef = FirebaseFirestore.instance.collection('users');
+  XFile?        _idPhoto;
+  Uint8List?    _idPhotoBytes;
+
+  final _auth              = FirebaseAuth.instance;
+  final _usersRef          = FirebaseFirestore.instance.collection('users');
+  final _verificationsRef  = FirebaseFirestore.instance.collection('verification_requests');
+  final _idPhotoService    = IdPhotoService(storage: FirebaseStorage.instance);
 
   @override
   void initState() {
@@ -92,6 +103,77 @@ class _SignupScreenState extends State<SignupScreen>
         _confirmError = v != _passwordCtrl.text ? 'הסיסמאות אינן תואמות' : null;
       });
 
+  Future<void> _pickIdPhoto(ImageSource source) async {
+    final file = await _idPhotoService.pickImage(source);
+    if (file == null) return; // user cancelled
+    final bytes = await file.readAsBytes();
+    setState(() {
+      _idPhoto      = file;
+      _idPhotoBytes = bytes;
+      _idPhotoError = null;
+    });
+  }
+
+  void _showIdPhotoPickerSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'העלאת תעודה מזהה',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _IdPhotoPickerOption(
+                  icon: Icons.camera_alt_rounded,
+                  label: 'צלם/י תמונה',
+                  color: AppColors.primary,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickIdPhoto(ImageSource.camera);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _IdPhotoPickerOption(
+                  icon: Icons.photo_library_rounded,
+                  label: 'בחר/י מהגלריה',
+                  color: const Color(0xFF0EA5E9),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickIdPhoto(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   bool get _formValid =>
       _nameError == null &&
       _emailError == null &&
@@ -134,9 +216,15 @@ class _SignupScreenState extends State<SignupScreen>
       _snack('יש לאשר את תנאי השימוש', isError: true);
       return;
     }
+    if (!_isPetOwner && _idPhoto == null) {
+      setState(() => _idPhotoError = 'יש להעלות צילום תעודה מזהה לצורך אימות זהות');
+      _snack('יש להעלות צילום תעודה מזהה לצורך אימות זהות', isError: true);
+      return;
+    }
     if (!_formValid) return;
 
     setState(() => _isLoading = true);
+    bool idPhotoUploadFailed = false;
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
         email:    _emailCtrl.text.trim(),
@@ -157,12 +245,31 @@ class _SignupScreenState extends State<SignupScreen>
             'updatedAt':  FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
         } catch (_) {}
+
+        if (!_isPetOwner && _idPhoto != null) {
+          try {
+            final idPhotoUrl = await _idPhotoService.uploadIdPhoto(uid, _idPhoto!);
+            await _verificationsRef.add({
+              'userId':      uid,
+              'status':      'pending',
+              'documents':   [idPhotoUrl],
+              'requestedAt': FieldValue.serverTimestamp(),
+            });
+          } catch (_) {
+            idPhotoUploadFailed = true;
+          }
+        }
       }
 
       // Sign out so the router reads the role fresh on next login
       await _auth.signOut();
       if (!mounted) return;
-      _snack('החשבון נוצר בהצלחה! אנא התחבר/י כדי להמשיך 🎉');
+      _snack(
+        idPhotoUploadFailed
+            ? 'החשבון נוצר, אך העלאת תעודת הזיהוי נכשלה. אנא פנה/י לתמיכה כדי להשלים את תהליך האימות.'
+            : 'החשבון נוצר בהצלחה! אנא התחבר/י כדי להמשיך 🎉',
+        isError: idPhotoUploadFailed,
+      );
       context.go('/login');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -288,8 +395,20 @@ class _SignupScreenState extends State<SignupScreen>
                         // ── Role selector ─────────────────────────────────
                         _GlassRoleSelector(
                           isPetOwner: _isPetOwner,
-                          onChanged: (v) => setState(() => _isPetOwner = v),
+                          onChanged: (v) => setState(() {
+                            _isPetOwner = v;
+                            if (v) _idPhotoError = null;
+                          }),
                         ),
+
+                        if (!_isPetOwner) ...[
+                          const SizedBox(height: 16),
+                          _GlassIdPhotoField(
+                            photoBytes: _idPhotoBytes,
+                            errorText: _idPhotoError,
+                            onTap: _showIdPhotoPickerSheet,
+                          ),
+                        ],
 
                         const SizedBox(height: 20),
 
@@ -911,6 +1030,158 @@ class _GradientButton extends StatelessWidget {
                       Icon(icon, color: Colors.white, size: 20),
                     ],
                   ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Glass ID photo field ──────────────────────────────────────────────────────
+
+class _GlassIdPhotoField extends StatelessWidget {
+  final Uint8List?     photoBytes;
+  final String?        errorText;
+  final VoidCallback   onTap;
+
+  const _GlassIdPhotoField({
+    required this.photoBytes,
+    required this.errorText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasError = errorText != null;
+    final hasPhoto = photoBytes != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'תעודה מזהה (לאימות זהות)',
+          style: TextStyle(
+            color: hasError ? AppColors.danger : Colors.white.withValues(alpha: 0.72),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: hasError
+                    ? AppColors.danger
+                    : Colors.white.withValues(alpha: 0.22),
+                width: 1.0,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: hasPhoto
+                      ? Image.memory(photoBytes!, fit: BoxFit.cover)
+                      : Icon(
+                          Icons.badge_outlined,
+                          color: Colors.white.withValues(alpha: 0.60),
+                          size: 22,
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasPhoto ? 'תמונה נבחרה — לחץ/י להחלפה' : 'לחץ/י להעלאת תמונה',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.white.withValues(alpha: 0.60),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, right: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 12, color: AppColors.danger),
+                const SizedBox(width: 4),
+                Text(
+                  errorText!,
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── ID photo picker sheet option ──────────────────────────────────────────────
+
+class _IdPhotoPickerOption extends StatelessWidget {
+  final IconData     icon;
+  final String       label;
+  final Color        color;
+  final VoidCallback onTap;
+
+  const _IdPhotoPickerOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
         ),
       ),

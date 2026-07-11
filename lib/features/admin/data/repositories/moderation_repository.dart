@@ -34,8 +34,14 @@ class ModerationRepository {
 
   /// Best-effort fetch of the actual reported content, so the AI can judge the
   /// content itself rather than only the reporter's reason. Returns null when
-  /// the target can't be read (e.g. comments stored as subcollections).
-  Future<String?> fetchReportedContent(ReportType type, String targetId) async {
+  /// the target can't be read. Comments and messages live in subcollections
+  /// (`posts/{parentId}/comments/{targetId}`, `conversations/{parentId}/messages/{targetId}`)
+  /// so [parentId] is required to locate them.
+  Future<String?> fetchReportedContent(
+    ReportType type,
+    String targetId, {
+    String? parentId,
+  }) async {
     if (targetId.isEmpty) return null;
     try {
       switch (type) {
@@ -44,9 +50,24 @@ class ModerationRepository {
               (await _firestore.collection('posts').doc(targetId).get()).data();
           return (d?['content'] ?? d?['text'] ?? d?['caption'])?.toString();
         case ReportType.comment:
-          final d =
-              (await _firestore.collection('comments').doc(targetId).get())
-                  .data();
+          if (parentId == null || parentId.isEmpty) return null;
+          final d = (await _firestore
+                  .collection('posts')
+                  .doc(parentId)
+                  .collection('comments')
+                  .doc(targetId)
+                  .get())
+              .data();
+          return (d?['text'] ?? d?['content'])?.toString();
+        case ReportType.message:
+          if (parentId == null || parentId.isEmpty) return null;
+          final d = (await _firestore
+                  .collection('conversations')
+                  .doc(parentId)
+                  .collection('messages')
+                  .doc(targetId)
+                  .get())
+              .data();
           return (d?['text'] ?? d?['content'])?.toString();
         case ReportType.user:
           final d =
@@ -110,6 +131,7 @@ class ModerationRepository {
     bool deleteContent = false,
     String? targetId,
     ReportType? type,
+    String? parentId,
   }) async {
     final batch = _firestore.batch();
 
@@ -122,21 +144,34 @@ class ModerationRepository {
 
     // Optionally delete the reported content
     if (deleteContent && targetId != null && type != null) {
-      String collection;
+      DocumentReference<Map<String, dynamic>>? ref;
       switch (type) {
         case ReportType.post:
-          collection = 'posts';
+          ref = _firestore.collection('posts').doc(targetId);
           break;
         case ReportType.comment:
-          // Comments are usually subcollections, so this might need adjustment
-          // For now assuming a flat comments collection or specific logic
-          collection = 'comments';
+          if (parentId != null && parentId.isNotEmpty) {
+            ref = _firestore
+                .collection('posts')
+                .doc(parentId)
+                .collection('comments')
+                .doc(targetId);
+          }
+          break;
+        case ReportType.message:
+          if (parentId != null && parentId.isNotEmpty) {
+            ref = _firestore
+                .collection('conversations')
+                .doc(parentId)
+                .collection('messages')
+                .doc(targetId);
+          }
           break;
         case ReportType.user:
-          collection = 'users';
+          ref = _firestore.collection('users').doc(targetId);
           break;
       }
-      batch.delete(_firestore.collection(collection).doc(targetId));
+      if (ref != null) batch.delete(ref);
     }
 
     await batch.commit();

@@ -159,73 +159,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   Widget _buildPOIList(POIType type) {
-    // nearbyPOIsProvider watches poiFiltersProvider internally and applies
-    // minRating / hasReviewsOnly before returning — filtering in the provider
-    // layer means it runs on the full fetched set, not after the 200-doc cap.
-    final poisAsync = ref.watch(nearbyPOIsProvider(type: type));
-
-    return poisAsync.when(
-      data: (pois) {
-        if (pois.isEmpty) {
-          return const EmptyStateWidget(
-            title: 'לא נמצאו תוצאות',
-            subtitle: 'נסה לשנות את הסינון',
-            icon: Icons.map_outlined,
-          );
-        }
-        return _buildScrollableList(
-          count: pois.length,
-          itemBuilder: (context, index) {
-            final poi = pois[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: POICard(
-                poi: poi,
-                onTap: () => context.push('/explore/poi/${poi.id}'),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-    );
-  }
-
-  Widget _buildScrollableList({
-    required int count,
-    required Widget Function(BuildContext, int) itemBuilder,
-  }) {
-    return AnimationLimiter(
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _buildResultsHeader(count),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return AnimationConfiguration.staggeredList(
-                    position: index,
-                    duration: const Duration(milliseconds: 600),
-                    child: SlideAnimation(
-                      verticalOffset: 50.0,
-                      child: FadeInAnimation(
-                        child: itemBuilder(context, index),
-                      ),
-                    ),
-                  );
-                },
-                childCount: count,
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(
-              child: SizedBox(height: 120)), // Space for floating nav
-        ],
-      ),
-    );
+    return _POIListView(type: type);
   }
 
   Widget _buildTabButton(int index, String label) {
@@ -277,42 +211,158 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     );
   }
 
-  Widget _buildResultsHeader(int count) {
-    return SliverPadding(
-      padding: const EdgeInsets.all(20),
-      sliver: SliverToBoxAdapter(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Left: Sort
-            Row(
-              children: [
-                const Icon(Icons.expand_more,
-                    size: 16, color: AppColors.textMuted),
-                const SizedBox(width: 4),
-                Text(
-                  'מיון: מומלץ',
-                  style:
-                      AppTextStyles.bodyMd.copyWith(color: AppColors.textMuted),
-                ),
-              ],
-            ),
-            // Right: Count
-            Row(
-              children: [
-                Text(
-                  '$count זמינים',
-                  style: AppTextStyles.bodyMd
-                      .copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.home_outlined,
-                    size: 18, color: AppColors.onSurface),
-              ],
-            ),
-          ],
-        ),
+}
+
+Widget _buildResultsHeader(int count) {
+  return SliverPadding(
+    padding: const EdgeInsets.all(20),
+    sliver: SliverToBoxAdapter(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left: Sort
+          Row(
+            children: [
+              const Icon(Icons.expand_more,
+                  size: 16, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text(
+                'מיון: מומלץ',
+                style:
+                    AppTextStyles.bodyMd.copyWith(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          // Right: Count
+          Row(
+            children: [
+              Text(
+                '$count זמינים',
+                style: AppTextStyles.bodyMd
+                    .copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.home_outlined,
+                  size: 18, color: AppColors.onSurface),
+            ],
+          ),
+        ],
       ),
+    ),
+  );
+}
+
+/// One tab's POI list ("גינות כלבים" / "וטרינרים" / "חנויות"). The underlying
+/// `nearbyPOIsProvider` fetch is capped and sorted by distance client-side
+/// (see its TODO about a proper geo-query), so real Firestore cursor
+/// pagination isn't a good fit here — instead this paginates the *rendering*
+/// of that already-fetched, distance-sorted list: reveal `_pageSize` items at
+/// a time, growing on scroll, same infinite-scroll UX as the feed and
+/// booking-history tabs without re-fetching or re-sorting anything.
+class _POIListView extends ConsumerStatefulWidget {
+  final POIType type;
+  const _POIListView({required this.type});
+
+  @override
+  ConsumerState<_POIListView> createState() => _POIListViewState();
+}
+
+class _POIListViewState extends ConsumerState<_POIListView> {
+  static const int _pageSize = 10;
+  int _visibleCount = _pageSize;
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    const threshold = 200.0;
+    if (maxScroll - currentScroll <= threshold) {
+      setState(() => _visibleCount += _pageSize);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // nearbyPOIsProvider watches poiFiltersProvider internally and applies
+    // minRating / hasReviewsOnly before returning — filtering in the provider
+    // layer means it runs on the full fetched set, not after the 200-doc cap.
+    final poisAsync = ref.watch(nearbyPOIsProvider(type: widget.type));
+
+    return poisAsync.when(
+      data: (pois) {
+        if (pois.isEmpty) {
+          return const EmptyStateWidget(
+            title: 'לא נמצאו תוצאות',
+            subtitle: 'נסה לשנות את הסינון',
+            icon: Icons.map_outlined,
+          );
+        }
+        final visible = pois.take(_visibleCount).toList();
+        final hasMore = _visibleCount < pois.length;
+        return AnimationLimiter(
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildResultsHeader(pois.length),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index == visible.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary, strokeWidth: 2),
+                          ),
+                        );
+                      }
+                      final poi = visible[index];
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 600),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: POICard(
+                                poi: poi,
+                                onTap: () =>
+                                    context.push('/explore/poi/${poi.id}'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: visible.length + (hasMore ? 1 : 0),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(
+                  child: SizedBox(height: 120)), // Space for floating nav
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 }

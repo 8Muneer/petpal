@@ -8,14 +8,46 @@ import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/utils/price_formatter.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
+import 'package:petpal/features/booking/presentation/widgets/booking_status_timeline.dart';
+import 'package:petpal/features/booking/presentation/widgets/booking_status_toggle.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 import 'package:petpal/features/reviews/presentation/providers/review_provider.dart';
 
-class MyBookingsScreen extends ConsumerWidget {
+class MyBookingsScreen extends ConsumerStatefulWidget {
   const MyBookingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyBookingsScreen> createState() => _MyBookingsScreenState();
+}
+
+class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
+  int _tab = 0; // 0 = active, 1 = history
+  final _historyScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _historyScrollController.addListener(_onHistoryScroll);
+  }
+
+  @override
+  void dispose() {
+    _historyScrollController.dispose();
+    super.dispose();
+  }
+
+  void _onHistoryScroll() {
+    if (!_historyScrollController.hasClients) return;
+    final maxScroll = _historyScrollController.position.maxScrollExtent;
+    final currentScroll = _historyScrollController.position.pixels;
+    const threshold = 200.0;
+    if (maxScroll - currentScroll <= threshold) {
+      ref.read(myBookingHistoryProvider.notifier).fetchNextPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(myBookingsProvider);
 
     return Directionality(
@@ -51,27 +83,33 @@ class MyBookingsScreen extends ConsumerWidget {
               );
             }
             final active = bookings.where((b) => b.isActive).toList();
-            final history = bookings.where((b) => !b.isActive).toList();
-            return ListView(
-              padding: const EdgeInsets.all(16),
+            return Column(
               children: [
-                if (active.isNotEmpty) ...[
-                  const _SectionLabel(text: 'פעילות'),
-                  const SizedBox(height: 10),
-                  for (final b in active) ...[
-                    _BookingSummaryCard(booking: b),
-                    const SizedBox(height: 12),
-                  ],
-                ],
-                if (history.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  const _SectionLabel(text: 'היסטוריה'),
-                  const SizedBox(height: 10),
-                  for (final b in history) ...[
-                    _BookingSummaryCard(booking: b),
-                    const SizedBox(height: 12),
-                  ],
-                ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: BookingStatusToggle(
+                    selected: _tab,
+                    onChanged: (i) => setState(() => _tab = i),
+                  ),
+                ),
+                Expanded(
+                  child: _tab == 0
+                      ? (active.isEmpty
+                          ? Center(
+                              child: Text('אין הזמנות פעילות',
+                                  style: AppTextStyles.labelMd
+                                      .copyWith(color: AppColors.textMuted)),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                              itemCount: active.length,
+                              itemBuilder: (context, i) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _BookingSummaryCard(booking: active[i]),
+                              ),
+                            ))
+                      : _HistoryTab(scrollController: _historyScrollController),
+                ),
               ],
             );
           },
@@ -81,34 +119,57 @@ class MyBookingsScreen extends ConsumerWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  Summary card — clean, scannable, tap to open detail sheet
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel({required this.text});
+/// Cursor-paginated "היסטוריה" tab — a one-shot fetch per page via
+/// [myBookingHistoryProvider], loaded further on scroll near the bottom.
+class _HistoryTab extends ConsumerWidget {
+  final ScrollController scrollController;
+  const _HistoryTab({required this.scrollController});
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(text,
-            style: AppTextStyles.headlineSm
-                .copyWith(fontWeight: FontWeight.w800)),
-      ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(myBookingHistoryProvider);
+    return historyAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (state) {
+        // The query isn't filtered by status server-side (it mirrors the
+        // owner's full booking list so pagination stays index-free) — filter
+        // out any still-active booking that rides along in a page.
+        final history = state.bookings.where((b) => !b.isActive).toList();
+        if (history.isEmpty && !state.hasMore) {
+          return Center(
+            child: Text('אין היסטוריית הזמנות',
+                style: AppTextStyles.labelMd.copyWith(color: AppColors.textMuted)),
+          );
+        }
+        return ListView.builder(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          itemCount: history.length + (state.isLoadingMore ? 1 : 0),
+          itemBuilder: (context, i) {
+            if (i == history.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.primary, strokeWidth: 2),
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _BookingSummaryCard(booking: history[i]),
+            );
+          },
+        );
+      },
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Summary card — clean, scannable, tap to open detail sheet
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _BookingSummaryCard extends StatelessWidget {
   final BookingRequest booking;
@@ -505,7 +566,7 @@ class _BookingDetailSheetState extends ConsumerState<_BookingDetailSheet>
                     _SectionCard(
                       title: 'מצב ההזמנה',
                       icon: Icons.timeline_rounded,
-                      child: _StatusTimeline(status: booking.status),
+                      child: BookingStatusTimeline(status: booking.status),
                     ),
                     start: 0.12,
                     end: 0.55,
@@ -1045,264 +1106,6 @@ class _SectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           child,
-        ],
-      ),
-    );
-  }
-}
-
-// ── Status timeline ──────────────────────────────────────────────────────────
-
-class _StatusTimeline extends StatelessWidget {
-  final BookingStatus status;
-  const _StatusTimeline({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final steps = _buildSteps(status);
-    return Column(
-      children: [
-        for (int i = 0; i < steps.length; i++)
-          _TimelineNode(
-            step: steps[i],
-            isLast: i == steps.length - 1,
-          ),
-      ],
-    );
-  }
-
-  List<_Step> _buildSteps(BookingStatus status) {
-    const sent = _Step(
-      icon: Icons.send_rounded,
-      title: 'הבקשה נשלחה',
-      subtitle: 'הבקשה הועברה לשומר',
-      state: _StepState.done,
-    );
-
-    switch (status) {
-      case BookingStatus.pending:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.hourglass_top_rounded,
-            title: 'ממתין לאישור',
-            subtitle: 'השומר בודק את הבקשה',
-            state: _StepState.current,
-            color: AppColors.warning,
-          ),
-        ];
-      case BookingStatus.accepted:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.check_circle_rounded,
-            title: 'הבקשה אושרה',
-            subtitle: 'השומר אישר את ההזמנה',
-            state: _StepState.done,
-            color: AppColors.success,
-          ),
-          _Step(
-            icon: Icons.pets_rounded,
-            title: 'השירות פעיל',
-            subtitle: 'אפשר לתאם בצ\'אט. הביקורת תיפתח בסיום',
-            state: _StepState.current,
-            color: AppColors.primary,
-          ),
-        ];
-      case BookingStatus.awaitingConfirmation:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.check_circle_rounded,
-            title: 'הבקשה אושרה',
-            subtitle: 'השומר אישר את ההזמנה',
-            state: _StepState.done,
-            color: AppColors.success,
-          ),
-          _Step(
-            icon: Icons.fact_check_outlined,
-            title: 'ממתין לאישורך',
-            subtitle: 'השומר סימן שסיים. אשר/י כדי לדרג',
-            state: _StepState.current,
-            color: AppColors.sapphire,
-          ),
-        ];
-      case BookingStatus.completed:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.check_circle_rounded,
-            title: 'הבקשה אושרה',
-            subtitle: 'השומר אישר את ההזמנה',
-            state: _StepState.done,
-            color: AppColors.success,
-          ),
-          _Step(
-            icon: Icons.fact_check_outlined,
-            title: 'השומר ביקש אישור',
-            subtitle: 'השומר סימן שהשירות הסתיים',
-            state: _StepState.done,
-            color: AppColors.sapphire,
-          ),
-          _Step(
-            icon: Icons.task_alt_rounded,
-            title: 'השירות הושלם',
-            subtitle: 'אישרת את סיום השירות. אפשר לכתוב ביקורת',
-            state: _StepState.done,
-            color: AppColors.primary,
-          ),
-        ];
-      case BookingStatus.declined:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.cancel_rounded,
-            title: 'הבקשה נדחתה',
-            subtitle: 'השומר אינו זמין לבקשה זו',
-            state: _StepState.error,
-            color: AppColors.error,
-          ),
-        ];
-      case BookingStatus.cancelled:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.do_not_disturb_on_rounded,
-            title: 'ההזמנה בוטלה',
-            subtitle: 'הבקשה בוטלה',
-            state: _StepState.muted,
-            color: AppColors.textMuted,
-          ),
-        ];
-      case BookingStatus.expired:
-        return const [
-          sent,
-          _Step(
-            icon: Icons.timer_off_rounded,
-            title: 'הבקשה פגה',
-            subtitle: 'הבקשה לא אושרה עד למועד השירות',
-            state: _StepState.muted,
-            color: AppColors.textMuted,
-          ),
-        ];
-    }
-  }
-}
-
-enum _StepState { done, current, error, muted }
-
-class _Step {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final _StepState state;
-  final Color color;
-  const _Step({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.state,
-    this.color = AppColors.success,
-  });
-}
-
-class _TimelineNode extends StatelessWidget {
-  final _Step step;
-  final bool isLast;
-  const _TimelineNode({required this.step, required this.isLast});
-
-  @override
-  Widget build(BuildContext context) {
-    final isMuted = step.state == _StepState.muted;
-    final color = step.color;
-    final filled =
-        step.state == _StepState.done || step.state == _StepState.current;
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Node + connector
-          Column(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: filled
-                      ? color.withValues(alpha: 0.14)
-                      : (step.state == _StepState.error
-                          ? color.withValues(alpha: 0.12)
-                          : AppColors.surface),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isMuted
-                        ? AppColors.border
-                        : color.withValues(alpha: 0.5),
-                    width: 1.5,
-                  ),
-                ),
-                child: Icon(step.icon,
-                    size: 16,
-                    color: isMuted ? AppColors.textMuted : color),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    color: AppColors.divider,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          // Texts
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 18, top: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.title,
-                    style: AppTextStyles.bodyMd.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: isMuted
-                          ? AppColors.textMuted
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    step.subtitle,
-                    style: AppTextStyles.labelMd
-                        .copyWith(color: AppColors.textMuted),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (step.state == _StepState.current)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'עכשיו',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: color,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

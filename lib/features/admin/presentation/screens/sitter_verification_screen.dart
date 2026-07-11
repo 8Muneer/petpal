@@ -16,7 +16,7 @@ class SitterVerificationScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Sitter Verification'),
+        title: const Text('Provider Verification'),
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
@@ -64,7 +64,7 @@ class SitterVerificationScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'No pending sitter verification requests.',
+            'No pending provider verification requests.',
             style: TextStyle(color: AppColors.textSecondary),
           ),
         ],

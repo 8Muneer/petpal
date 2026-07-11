@@ -67,7 +67,6 @@ class _ServiceProviderHomeScreenState
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = ref.watch(pendingBookingCountProvider);
     final tabs = <Widget>[
       _ProviderHomeTab(
         onAction: (msg) => _toast(msg),
@@ -98,28 +97,27 @@ class _ServiceProviderHomeScreenState
         bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
           onChanged: _onNavChanged,
-          items: [
-            const AppNavItem(
+          items: const [
+            AppNavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
                 label: 'בית'),
-            const AppNavItem(
+            AppNavItem(
                 icon: Icons.feed_outlined,
                 activeIcon: Icons.feed_rounded,
                 label: 'קהילה'),
-            const AppNavItem(
+            AppNavItem(
                 icon: Icons.explore_outlined,
                 activeIcon: Icons.explore_rounded,
                 label: 'גלה'),
-            const AppNavItem(
+            AppNavItem(
                 icon: Icons.pets_outlined,
                 activeIcon: Icons.pets_rounded,
                 label: 'אבודים'),
             AppNavItem(
                 icon: Icons.assignment_outlined,
                 activeIcon: Icons.assignment_rounded,
-                label: 'הבקשות',
-                badgeCount: pendingCount),
+                label: 'הבקשות'),
           ],
         ),
       ),

@@ -144,6 +144,7 @@ String _reportTypeLabel(ReportType t) => switch (t) {
       ReportType.post => 'פוסט',
       ReportType.comment => 'תגובה',
       ReportType.user => 'משתמש',
+      ReportType.message => 'הודעה',
     };
 
 String _timeAgo(DateTime d) {

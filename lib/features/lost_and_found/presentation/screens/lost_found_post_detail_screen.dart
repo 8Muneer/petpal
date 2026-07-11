@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petpal/core/theme/app_theme.dart';
+import 'package:petpal/core/widgets/report_content_dialog.dart';
+import 'package:petpal/features/admin/domain/entities/report_model.dart';
 import 'package:petpal/features/lost_and_found/domain/entities/lost_found_post.dart';
 import 'package:petpal/features/lost_and_found/presentation/providers/lost_found_provider.dart';
 
@@ -80,7 +82,7 @@ class _LostFoundPostDetailScreenState
         backgroundColor: AppColors.surface,
         body: CustomScrollView(
           slivers: [
-            _buildAppBar(livePost, accent),
+            _buildAppBar(livePost, accent, isOwner),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -109,12 +111,45 @@ class _LostFoundPostDetailScreenState
     );
   }
 
-  Widget _buildAppBar(LostFoundPost post, Color accent) {
+  Widget _buildAppBar(LostFoundPost post, Color accent, bool isOwner) {
     return SliverAppBar(
       expandedHeight: 280,
       pinned: true,
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
+      actions: isOwner
+          ? null
+          : [
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: GestureDetector(
+                  onTap: () {
+                    if (currentUserUid.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('יש להתחבר כדי לדווח')),
+                      );
+                      return;
+                    }
+                    showReportDialog(context,
+                        targetId: post.id, type: ReportType.post);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8)
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(Icons.flag_outlined,
+                        size: 16, color: AppColors.onSurface),
+                  ),
+                ),
+              ),
+            ],
       leading: Padding(
         padding: const EdgeInsets.all(8),
         child: GestureDetector(

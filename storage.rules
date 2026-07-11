@@ -18,6 +18,15 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == userId && isValidImage();
     }
 
+    // ID verification photos — sensitive documents, so unlike profile_images
+    // these are readable only by their owner and admins (custom claim, same
+    // pattern as poi_images below), never by any signed-in user.
+    match /id_photos/{userId} {
+      allow read:  if request.auth != null &&
+        (request.auth.uid == userId || request.auth.token.role == 'admin');
+      allow write: if request.auth != null && request.auth.uid == userId && isValidImage();
+    }
+
     // Pet images — scoped to the owning user
     match /pets/{userId}/{allPaths=**} {
       allow read:  if request.auth != null;

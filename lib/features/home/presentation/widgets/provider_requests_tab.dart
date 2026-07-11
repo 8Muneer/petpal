@@ -20,6 +20,7 @@ import 'package:petpal/features/sitting/domain/entities/sitting_request.dart'
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
 import 'package:petpal/features/booking/presentation/providers/booking_provider.dart';
 import 'package:petpal/features/booking/domain/entities/booking_request.dart';
+import 'package:petpal/features/booking/presentation/widgets/booking_status_toggle.dart';
 import 'package:petpal/features/applications/presentation/widgets/service_application_sheet.dart';
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
@@ -1195,11 +1196,42 @@ class _IconChip extends StatelessWidget {
   }
 }
 
-class _IncomingBookingsView extends ConsumerWidget {
+class _IncomingBookingsView extends ConsumerStatefulWidget {
   const _IncomingBookingsView();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_IncomingBookingsView> createState() =>
+      _IncomingBookingsViewState();
+}
+
+class _IncomingBookingsViewState extends ConsumerState<_IncomingBookingsView> {
+  int _tab = 0; // 0 = active, 1 = history
+  final _historyScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _historyScrollController.addListener(_onHistoryScroll);
+  }
+
+  @override
+  void dispose() {
+    _historyScrollController.dispose();
+    super.dispose();
+  }
+
+  void _onHistoryScroll() {
+    if (!_historyScrollController.hasClients) return;
+    final maxScroll = _historyScrollController.position.maxScrollExtent;
+    final currentScroll = _historyScrollController.position.pixels;
+    const threshold = 200.0;
+    if (maxScroll - currentScroll <= threshold) {
+      ref.read(incomingBookingHistoryProvider.notifier).fetchNextPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(incomingBookingsProvider);
 
     return bookingsAsync.when(
@@ -1226,27 +1258,34 @@ class _IncomingBookingsView extends ConsumerWidget {
           );
         }
         final active = bookings.where((b) => b.isActive).toList();
-        final history = bookings.where((b) => !b.isActive).toList();
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return Column(
           children: [
-            if (active.isNotEmpty) ...[
-              const _IncomingSectionLabel(text: 'פעילות'),
-              const SizedBox(height: 10),
-              for (final b in active) ...[
-                _IncomingBookingTile(booking: b),
-                const SizedBox(height: 12),
-              ],
-            ],
-            if (history.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const _IncomingSectionLabel(text: 'היסטוריה'),
-              const SizedBox(height: 10),
-              for (final b in history) ...[
-                _IncomingBookingTile(booking: b),
-                const SizedBox(height: 12),
-              ],
-            ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: BookingStatusToggle(
+                selected: _tab,
+                onChanged: (i) => setState(() => _tab = i),
+              ),
+            ),
+            Expanded(
+              child: _tab == 0
+                  ? (active.isEmpty
+                      ? Center(
+                          child: Text('אין הזמנות פעילות',
+                              style: AppTextStyles.labelMd
+                                  .copyWith(color: AppColors.textMuted)),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                          itemCount: active.length,
+                          itemBuilder: (context, i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _IncomingBookingTile(booking: active[i]),
+                          ),
+                        ))
+                  : _IncomingHistoryTab(
+                      scrollController: _historyScrollController),
+            ),
           ],
         );
       },
@@ -1254,27 +1293,47 @@ class _IncomingBookingsView extends ConsumerWidget {
   }
 }
 
-class _IncomingSectionLabel extends StatelessWidget {
-  final String text;
-  const _IncomingSectionLabel({required this.text});
+/// Cursor-paginated "היסטוריה" tab for incoming bookings — mirrors
+/// _HistoryTab in my_bookings_screen.dart for the provider side.
+class _IncomingHistoryTab extends ConsumerWidget {
+  final ScrollController scrollController;
+  const _IncomingHistoryTab({required this.scrollController});
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(text,
-            style: AppTextStyles.headlineSm
-                .copyWith(fontWeight: FontWeight.w800)),
-      ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(incomingBookingHistoryProvider);
+    return historyAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
+      data: (state) {
+        final history = state.bookings.where((b) => !b.isActive).toList();
+        if (history.isEmpty && !state.hasMore) {
+          return Center(
+            child: Text('אין היסטוריית הזמנות',
+                style: AppTextStyles.labelMd.copyWith(color: AppColors.textMuted)),
+          );
+        }
+        return ListView.builder(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          itemCount: history.length + (state.isLoadingMore ? 1 : 0),
+          itemBuilder: (context, i) {
+            if (i == history.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.primary, strokeWidth: 2),
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _IncomingBookingTile(booking: history[i]),
+            );
+          },
+        );
+      },
     );
   }
 }

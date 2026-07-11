@@ -287,7 +287,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 .map((c) => Padding(
                                       padding:
                                           const EdgeInsets.only(bottom: 10),
-                                      child: _CommentCard(comment: c),
+                                      child: _CommentCard(
+                                comment: c,
+                                postId: widget.postId,
+                                currentUid: uid,
+                                onTapWhenGuest: _showLoginDialog,
+                              ),
                                     ))
                                 .toList(),
                           );
@@ -707,11 +712,20 @@ class _EmptyComments extends StatelessWidget {
 
 class _CommentCard extends StatelessWidget {
   final FeedComment comment;
+  final String postId;
+  final String currentUid;
+  final VoidCallback onTapWhenGuest;
 
-  const _CommentCard({required this.comment});
+  const _CommentCard({
+    required this.comment,
+    required this.postId,
+    required this.currentUid,
+    required this.onTapWhenGuest,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isAuthor = currentUid.isNotEmpty && comment.authorUid == currentUid;
     return AppCard.outline(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -749,6 +763,22 @@ class _CommentCard extends StatelessWidget {
               ],
             ),
           ),
+          if (!isAuthor)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined,
+                  size: 16, color: AppColors.textSecondary),
+              tooltip: 'דווח על התגובה',
+              onPressed: () {
+                if (currentUid.isEmpty) {
+                  onTapWhenGuest();
+                  return;
+                }
+                showReportDialog(context,
+                    targetId: comment.id,
+                    type: ReportType.comment,
+                    parentId: postId);
+              },
+            ),
         ],
       ),
     );

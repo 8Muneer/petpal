@@ -33,6 +33,24 @@ class BookingRemoteDatasource {
             .toList());
   }
 
+  /// Cursor-paginated query for the owner's booking history tab — same
+  /// underlying data as [watchOwnerBookings] but as a plain [Query] (no
+  /// `.limit()`/`.snapshots()`) so callers can chain `.limit()` and
+  /// `.startAfterDocument()` for page-based loading.
+  Query ownerBookingsQuery(String ownerUid) {
+    return _col
+        .where('ownerUid', isEqualTo: ownerUid)
+        .orderBy('createdAt', descending: true);
+  }
+
+  /// Cursor-paginated query for the provider's booking history tab — mirrors
+  /// [ownerBookingsQuery] for the provider side.
+  Query providerBookingsQuery(String providerUid) {
+    return _col
+        .where('providerUid', isEqualTo: providerUid)
+        .orderBy('createdAt', descending: true);
+  }
+
   Stream<List<BookingRequestModel>> watchProviderBookings(String providerUid) {
     return _col
         .where('providerUid', isEqualTo: providerUid)
