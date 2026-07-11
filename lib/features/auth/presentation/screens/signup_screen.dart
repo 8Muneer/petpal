@@ -22,6 +22,7 @@ class _SignupScreenState extends State<SignupScreen>
     with SingleTickerProviderStateMixin {
   final _nameCtrl     = TextEditingController();
   final _emailCtrl    = TextEditingController();
+  final _phoneCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl  = TextEditingController();
 
@@ -35,6 +36,7 @@ class _SignupScreenState extends State<SignupScreen>
 
   String? _nameError;
   String? _emailError;
+  String? _phoneError;
   String? _passwordError;
   String? _confirmError;
   String? _idPhotoError;
@@ -67,6 +69,7 @@ class _SignupScreenState extends State<SignupScreen>
     _animCtrl.dispose();
     _nameCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
@@ -86,6 +89,10 @@ class _SignupScreenState extends State<SignupScreen>
         } else {
           _emailError = null;
         }
+      });
+
+  void _validatePhone(String v) => setState(() {
+        _phoneError = _isPetOwner ? null : Validators.validatePhone(v);
       });
 
   void _validatePassword(String v) => setState(() {
@@ -182,7 +189,8 @@ class _SignupScreenState extends State<SignupScreen>
       _nameCtrl.text.isNotEmpty &&
       _emailCtrl.text.isNotEmpty &&
       _passwordCtrl.text.isNotEmpty &&
-      _confirmCtrl.text.isNotEmpty;
+      _confirmCtrl.text.isNotEmpty &&
+      (_isPetOwner || Validators.validatePhone(_phoneCtrl.text) == null);
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -209,6 +217,7 @@ class _SignupScreenState extends State<SignupScreen>
   Future<void> _handleSignup() async {
     _validateName(_nameCtrl.text);
     _validateEmail(_emailCtrl.text);
+    _validatePhone(_phoneCtrl.text);
     _validatePassword(_passwordCtrl.text);
     _validateConfirm(_confirmCtrl.text);
 
@@ -239,6 +248,7 @@ class _SignupScreenState extends State<SignupScreen>
             'uid':        uid,
             'name':       _nameCtrl.text.trim(),
             'email':      _emailCtrl.text.trim(),
+            if (!_isPetOwner) 'phone': _phoneCtrl.text.trim(),
             'role':       _isPetOwner ? 'petOwner' : 'serviceProvider',
             'isVerified': false,
             'createdAt':  FieldValue.serverTimestamp(),
@@ -397,7 +407,10 @@ class _SignupScreenState extends State<SignupScreen>
                           isPetOwner: _isPetOwner,
                           onChanged: (v) => setState(() {
                             _isPetOwner = v;
-                            if (v) _idPhotoError = null;
+                            if (v) {
+                              _idPhotoError = null;
+                              _phoneError = null;
+                            }
                           }),
                         ),
 
@@ -437,6 +450,21 @@ class _SignupScreenState extends State<SignupScreen>
                           errorText: _emailError,
                           onChanged: _validateEmail,
                         ),
+
+                        if (!_isPetOwner) ...[
+                          const SizedBox(height: 12),
+                          _GlassInput(
+                            controller: _phoneCtrl,
+                            label: 'טלפון',
+                            hint: '050-1234567',
+                            icon: Icons.phone_outlined,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            textDirection: TextDirection.ltr,
+                            errorText: _phoneError,
+                            onChanged: _validatePhone,
+                          ),
+                        ],
 
                         const SizedBox(height: 12),
 

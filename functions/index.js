@@ -25,6 +25,9 @@ const MAX_CONCURRENT = 3;
 /** Max retry attempts per Gemini call on 429 / 5xx. */
 const MAX_RETRIES = 3;
 
+/** Free-tier text embedding model used for semantic candidate ranking. */
+const EMBEDDING_MODEL = 'gemini-embedding-001';
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Booking notifications (server-side, Blaze)
 //
@@ -798,7 +801,7 @@ async function _setMatchingStatus(docId, status) {
 /**
  * Full matching pipeline:
  *  1. Fetch opposite-type candidates (Phase 2)
- *  2. Attribute pre-score & trim to top GEMINI_CANDIDATE_LIMIT (Phase 2)
+ *  2. Rank by text-embedding similarity & trim to top GEMINI_CANDIDATE_LIMIT (Phase 2)
  *  3. Call Gemini for each with concurrency cap (Phase 3)
  *  4. Write bidirectional matches sorted by confidence (Phase 4)
  */
@@ -809,7 +812,7 @@ async function _runMatchingPipeline(postId, post, geminiKey) {
   const candidates = await _fetchCandidates(db, post);
   console.log(`[LostFound] ${postId}: ${candidates.length} raw candidates`);
 
-  const ranked = _preScoreCandidates(post, candidates);
+  const ranked = await _rankCandidates(db, postId, post, candidates, geminiKey);
   const top = ranked.slice(0, GEMINI_CANDIDATE_LIMIT);
   console.log(`[LostFound] ${postId}: ${top.length} candidates sent to Gemini`);
 
@@ -847,22 +850,116 @@ async function _fetchCandidates(db, post) {
 }
 
 /**
- * Cheap attribute pre-filter — scores each candidate 0-4 on species/breed/
- * color/area overlap so only the most promising get a Gemini call.
+ * Ranks candidates by semantic similarity of their text attributes (species,
+ * breed, colour, size, gender, area, free-text description), using free-tier
+ * text embeddings instead of exact string matching. This is the retrieval
+ * step of the pipeline — it decides which candidates are worth an expensive
+ * Gemini vision call, so catching semantically-close-but-not-identical
+ * wording (synonyms, partial phrasing, different word order) here means
+ * fewer true matches get filtered out before Gemini ever sees the photos.
+ *
+ * Embeddings are computed once per post and cached on the document
+ * (`matchEmbedding` field) so re-runs and later comparisons don't re-pay the
+ * embedding call. Falls back to the old 0-4 exact-attribute-overlap score
+ * (scaled down) as a tiebreaker/fallback when an embedding can't be computed.
  */
-function _preScoreCandidates(post, candidates) {
-  return candidates
-    .filter(c => c.imageUrl)
-    .map(c => {
-      let score = 0;
-      if (c.species && post.species && c.species === post.species) score++;
-      if (c.breed && post.breed && c.breed.trim().toLowerCase() === post.breed.trim().toLowerCase()) score++;
-      if (c.color && post.color && c.color.trim().toLowerCase() === post.color.trim().toLowerCase()) score++;
-      if (c.area && post.area && c.area.trim().toLowerCase() === post.area.trim().toLowerCase()) score++;
-      if (c.size && post.size && c.size === post.size) score++;
-      return { ...c, _preScore: score };
-    })
-    .sort((a, b) => b._preScore - a._preScore);
+async function _rankCandidates(db, postId, post, candidates, geminiKey) {
+  const withImages = candidates.filter(c => c.imageUrl);
+  const postEmbedding = await _getOrComputeEmbedding(db, postId, post, geminiKey);
+
+  const scored = await Promise.all(withImages.map(async c => {
+    const heuristic = _heuristicScore(post, c);
+    let embeddingSim = 0;
+    if (postEmbedding) {
+      const candidateEmbedding = await _getOrComputeEmbedding(db, c.id, c, geminiKey);
+      if (candidateEmbedding) embeddingSim = _cosineSimilarity(postEmbedding, candidateEmbedding);
+    }
+    // Embedding similarity (0-1) is the primary signal; the exact-attribute
+    // heuristic (0-4) only nudges ranking as a tiebreaker.
+    return { ...c, _score: embeddingSim, _heuristic: heuristic, _combined: embeddingSim + heuristic * 0.01 };
+  }));
+
+  scored.sort((a, b) => b._combined - a._combined);
+  console.log(`[LostFound] ${postId}: ranked candidates —`,
+    scored.map(c => `${c.id}(emb=${c._score.toFixed(3)},heur=${c._heuristic})`).join(', '));
+  return scored;
+}
+
+/** Cheap exact-attribute-overlap score (0-4) — fallback/tiebreaker only. */
+function _heuristicScore(post, c) {
+  let score = 0;
+  if (c.species && post.species && c.species === post.species) score++;
+  if (c.breed && post.breed && c.breed.trim().toLowerCase() === post.breed.trim().toLowerCase()) score++;
+  if (c.color && post.color && c.color.trim().toLowerCase() === post.color.trim().toLowerCase()) score++;
+  if (c.area && post.area && c.area.trim().toLowerCase() === post.area.trim().toLowerCase()) score++;
+  if (c.size && post.size && c.size === post.size) score++;
+  return score;
+}
+
+/** Returns a post's cached embedding, computing and caching it if missing. */
+async function _getOrComputeEmbedding(db, docId, docData, geminiKey) {
+  if (Array.isArray(docData.matchEmbedding) && docData.matchEmbedding.length > 0) {
+    return docData.matchEmbedding;
+  }
+  const text = _buildEmbeddingText(docData);
+  const embedding = await _getEmbedding(text, geminiKey);
+  if (embedding) {
+    await db.collection('lost_found_posts').doc(docId)
+      .update({ matchEmbedding: embedding })
+      .catch(err => console.warn('[LostFound] failed to cache embedding for', docId, err));
+  }
+  return embedding;
+}
+
+/** Combines a post's text attributes into one string for embedding. */
+function _buildEmbeddingText(post) {
+  return [post.species, post.breed, post.color, post.size, post.gender, post.area, post.description]
+    .filter(Boolean)
+    .join(', ');
+}
+
+/** Calls the free-tier text-embedding-004 model. Returns the embedding vector, or null on failure. */
+async function _getEmbedding(text, geminiKey) {
+  if (!text || !text.trim()) return null;
+
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${geminiKey}`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: `models/${EMBEDDING_MODEL}`,
+        content: { parts: [{ text }] },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!res.ok) {
+      console.error('[Embedding] API error', res.status, await res.text());
+      return null;
+    }
+
+    const decoded = await res.json();
+    return decoded?.embedding?.values ?? null;
+  } catch (err) {
+    console.error('[Embedding] request failed:', err);
+    return null;
+  }
+}
+
+/** Cosine similarity between two equal-length vectors. Returns 0 if either is missing/mismatched. */
+function _cosineSimilarity(a, b) {
+  if (!a || !b || a.length !== b.length) return 0;
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 /**

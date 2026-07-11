@@ -14,7 +14,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///   4. On success → return the real GPS position.
 final locationProvider = FutureProvider<({double lat, double lng})>((ref) async {
   // Step 1 — check whether location services are switched on at OS level.
-  final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  // Timed out: some OEM permission dialogs never resolve the platform-channel
+  // callback (e.g. dismissed by backgrounding the app or a config change), which
+  // would otherwise hang this provider — and every screen awaiting it — forever.
+  final serviceEnabled = await Geolocator.isLocationServiceEnabled()
+      .timeout(const Duration(seconds: 5), onTimeout: () => false);
   if (!serviceEnabled) {
     // Location service is off (airplane mode, battery saver, etc.).
     // Return the Tel Aviv fallback so POI distances still make sense
@@ -23,11 +27,13 @@ final locationProvider = FutureProvider<({double lat, double lng})>((ref) async 
   }
 
   // Step 2 — check / request runtime permission.
-  LocationPermission permission = await Geolocator.checkPermission();
+  LocationPermission permission = await Geolocator.checkPermission()
+      .timeout(const Duration(seconds: 5), onTimeout: () => LocationPermission.denied);
 
   if (permission == LocationPermission.denied) {
     // Not yet decided — ask the user once.
-    permission = await Geolocator.requestPermission();
+    permission = await Geolocator.requestPermission()
+        .timeout(const Duration(seconds: 15), onTimeout: () => LocationPermission.denied);
   }
 
   if (permission == LocationPermission.denied ||

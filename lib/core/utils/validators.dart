@@ -41,4 +41,21 @@
     }
     return null;
   }
+
+  static final RegExp phoneDigitsRegex = RegExp(r'^[0-9+\-\s()]+$');
+
+  static bool isValidPhone(String phone) {
+    final digitsOnly = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return phoneDigitsRegex.hasMatch(phone) && digitsOnly.length >= 9;
+  }
+
+  static String? validatePhone(String? phone) {
+    if (phone == null || phone.trim().isEmpty) {
+      return 'אנא הזן/י מספר טלפון';
+    }
+    if (!isValidPhone(phone.trim())) {
+      return 'מספר טלפון לא תקין';
+    }
+    return null;
+  }
 }
