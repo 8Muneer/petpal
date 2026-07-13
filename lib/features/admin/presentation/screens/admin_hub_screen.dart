@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:petpal/core/providers/firebase_providers.dart';
 import 'package:petpal/core/services/seed_service.dart';
 import 'package:petpal/core/theme/app_theme.dart';
 import 'package:petpal/core/widgets/app_bottom_nav.dart';
+import 'package:petpal/features/admin/data/repositories/admin_repository.dart';
 import 'package:petpal/features/admin/presentation/widgets/admin_dashboard_tab.dart';
 import 'package:petpal/features/admin/presentation/widgets/admin_theme.dart';
 import 'package:petpal/features/admin/presentation/screens/user_directory_screen.dart';
@@ -135,6 +138,29 @@ class _AdminHubScreenState extends ConsumerState<AdminHubScreen> {
         },
       );
 
+  // Admin accounts promoted before this claim was introduced — or promoted
+  // directly in the Firestore console instead of via setUserRole — never got
+  // an 'admin' custom claim on their Auth token. Firestore reads the live
+  // role doc, so those admins work everywhere except Storage rules (POI
+  // images), which can only check request.auth.token.role. Calling
+  // setUserRole on yourself hits the Cloud Function's no-op branch (role
+  // unchanged) that still re-sets the custom claim — that's the one thing a
+  // client-side token refresh alone can't produce if the claim was never set
+  // server-side to begin with.
+  Future<void> _syncAdminPermissions() async {
+    final uid = ref.read(authStateChangesProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    try {
+      await ref.read(adminRepositoryProvider).setUserRole(uid, 'admin');
+      await FirebaseAuth.instance.currentUser?.getIdToken(true);
+      _toast('הרשאות המנהל סונכרנו בהצלחה');
+    } on FirebaseFunctionsException catch (e) {
+      _toast(e.message ?? 'שגיאה בסנכרון ההרשאות');
+    } catch (e) {
+      _toast('שגיאה בסנכרון ההרשאות: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = ref.watch(isAdminProvider);
@@ -161,6 +187,7 @@ class _AdminHubScreenState extends ConsumerState<AdminHubScreen> {
                     onLogout: _logout,
                     onSeedDemoData: _seedDemoData,
                     onClearDemoData: _clearDemoData,
+                    onSyncPermissions: _syncAdminPermissions,
                   ),
                   Expanded(child: _bodies[_currentIndex]),
                 ],
@@ -212,11 +239,13 @@ class _AdminTopBar extends StatelessWidget {
   final VoidCallback onLogout;
   final VoidCallback onSeedDemoData;
   final VoidCallback onClearDemoData;
+  final VoidCallback onSyncPermissions;
   const _AdminTopBar({
     required this.title,
     required this.onLogout,
     required this.onSeedDemoData,
     required this.onClearDemoData,
+    required this.onSyncPermissions,
   });
 
   @override
@@ -244,6 +273,12 @@ class _AdminTopBar extends StatelessWidget {
           const Spacer(),
           // Demo-data tools — admin-only by construction (this whole screen
           // is behind the isAdmin gate, and firestore.rules enforce it too).
+          IconButton(
+            onPressed: onSyncPermissions,
+            tooltip: 'סנכרון הרשאות מנהל (תיקון שגיאת העלאת תמונות)',
+            icon: const Icon(Icons.sync_rounded,
+                size: 20, color: AdminColors.inkMuted),
+          ),
           IconButton(
             onPressed: onSeedDemoData,
             tooltip: 'יצירת נתוני דמו',

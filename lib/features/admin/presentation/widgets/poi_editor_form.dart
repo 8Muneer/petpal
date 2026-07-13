@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:petpal/core/theme/app_theme.dart';
@@ -66,7 +68,6 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
   late TextEditingController _emailController;
   late TextEditingController _latController;
   late TextEditingController _lngController;
-  late TextEditingController _imageUrlController;
   late TextEditingController _tagController;
 
   late POIType _selectedType;
@@ -74,11 +75,16 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
   late bool _open24h;
   bool _isUploading = false;
 
-  // When the admin picks a photo for a NEW POI (no existing ID yet), we can't
-  // upload it immediately because we don't have a Firestore document ID to use
-  // as the Storage path. We store the file here and upload it during _save()
-  // after Firestore assigns the real ID.
-  XFile? _pendingImageFile;
+  // Already-uploaded photo URLs, in display order. For an existing POI this
+  // starts populated from Firestore; for a new POI it starts empty and is
+  // only filled in during _save() once we have a real document ID.
+  late List<String> _imageUrls;
+
+  // When the admin picks photos for a NEW POI (no existing ID yet), we can't
+  // upload them immediately because we don't have a Firestore document ID to
+  // use as the Storage path. We store the files here and upload them during
+  // _save() after Firestore assigns the real ID.
+  final List<XFile> _pendingImageFiles = [];
 
   final List<String> _tags = [];
   final Set<String> _services = {};
@@ -102,7 +108,9 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
         text: p?.latitude != null ? p!.latitude.toString() : '');
     _lngController = TextEditingController(
         text: p?.longitude != null ? p!.longitude.toString() : '');
-    _imageUrlController = TextEditingController(text: p?.imageUrl ?? '');
+    _imageUrls = p?.imageUrls.isNotEmpty == true
+        ? List.of(p!.imageUrls)
+        : (p?.imageUrl != null ? [p!.imageUrl!] : []);
     _tagController = TextEditingController();
     _selectedType = p?.type ?? POIType.park;
     _isEmergency = p?.isEmergency ?? false;
@@ -134,7 +142,6 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
     _emailController.dispose();
     _latController.dispose();
     _lngController.dispose();
-    _imageUrlController.dispose();
     _tagController.dispose();
     super.dispose();
   }
@@ -230,7 +237,8 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
       website: clean(_websiteController),
       email: clean(_emailController),
       description: clean(_descController),
-      imageUrl: clean(_imageUrlController),
+      imageUrl: _imageUrls.isNotEmpty ? _imageUrls.first : null,
+      imageUrls: _imageUrls,
       open24h: _open24h,
       openingHours: _buildOpeningHours(),
       services: _services.toList(),
@@ -244,14 +252,15 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
       // new POIs, or the existing ID for edits).
       final savedId = await adminRepo.savePOI(newPoi);
 
-      // If the admin picked an image for a NEW POI, upload it now under the
-      // real document ID and patch the document with the resulting URL.
+      // If the admin picked photos for a NEW POI, upload them now under the
+      // real document ID and patch the document with the resulting URLs.
       // This eliminates the orphaned-upload bug where images were stored under
       // a temporary 'new_<timestamp>' path that never matched the final doc ID.
-      if (_pendingImageFile != null) {
+      if (_pendingImageFiles.isNotEmpty) {
         final imageService = ref.read(adminImageServiceProvider);
-        final url = await imageService.uploadPOIImage(savedId, _pendingImageFile!);
-        await adminRepo.updatePOIImageUrl(savedId, url);
+        final urls =
+            await imageService.uploadPOIImages(savedId, _pendingImageFiles);
+        await adminRepo.updatePOIImageUrls(savedId, [..._imageUrls, ...urls]);
       }
 
       if (mounted) Navigator.pop(context);
@@ -264,32 +273,47 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
     final imageService = ref.read(adminImageServiceProvider);
-    final file = await imageService.pickImage(ImageSource.gallery);
-    if (file == null) return;
+    final files = await imageService.pickImages();
+    if (files.isEmpty) return;
 
     if (widget.poi != null) {
       // Existing POI — we already have the Firestore document ID, so we can
       // upload immediately under the correct Storage path.
       setState(() => _isUploading = true);
       try {
-        final url = await imageService.uploadPOIImage(widget.poi!.id, file);
-        if (mounted) setState(() => _imageUrlController.text = url);
+        final urls = await imageService.uploadPOIImages(widget.poi!.id, files);
+        if (mounted) setState(() => _imageUrls.addAll(urls));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('שגיאה בהעלאת התמונה: $e')),
+          );
+        }
       } finally {
         if (mounted) setState(() => _isUploading = false);
       }
     } else {
-      // New POI — no document ID exists yet. Store the file locally and defer
+      // New POI — no document ID exists yet. Store the files locally and defer
       // the upload to _save(), where we can use the real Firestore-assigned ID.
-      // This prevents the image from being orphaned under a temporary path that
-      // never matches the final document ID.
-      setState(() {
-        _pendingImageFile = file;
-        // Clear any manually entered URL so the pending file takes priority.
-        _imageUrlController.text = '';
-      });
+      // This prevents the images from being orphaned under a temporary path
+      // that never matches the final document ID.
+      setState(() => _pendingImageFiles.addAll(files));
     }
+  }
+
+  /// Removes an already-uploaded photo. Best-effort deletes the Storage
+  /// object; the removal from `_imageUrls` (and therefore the saved POI) is
+  /// what actually matters and happens regardless of the delete's outcome.
+  void _removeUploadedImage(int index) {
+    final url = _imageUrls[index];
+    setState(() => _imageUrls.removeAt(index));
+    ref.read(adminImageServiceProvider).deletePOIImage(url).catchError((_) {});
+  }
+
+  void _removePendingImage(int index) {
+    setState(() => _pendingImageFiles.removeAt(index));
   }
 
   void _addTag() {
@@ -514,49 +538,18 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
                 _buildTagEditor(),
                 const SizedBox(height: 16),
 
-                // Image
-                _label('תמונה'),
-                // For new POIs, when a photo is picked it is NOT uploaded yet —
-                // it waits until save. Show a "pending" hint so the admin knows
-                // the image will be attached on save.
-                if (_pendingImageFile != null)
+                // Images
+                _label('תמונות'),
+                if (_imageUrls.isNotEmpty || _pendingImageFiles.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            color: Colors.green, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'תמונה נבחרה — תועלה בעת השמירה',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.green[700]),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildImageGrid(),
                   ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _imageUrlController,
-                        // Disable manual URL entry while a local file is pending
-                        // upload to avoid the two sources conflicting.
-                        enabled: _pendingImageFile == null,
-                        decoration: _dec('https://...'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton.filledTonal(
-                      onPressed: _isUploading ? null : _pickImage,
-                      icon: _isUploading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.add_a_photo_rounded),
-                    ),
-                  ],
+                AppButton.secondary(
+                  label: 'הוספת תמונות',
+                  isLoading: _isUploading,
+                  onTap: _isUploading ? null : _pickImages,
+                  leadingIcon: Icons.add_a_photo_rounded,
                 ),
                 const SizedBox(height: 28),
 
@@ -731,6 +724,87 @@ class _POIEditorFormState extends ConsumerState<POIEditorForm> {
                 .toList(),
           ),
         ],
+      ],
+    );
+  }
+
+  // ── Image gallery ─────────────────────────────────────────────────────────
+
+  Widget _buildImageGrid() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (var i = 0; i < _imageUrls.length; i++)
+          _imageThumb(
+            image: Image.network(_imageUrls[i], fit: BoxFit.cover),
+            onRemove: () => _removeUploadedImage(i),
+          ),
+        for (var i = 0; i < _pendingImageFiles.length; i++)
+          _imageThumb(
+            image: Image.file(File(_pendingImageFiles[i].path),
+                fit: BoxFit.cover),
+            onRemove: () => _removePendingImage(i),
+            pending: true,
+          ),
+      ],
+    );
+  }
+
+  Widget _imageThumb({
+    required Widget image,
+    required VoidCallback onRemove,
+    bool pending = false,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 84,
+          height: 84,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: pending ? Colors.green : Colors.grey[300]!,
+              width: pending ? 1.5 : 1,
+            ),
+          ),
+          child: image,
+        ),
+        Positioned(
+          top: -6,
+          left: -6,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: const BoxDecoration(
+                color: Colors.black87,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 14),
+            ),
+          ),
+        ),
+        // Pending images haven't been uploaded yet — they'll go up on save.
+        if (pending)
+          Positioned(
+            bottom: 2,
+            right: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.green[700],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'ממתין',
+                style: TextStyle(color: Colors.white, fontSize: 9),
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -55,7 +55,8 @@ class AdminRepository {
       'type': poi.type.name,
       'latitude': poi.latitude,   // null → stored as Firestore null
       'longitude': poi.longitude, // null → map section hidden in detail screen
-      'imageUrl': poi.imageUrl,
+      'imageUrl': poi.imageUrls.isNotEmpty ? poi.imageUrls.first : poi.imageUrl,
+      'imageUrls': poi.imageUrls,
       'address': poi.address,
       'phoneNumber': poi.phoneNumber,
       'isEmergency': poi.isEmergency,
@@ -72,11 +73,14 @@ class AdminRepository {
     return docRef.id;
   }
 
-  /// Patches only the imageUrl field on an existing POI document.
-  /// Called after uploading an image for a newly created POI, once we have
+  /// Patches the imageUrl(s) fields on an existing POI document.
+  /// Called after uploading images for a newly created POI, once we have
   /// the Firestore-assigned document ID.
-  Future<void> updatePOIImageUrl(String poiId, String imageUrl) async {
-    await _firestore.collection('pois').doc(poiId).update({'imageUrl': imageUrl});
+  Future<void> updatePOIImageUrls(String poiId, List<String> imageUrls) async {
+    await _firestore.collection('pois').doc(poiId).update({
+      'imageUrl': imageUrls.isNotEmpty ? imageUrls.first : null,
+      'imageUrls': imageUrls,
+    });
   }
 
   Future<void> deletePOI(String poiId) async {

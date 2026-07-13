@@ -39,6 +39,24 @@ class _AuthGateState extends ConsumerState<AuthGate> {
 
     final role = (data['role'] ?? data['userType'])?.toString().trim();
     if (role == null || role.isEmpty) return null;
+
+    // setUserRole (functions/index.js) sets the 'admin' role both on the
+    // Firestore user doc and as a custom claim on the Auth token, but an
+    // already-signed-in client keeps whatever token it cached at login —
+    // custom claims only land in a new token, not the old one. Storage rules
+    // for poi_images check request.auth.token.role directly (they can't do a
+    // Firestore get() the way firestore.rules' isAdmin() does), so an admin
+    // promoted mid-session got Firestore writes working (live doc read) while
+    // every Storage image upload failed with 403 permission-denied. Forcing
+    // a refresh here — once per uid, since _roleFor caches this future —
+    // ensures the token carries the current claim before the admin ever
+    // reaches a Storage-writing screen.
+    if (role.toLowerCase() == 'admin') {
+      FirebaseAuth.instance.currentUser
+          ?.getIdToken(true)
+          .catchError((_) => null);
+    }
+
     return role;
   }
 

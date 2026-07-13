@@ -48,7 +48,14 @@ class _WalkRequestDetailScreenState
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
   bool get _isOwner => _uid != null && _uid == _request.ownerUid;
   bool get _isOpen => _request.status == WalkStatus.open;
-  bool get _showProviderCta => !_isOwner && _isOpen;
+  bool get _isExpired {
+    final deadline = _request.preferredDate;
+    if (deadline == null) return false;
+    final endOfDeadlineDay =
+        DateTime(deadline.year, deadline.month, deadline.day, 23, 59, 59);
+    return endOfDeadlineDay.isBefore(DateTime.now());
+  }
+  bool get _showProviderCta => !_isOwner && _isOpen && !_isExpired;
 
   void _showOfferSheet() {
     final dateStr = _request.preferredDate != null
@@ -64,6 +71,7 @@ class _WalkRequestDetailScreenState
         ownerUid: _request.ownerUid,
         ownerName: _request.ownerName,
         petName: _request.petName,
+        deadline: _request.preferredDate,
         summaryChips: [
           if (_request.area.isNotEmpty) _request.area,
           if (_request.preferredTime.isNotEmpty)

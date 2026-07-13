@@ -21,6 +21,7 @@ import 'package:petpal/features/walks/domain/entities/walk_service.dart';
 import 'package:petpal/features/walks/presentation/providers/walk_provider.dart';
 import 'package:petpal/features/sitting/domain/entities/sitting_service.dart';
 import 'package:petpal/features/sitting/presentation/providers/sitting_provider.dart';
+import 'package:petpal/features/explore/presentation/providers/poi_provider.dart';
 
 class _ServiceEntry {
   final bool isWalk;
@@ -682,6 +683,18 @@ class _ServicesTabState extends ConsumerState<ServicesTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Picks up a query submitted from the home screen's hero search bar,
+    // seeds it into this tab's own search field, then clears the handoff
+    // state so re-visiting the tab later doesn't re-apply a stale query.
+    ref.listen(homeSearchQueryProvider, (previous, next) {
+      if (next.isEmpty) return;
+      setState(() {
+        _searchCtrl.text = next;
+        _query = next.trim().toLowerCase();
+      });
+      ref.read(homeSearchQueryProvider.notifier).state = '';
+    });
+
     final walksAsync = ref.watch(walkServicesProvider);
     final sittingAsync = ref.watch(sittingServicesProvider);
 

@@ -158,6 +158,7 @@ class _HomeTab extends ConsumerStatefulWidget {
 
 class _HomeTabState extends ConsumerState<_HomeTab> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
   bool _showStickySearch = false;
 
   @override
@@ -170,7 +171,15 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchSubmitted(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    ref.read(homeSearchQueryProvider.notifier).state = trimmed;
+    widget.onTabChange(4);
   }
 
   void _onScroll() {
@@ -201,7 +210,11 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
             LuxuryHero(
               imageUrl: 'assets/images/hero/home_bg.jpg',
               scrollController: _scrollController,
-              searchBar: const GlassSearchBar(hintText: 'חפש שירותים...'),
+              searchBar: GlassSearchBar(
+                hintText: 'חפש שירותים...',
+                controller: _searchController,
+                onSubmitted: _onSearchSubmitted,
+              ),
               profileImageUrl: profile?.photoUrl,
               userName: profile?.name,
               onNotificationTap: () => context.push('/notifications'),
@@ -595,7 +608,11 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                 right: AppSpacing.marginPage,
               ),
               color: AppColors.surface.withValues(alpha: 0.95),
-              child: const GlassSearchBar(hintText: 'חפש שירותים...'),
+              child: GlassSearchBar(
+                hintText: 'חפש שירותים...',
+                controller: _searchController,
+                onSubmitted: _onSearchSubmitted,
+              ),
             ),
           ),
       ],

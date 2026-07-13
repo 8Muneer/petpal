@@ -28,7 +28,11 @@ mixin _$POI {
   double? get longitude => throw _privateConstructorUsedError;
   double get rating => throw _privateConstructorUsedError;
   int get reviewCount => throw _privateConstructorUsedError;
-  String? get imageUrl => throw _privateConstructorUsedError;
+  String? get imageUrl =>
+      throw _privateConstructorUsedError; // All photo URLs for this POI, in display order. `imageUrl` above is kept
+// for backward compatibility with old documents/consumers and is treated
+// as this list's first entry when both are present.
+  List<String> get imageUrls => throw _privateConstructorUsedError;
   String? get address => throw _privateConstructorUsedError;
   String? get phoneNumber => throw _privateConstructorUsedError;
   List<String> get tags =>
@@ -72,6 +76,7 @@ abstract class $POICopyWith<$Res> {
       double rating,
       int reviewCount,
       String? imageUrl,
+      List<String> imageUrls,
       String? address,
       String? phoneNumber,
       List<String> tags,
@@ -106,6 +111,7 @@ class _$POICopyWithImpl<$Res, $Val extends POI> implements $POICopyWith<$Res> {
     Object? rating = null,
     Object? reviewCount = null,
     Object? imageUrl = freezed,
+    Object? imageUrls = null,
     Object? address = freezed,
     Object? phoneNumber = freezed,
     Object? tags = null,
@@ -153,6 +159,10 @@ class _$POICopyWithImpl<$Res, $Val extends POI> implements $POICopyWith<$Res> {
           ? _value.imageUrl
           : imageUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      imageUrls: null == imageUrls
+          ? _value.imageUrls
+          : imageUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       address: freezed == address
           ? _value.address
           : address // ignore: cast_nullable_to_non_nullable
@@ -209,6 +219,7 @@ abstract class _$$POIImplCopyWith<$Res> implements $POICopyWith<$Res> {
       double rating,
       int reviewCount,
       String? imageUrl,
+      List<String> imageUrls,
       String? address,
       String? phoneNumber,
       List<String> tags,
@@ -240,6 +251,7 @@ class __$$POIImplCopyWithImpl<$Res> extends _$POICopyWithImpl<$Res, _$POIImpl>
     Object? rating = null,
     Object? reviewCount = null,
     Object? imageUrl = freezed,
+    Object? imageUrls = null,
     Object? address = freezed,
     Object? phoneNumber = freezed,
     Object? tags = null,
@@ -287,6 +299,10 @@ class __$$POIImplCopyWithImpl<$Res> extends _$POICopyWithImpl<$Res, _$POIImpl>
           ? _value.imageUrl
           : imageUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      imageUrls: null == imageUrls
+          ? _value._imageUrls
+          : imageUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       address: freezed == address
           ? _value.address
           : address // ignore: cast_nullable_to_non_nullable
@@ -340,6 +356,7 @@ class _$POIImpl implements _POI {
       this.rating = 0.0,
       this.reviewCount = 0,
       this.imageUrl,
+      final List<String> imageUrls = const [],
       this.address,
       this.phoneNumber,
       final List<String> tags = const [],
@@ -349,7 +366,8 @@ class _$POIImpl implements _POI {
       this.open24h = false,
       final Map<String, String> openingHours = const {},
       final List<String> services = const []})
-      : _tags = tags,
+      : _imageUrls = imageUrls,
+        _tags = tags,
         _openingHours = openingHours,
         _services = services;
 
@@ -377,6 +395,21 @@ class _$POIImpl implements _POI {
   final int reviewCount;
   @override
   final String? imageUrl;
+// All photo URLs for this POI, in display order. `imageUrl` above is kept
+// for backward compatibility with old documents/consumers and is treated
+// as this list's first entry when both are present.
+  final List<String> _imageUrls;
+// All photo URLs for this POI, in display order. `imageUrl` above is kept
+// for backward compatibility with old documents/consumers and is treated
+// as this list's first entry when both are present.
+  @override
+  @JsonKey()
+  List<String> get imageUrls {
+    if (_imageUrls is EqualUnmodifiableListView) return _imageUrls;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_imageUrls);
+  }
+
   @override
   final String? address;
   @override
@@ -433,7 +466,7 @@ class _$POIImpl implements _POI {
 
   @override
   String toString() {
-    return 'POI(id: $id, name: $name, type: $type, isEmergency: $isEmergency, latitude: $latitude, longitude: $longitude, rating: $rating, reviewCount: $reviewCount, imageUrl: $imageUrl, address: $address, phoneNumber: $phoneNumber, tags: $tags, description: $description, website: $website, email: $email, open24h: $open24h, openingHours: $openingHours, services: $services)';
+    return 'POI(id: $id, name: $name, type: $type, isEmergency: $isEmergency, latitude: $latitude, longitude: $longitude, rating: $rating, reviewCount: $reviewCount, imageUrl: $imageUrl, imageUrls: $imageUrls, address: $address, phoneNumber: $phoneNumber, tags: $tags, description: $description, website: $website, email: $email, open24h: $open24h, openingHours: $openingHours, services: $services)';
   }
 
   @override
@@ -455,6 +488,8 @@ class _$POIImpl implements _POI {
                 other.reviewCount == reviewCount) &&
             (identical(other.imageUrl, imageUrl) ||
                 other.imageUrl == imageUrl) &&
+            const DeepCollectionEquality()
+                .equals(other._imageUrls, _imageUrls) &&
             (identical(other.address, address) || other.address == address) &&
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
@@ -471,26 +506,28 @@ class _$POIImpl implements _POI {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      name,
-      type,
-      isEmergency,
-      latitude,
-      longitude,
-      rating,
-      reviewCount,
-      imageUrl,
-      address,
-      phoneNumber,
-      const DeepCollectionEquality().hash(_tags),
-      description,
-      website,
-      email,
-      open24h,
-      const DeepCollectionEquality().hash(_openingHours),
-      const DeepCollectionEquality().hash(_services));
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        name,
+        type,
+        isEmergency,
+        latitude,
+        longitude,
+        rating,
+        reviewCount,
+        imageUrl,
+        const DeepCollectionEquality().hash(_imageUrls),
+        address,
+        phoneNumber,
+        const DeepCollectionEquality().hash(_tags),
+        description,
+        website,
+        email,
+        open24h,
+        const DeepCollectionEquality().hash(_openingHours),
+        const DeepCollectionEquality().hash(_services)
+      ]);
 
   /// Create a copy of POI
   /// with the given fields replaced by the non-null parameter values.
@@ -519,6 +556,7 @@ abstract class _POI implements POI {
       final double rating,
       final int reviewCount,
       final String? imageUrl,
+      final List<String> imageUrls,
       final String? address,
       final String? phoneNumber,
       final List<String> tags,
@@ -548,7 +586,12 @@ abstract class _POI implements POI {
   @override
   int get reviewCount;
   @override
-  String? get imageUrl;
+  String?
+      get imageUrl; // All photo URLs for this POI, in display order. `imageUrl` above is kept
+// for backward compatibility with old documents/consumers and is treated
+// as this list's first entry when both are present.
+  @override
+  List<String> get imageUrls;
   @override
   String? get address;
   @override

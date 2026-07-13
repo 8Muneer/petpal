@@ -1,7 +1,7 @@
 ﻿import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show SystemChrome, SystemUiMode, SystemUiOverlayStyle, rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,6 +30,17 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Edge-to-edge: the app draws behind the system nav bar and the bar
+  // itself is transparent, so it blends into the app's UI instead of
+  // showing a solid black strip.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
 
   runApp(
     const ProviderScope(

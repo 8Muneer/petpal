@@ -6,12 +6,16 @@ class GlassSearchBar extends StatelessWidget {
   final TextEditingController? controller;
   final String hintText;
   final VoidCallback? onFilterTap;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   const GlassSearchBar({
     super.key,
     this.controller,
     this.hintText = 'Find walkers, sitters...',
     this.onFilterTap,
+    this.onChanged,
+    this.onSubmitted,
   });
 
   @override
@@ -45,6 +49,9 @@ class GlassSearchBar extends StatelessWidget {
                   child: TextField(
                     controller: controller,
                     style: AppTextStyles.bodyLg,
+                    textInputAction: TextInputAction.search,
+                    onChanged: onChanged,
+                    onSubmitted: onSubmitted,
                     decoration: InputDecoration(
                       hintText: hintText,
                       hintStyle: AppTextStyles.bodyLg.copyWith(color: AppColors.textMuted),

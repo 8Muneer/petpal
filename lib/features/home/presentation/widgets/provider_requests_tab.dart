@@ -25,6 +25,15 @@ import 'package:petpal/features/applications/presentation/widgets/service_applic
 import 'package:petpal/features/profile/presentation/providers/profile_provider.dart';
 import 'package:petpal/features/messaging/data/datasources/messaging_datasource.dart';
 
+/// True once the deadline's calendar day has fully passed — a request is
+/// still applicable through the end of its own day.
+bool _isDeadlinePassed(DateTime? deadline) {
+  if (deadline == null) return false;
+  final endOfDeadlineDay =
+      DateTime(deadline.year, deadline.month, deadline.day, 23, 59, 59);
+  return endOfDeadlineDay.isBefore(DateTime.now());
+}
+
 class ProviderRequestsTab extends ConsumerStatefulWidget {
   const ProviderRequestsTab({super.key});
 
@@ -393,49 +402,64 @@ class _ProviderWalkRequestCard extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 28,
-                      child: GestureDetector(
-                        onTap: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => ServiceApplicationSheet(
-                            requestType: 'walk',
-                            requestId: request.id,
-                            ownerUid: request.ownerUid,
-                            ownerName: request.ownerName,
-                            petName: request.petName,
-                            summaryChips: [
-                              if (request.area.isNotEmpty) request.area,
-                              if (request.preferredTime.isNotEmpty)
-                                request.preferredTime,
-                              if (request.budget != null &&
-                                  request.budget!.isNotEmpty)
-                                'תקציב: ${withShekel(request.budget!)}',
-                            ],
+                    Builder(builder: (context) {
+                      final expired = _isDeadlinePassed(request.preferredDate);
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: GestureDetector(
+                          onTap: expired
+                              ? null
+                              : () => showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => ServiceApplicationSheet(
+                                      requestType: 'walk',
+                                      requestId: request.id,
+                                      ownerUid: request.ownerUid,
+                                      ownerName: request.ownerName,
+                                      petName: request.petName,
+                                      deadline: request.preferredDate,
+                                      summaryChips: [
+                                        if (request.area.isNotEmpty)
+                                          request.area,
+                                        if (request.preferredTime.isNotEmpty)
+                                          request.preferredTime,
+                                        if (request.budget != null &&
+                                            request.budget!.isNotEmpty)
+                                          'תקציב: ${withShekel(request.budget!)}',
+                                      ],
+                                    ),
+                                  ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: expired
+                                  ? null
+                                  : const LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.accent
+                                      ],
+                                    ),
+                              color: expired ? AppColors.borderFaint : null,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                expired ? 'פג תוקף' : 'הגש מועמדות',
+                                style: TextStyle(
+                                    color: expired
+                                        ? AppColors.textMuted
+                                        : Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 11),
+                              ),
+                            ),
                           ),
                         ),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.accent],
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'הגש מועמדות',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -778,36 +802,50 @@ class _ProviderSittingRequestCard extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 28,
-                      child: GestureDetector(
-                        onTap: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) =>
-                              _SittingProviderOfferSheet(request: request),
-                        ),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.accent],
+                    Builder(builder: (context) {
+                      final expired = _isDeadlinePassed(
+                          request.endDate ?? request.startDate);
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: GestureDetector(
+                          onTap: expired
+                              ? null
+                              : () => showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => _SittingProviderOfferSheet(
+                                        request: request),
+                                  ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: expired
+                                  ? null
+                                  : const LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.accent
+                                      ],
+                                    ),
+                              color: expired ? AppColors.borderFaint : null,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'הגש מועמדות',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11),
+                            child: Center(
+                              child: Text(
+                                expired ? 'פג תוקף' : 'הגש מועמדות',
+                                style: TextStyle(
+                                    color: expired
+                                        ? AppColors.textMuted
+                                        : Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 11),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -860,6 +898,11 @@ class _SittingProviderOfferSheetState
     }
     final me = FirebaseAuth.instance.currentUser;
     if (me == null) return;
+
+    if (_isDeadlinePassed(widget.request.endDate ?? widget.request.startDate)) {
+      _showSnack('לא ניתן להגיש מועמדות לבקשה שפג תוקפה');
+      return;
+    }
 
     setState(() => _sending = true);
 

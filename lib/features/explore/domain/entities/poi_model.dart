@@ -22,6 +22,10 @@ class POI with _$POI {
     @Default(0.0) double rating,
     @Default(0) int reviewCount,
     String? imageUrl,
+    // All photo URLs for this POI, in display order. `imageUrl` above is kept
+    // for backward compatibility with old documents/consumers and is treated
+    // as this list's first entry when both are present.
+    @Default([]) List<String> imageUrls,
     String? address,
     String? phoneNumber,
     @Default([]) List<String> tags,
@@ -48,9 +52,21 @@ class POI with _$POI {
     // doc.data() returns null when a document is deleted between the snapshot
     // emission and the time we iterate — guard against that to avoid CastError.
     final data = (doc.data() as Map<String, dynamic>?) ?? {};
+
+    // Legacy documents only have the singular `imageUrl` field. Fall back to
+    // wrapping it in a single-element list so old POIs still display via the
+    // new `imageUrls`-based gallery UI.
+    final rawImageUrls = data['imageUrls'];
+    final imageUrls = (rawImageUrls is List && rawImageUrls.isNotEmpty)
+        ? rawImageUrls.cast<String>()
+        : (data['imageUrl'] is String && (data['imageUrl'] as String).isNotEmpty)
+            ? [data['imageUrl'] as String]
+            : <String>[];
+
     return POI.fromJson({
       ...data,
       'id': doc.id,
+      'imageUrls': imageUrls,
     });
   }
 }

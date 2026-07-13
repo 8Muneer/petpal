@@ -83,3 +83,7 @@ Future<List<POI>> topRatedPOIs(TopRatedPOIsRef ref, {required POIType type}) asy
 }
 
 final exploreTabIndexProvider = StateProvider<int>((ref) => 0);
+
+/// Set by the home screen's hero search bar when the user submits a query;
+/// consumed once by ServicesTab to seed its own search field, then reset.
+final homeSearchQueryProvider = StateProvider<String>((ref) => '');

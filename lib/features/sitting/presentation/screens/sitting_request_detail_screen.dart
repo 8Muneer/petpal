@@ -45,6 +45,14 @@ class _SittingRequestDetailScreenState
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
   bool get _isOwner => _uid != null && _uid == _request.ownerUid;
   bool get _isOpen => _request.status == SittingStatus.open;
+  bool get _isExpired {
+    final deadline = _request.endDate ?? _request.startDate;
+    if (deadline == null) return false;
+    final today = DateTime.now();
+    final endOfDeadlineDay =
+        DateTime(deadline.year, deadline.month, deadline.day, 23, 59, 59);
+    return endOfDeadlineDay.isBefore(today);
+  }
 
   String get _petTypeLabel {
     switch (_request.petType) {
@@ -186,7 +194,7 @@ class _SittingRequestDetailScreenState
   Widget build(BuildContext context) {
     final images = _request.allImages;
     final safeTop = MediaQuery.of(context).padding.top;
-    final showProviderCta = !_isOwner && _isOpen;
+    final showProviderCta = !_isOwner && _isOpen && !_isExpired;
     final startStr =
         _request.startDate != null ? _formatDate(_request.startDate!) : '';
     final endStr =
@@ -907,9 +915,23 @@ class _SittingOfferBottomSheetState
     final me = FirebaseAuth.instance.currentUser;
     if (me == null) return;
 
+    final req = widget.request;
+    final deadline = req.endDate ?? req.startDate;
+    final isExpired = deadline != null &&
+        DateTime(deadline.year, deadline.month, deadline.day, 23, 59, 59)
+            .isBefore(DateTime.now());
+    if (isExpired) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('לא ניתן להגיש מועמדות לבקשה שפג תוקפה')),
+        );
+      }
+      return;
+    }
+
     setState(() => _sending = true);
 
-    final req = widget.request;
     final myProfile = ref.read(currentUserProfileProvider).asData?.value;
     final myPhotoUrl = myProfile?.photoUrl ?? me.photoURL ?? '';
     final ownerPhotoUrl = req.ownerPhotoUrl ?? '';

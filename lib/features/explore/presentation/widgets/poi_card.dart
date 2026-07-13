@@ -65,7 +65,9 @@ class POICard extends ConsumerWidget {
                 AspectRatio(
                   aspectRatio: isCompact ? 16 / 9 : 16 / 7,
                   child: CachedNetworkImage(
-                    imageUrl: poi.imageUrl ??
+                    imageUrl: (poi.imageUrls.isNotEmpty
+                        ? poi.imageUrls.first
+                        : poi.imageUrl) ??
                         'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(

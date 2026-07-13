@@ -24,6 +24,10 @@ class ServiceApplicationSheet extends ConsumerStatefulWidget {
   /// Small summary chips shown at the top (area / date / time / budget).
   final List<String> summaryChips;
 
+  /// When the request is no longer applicable (e.g. the walk's preferred
+  /// date). Submission is blocked once this has fully passed.
+  final DateTime? deadline;
+
   const ServiceApplicationSheet({
     super.key,
     required this.requestType,
@@ -32,6 +36,7 @@ class ServiceApplicationSheet extends ConsumerStatefulWidget {
     required this.petName,
     required this.ownerName,
     this.summaryChips = const [],
+    this.deadline,
   });
 
   @override
@@ -67,9 +72,22 @@ class _ServiceApplicationSheetState
     ));
   }
 
+  bool get _isExpired {
+    final deadline = widget.deadline;
+    if (deadline == null) return false;
+    final endOfDeadlineDay =
+        DateTime(deadline.year, deadline.month, deadline.day, 23, 59, 59);
+    return endOfDeadlineDay.isBefore(DateTime.now());
+  }
+
   Future<void> _submit() async {
     final me = FirebaseAuth.instance.currentUser;
     if (me == null) return;
+
+    if (_isExpired) {
+      _snack('לא ניתן להגיש מועמדות לבקשה שפג תוקפה');
+      return;
+    }
 
     final price = _priceController.text.trim();
     if (price.isEmpty) {

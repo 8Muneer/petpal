@@ -16,6 +16,10 @@ _$POIImpl _$$POIImplFromJson(Map<String, dynamic> json) => _$POIImpl(
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
       imageUrl: json['imageUrl'] as String?,
+      imageUrls: (json['imageUrls'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       address: json['address'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       tags:
@@ -45,6 +49,7 @@ Map<String, dynamic> _$$POIImplToJson(_$POIImpl instance) => <String, dynamic>{
       'rating': instance.rating,
       'reviewCount': instance.reviewCount,
       'imageUrl': instance.imageUrl,
+      'imageUrls': instance.imageUrls,
       'address': instance.address,
       'phoneNumber': instance.phoneNumber,
       'tags': instance.tags,

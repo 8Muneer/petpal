@@ -60,22 +60,27 @@ class POIDetailScreen extends ConsumerWidget {
             background: Stack(
               fit: StackFit.expand,
               children: [
-                CachedNetworkImage(
-                  imageUrl: poi.imageUrl ??
-                      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
-                  fit: BoxFit.cover,
+                _POIImageCarousel(
+                  imageUrls: poi.imageUrls.isNotEmpty
+                      ? poi.imageUrls
+                      : [
+                          poi.imageUrl ??
+                              'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',
+                        ],
                 ),
                 // Gradient overlay for text legibility
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black26,
-                        Colors.transparent,
-                        Colors.black45
-                      ],
+                const IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black26,
+                          Colors.transparent,
+                          Colors.black45
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -455,6 +460,69 @@ class POIDetailScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Swipeable hero gallery with dot indicators. Falls back gracefully to a
+/// single static image (no dots) when there's only one photo.
+class _POIImageCarousel extends StatefulWidget {
+  final List<String> imageUrls;
+
+  const _POIImageCarousel({required this.imageUrls});
+
+  @override
+  State<_POIImageCarousel> createState() => _POIImageCarouselState();
+}
+
+class _POIImageCarouselState extends State<_POIImageCarousel> {
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _controller,
+          itemCount: widget.imageUrls.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (context, i) => CachedNetworkImage(
+            imageUrl: widget.imageUrls[i],
+            fit: BoxFit.cover,
+          ),
+        ),
+        if (widget.imageUrls.length > 1)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < widget.imageUrls.length; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == _page ? 18 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.white
+                          .withValues(alpha: i == _page ? 0.95 : 0.5),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
